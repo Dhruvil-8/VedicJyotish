@@ -1,7 +1,7 @@
-# 🌟 Vedic Astro AI
+#  Vedic Astro AI
 
 > **Ancient Calculations. AI‑Assisted Interpretation.**
-> A full‑stack experimental Vedic Astrology application that focuses on **accurate chart calculation** and **AI‑generated explanations**.
+> A full‑stack experimental Vedic Astrology application that focuses on **chart calculation** and **AI‑generated explanations**.
 
 ---
 
@@ -19,10 +19,10 @@ This project should be viewed as:
 
 ---
 
-## 🚀 Features
+## Features
 
-* **Chart Calculation (Core Focus)**
-  Uses **Swiss Ephemeris (C‑Kernel)** with **Lahiri Ayanamsa**, validated by comparing results with **JHora** for consistency.
+* **Chart Calculation**
+  Uses **Swiss Ephemeris ** with **Lahiri Ayanamsa**, 
 
 * **North Indian Chart Rendering**
   Custom React‑based SVG logic to display a **North Indian (Diamond‑style) Kundli**.
@@ -35,7 +35,7 @@ This project should be viewed as:
   * Vimshottari Dasha timeline and converts them into **readable natural‑language insights**.
 
 * **Vimshottari Dasha (Algorithmic)**
-  Programmatic calculation of the 120‑year dasha cycle down to **Antardasha** level.
+  Programmatic calculation of the dasha cycle down to **Antardasha** level.
 
 * **Geo‑Location Handling**
   City‑based location lookup with automatic latitude, longitude, and timezone resolution.
@@ -49,7 +49,6 @@ This project should be viewed as:
 * Python
 * FastAPI
 * Swiss Ephemeris (PySwissEph)
-* Pydantic
 
 ### Frontend
 
@@ -63,21 +62,12 @@ This project should be viewed as:
 
 ---
 
-## 📖 Development Philosophy
-
-> **"Built with Gemini"**
-
-* No hard‑coded astrological opinions
-* No manual rule‑writing
-* Logic and structure generated via **AI‑assisted coding**
-
-
-## ⚡ Installation Guide
+## Installation Guide
 
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/VedicJyotish.git
+git clone https://github.com/Dhruvil-8/VedicJyotish.git
 cd VedicJyotish
 ```
 
@@ -129,7 +119,7 @@ npm run dev
 
 ---
 
-## 🔮 Future Roadmap
+## Future Roadmap
 
 * Improve calculation coverage (more Vargas, Yogas)
 * PDF report export
@@ -139,7 +129,7 @@ npm run dev
 
 ---
 
-## 📌 Disclaimer
+## Disclaimer
 
 This software is for **educational and experimental purposes**.
 

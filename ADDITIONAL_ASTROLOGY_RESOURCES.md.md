@@ -1,5 +1,5 @@
 Note: This document is provided for informational purposes only.
-The project independently performs all astrological calculations.
+The project independently performs all basic astrological calculations.
 This guide explains an optional external method for personal exploration.
 
 
@@ -94,7 +94,12 @@ You can also use other LLMs if you prefer.
 
 Start with a basic prompt like:
 
-> **"Analyze the above data from a Vedic Jyotish perspective and create a detailed report."**
+> **1)"Analyze the above data from a Vedic Jyotish perspective and create a detailed report."**
+
+> **2)"The data contains many details. First, list what aspects can be analyzed from this data."**
+
+Then copy-paste each item one by one and ask for detailed analysis of each point.
+This produces deeper and clearer results than asking everything in one prompt.
 
 Once the initial report is generated, you can continue with:
 
@@ -103,11 +108,6 @@ Once the initial report is generated, you can continue with:
 * Health tendencies
 * Dasha / timing analysis
 * Spiritual inclination
-* Strengths, weaknesses, and remedies
-
-Example follow-up:
-
-> "Explain my career path during Mahadasha–Antardasha periods."
 
 ---
 
