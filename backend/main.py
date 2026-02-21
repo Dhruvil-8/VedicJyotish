@@ -213,6 +213,15 @@ tf = TimezoneFinder()
 
 # --- Endpoints ---
 
+@app.get("/")
+def read_root():
+    return {
+        "message": "Vedic Astrology API is running",
+        "status": "online",
+        "documentation": "https://github.com/Dhruvil-8/VedicJyotish",
+        "environment": ENVIRONMENT
+    }
+
 @lru_cache(maxsize=256)
 def _geocode_query(query: str):
     """Cached geocoding to avoid repeated API calls for same city."""
