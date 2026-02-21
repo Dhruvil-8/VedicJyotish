@@ -1,11 +1,11 @@
-#  Vedic Astro AI
+# Vedic Astro AI
 
 > **Ancient Calculations. AI‑Assisted Interpretation.**
 > A full‑stack experimental Vedic Astrology application that focuses on **chart calculation** and **AI‑generated explanations**.
 
 ---
 
-## ⚠️ Important Note (Honest Scope)
+## Important Note (Honest Scope)
 
 This project is **not built by an astrologer**.
 
@@ -34,7 +34,7 @@ This project should be viewed as:
   * Houses and signs
   * Vimshottari Dasha timeline and converts them into **readable natural‑language insights**.
 
-* **Vimshottari Dasha (Algorithmic)**
+* **Vimshottari Dasha**
   Programmatic calculation of the dasha cycle down to **Antardasha** level.
 
 * **Geo‑Location Handling**
@@ -42,7 +42,7 @@ This project should be viewed as:
 
 ---
 
-## 🛠 Tech Stack
+## Tech Stack
 
 ### Backend
 

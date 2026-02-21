@@ -1,119 +1,165 @@
 "use client";
+
 import React from "react";
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
 
-// Helper: Convert Sign Name to Number (Aries=1, etc.)
-const SIGN_MAP: Record<string, number> = {
-  Aries: 1, Taurus: 2, Gemini: 3, Cancer: 4, Leo: 5, Virgo: 6,
-  Libra: 7, Scorpio: 8, Sagittarius: 9, Capricorn: 10, Aquarius: 11, Pisces: 12
-};
-
-// Geometry: Center points for text in a 100x100 SVG
-// House 1 is top center. House 2 is top left, etc. (Counter-Clockwise)
-const HOUSE_CENTERS = [
-  { x: 50, y: 20 },  // H1 (Top Diamond)
-  { x: 20, y: 10 },  // H2 (Top Left Triangle)
-  { x: 10, y: 20 },  // H3 (Left Triangle)
-  { x: 25, y: 50 },  // H4 (Left Diamond)
-  { x: 10, y: 80 },  // H5 (Bottom Left Triangle)
-  { x: 20, y: 90 },  // H6 (Bottom Triangle)
-  { x: 50, y: 80 },  // H7 (Bottom Diamond)
-  { x: 80, y: 90 },  // H8 (Bottom Right Triangle)
-  { x: 90, y: 80 },  // H9 (Right Triangle)
-  { x: 75, y: 50 },  // H10 (Right Diamond)
-  { x: 90, y: 20 },  // H11 (Top Right Triangle)
-  { x: 80, y: 10 },  // H12 (Top Triangle)
-];
-
-// Corner positions for Sign Numbers
-const SIGN_POSITIONS = [
-  { x: 50, y: 45, anchor: "middle" }, // H1
-  { x: 45, y: 5, anchor: "start" },   // H2
-  { x: 5, y: 45, anchor: "start" },   // H3
-  { x: 50, y: 55, anchor: "middle" }, // H4
-  { x: 5, y: 55, anchor: "start" },   // H5
-  { x: 45, y: 95, anchor: "start" },  // H6
-  { x: 50, y: 65, anchor: "middle" }, // H7
-  { x: 55, y: 95, anchor: "end" },    // H8
-  { x: 95, y: 55, anchor: "end" },    // H9
-  { x: 50, y: 45, anchor: "middle" }, // H10 (Logic shift needed for H10/H4 usually)
-  // Actually, standard representation:
-  // H1 Num: Bottom of H1 diamond
-  // H2 Num: Top corner
-];
-
-interface ChartProps {
-  data: any; // The full chart_data object
-  ascendantSign: string;
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
 }
 
-export default function NorthIndianChart({ data, ascendantSign }: ChartProps) {
-  const ascNum = SIGN_MAP[ascendantSign] || 1;
+interface Planet {
+  name: string;
+  sign: string;
+  house: number;
+  strength: string;
+  nature: string;
+  nakshatra: string;
+  full_degree: number;
+  deg_in_sign: number;
+  retrograde?: boolean;
+  combust?: boolean;
+}
 
-  // Helper to render planets
-  const renderPlanets = (houseIndex: number) => {
-    const houseKey = `house_${houseIndex + 1}`;
-    const houseData = data[houseKey];
-    if (!houseData || !houseData.planets) return null;
+interface HouseData {
+  sign: string;
+  planets: string[] | Planet[]; // Flexible to handle both D1 and D9 data structures
+}
 
-    return houseData.planets.map((p: any, i: number) => (
-      <tspan key={p.name} x={HOUSE_CENTERS[houseIndex].x} dy={i === 0 ? 0 : 12} className="text-[8px] fill-white font-semibold">
-        {p.name.substring(0, 2)}
-      </tspan>
-    ));
+interface NorthIndianChartProps {
+  chartData: Record<string, HouseData>;
+  ascendantSign: string;
+  title?: string;
+  className?: string;
+}
+
+const HOUSE_CENTERS = [
+  { x: 50, y: 33 }, // H1
+  { x: 25, y: 17 }, // H2
+  { x: 17, y: 25 }, // H3
+  { x: 33, y: 50 }, // H4
+  { x: 17, y: 75 }, // H5
+  { x: 25, y: 83 }, // H6
+  { x: 50, y: 67 }, // H7
+  { x: 75, y: 83 }, // H8
+  { x: 83, y: 75 }, // H9
+  { x: 67, y: 50 }, // H10
+  { x: 83, y: 25 }, // H11
+  { x: 75, y: 17 }, // H12
+];
+
+const SIGN_POSITIONS = [
+  { x: 50, y: 20 }, // H1  — top center (tip of top triangle)
+  { x: 25, y: 8 },  // H2  — top-left corner area
+  { x: 8, y: 25 },  // H3  — left-top corner area
+  { x: 20, y: 50 }, // H4  — left center
+  { x: 8, y: 75 },  // H5  — left-bottom corner area
+  { x: 25, y: 92 }, // H6  — bottom-left corner area
+  { x: 50, y: 80 }, // H7  — bottom center (tip of bottom triangle)
+  { x: 75, y: 92 }, // H8  — bottom-right corner area
+  { x: 92, y: 75 }, // H9  — right-bottom corner area
+  { x: 80, y: 50 }, // H10 — right center
+  { x: 92, y: 25 }, // H11 — right-top corner area
+  { x: 75, y: 8 },  // H12 — top-right corner area
+];
+
+const SIGN_SYMBOLS = [
+  "♈", "♉", "♊", "♋", "♌", "♍", "♎", "♏", "♐", "♑", "♒", "♓"
+];
+
+const PLANET_SYMBOLS: Record<string, string> = {
+  Sun: "Su", Moon: "Mo", Mars: "Ma", Mercury: "Me",
+  Jupiter: "Ju", Venus: "Ve", Saturn: "Sa", Rahu: "Ra", Ketu: "Ke"
+};
+
+export default function NorthIndianChart({
+  chartData,
+  ascendantSign,
+  title,
+  className,
+}: NorthIndianChartProps) {
+  const getSignIndex = (signName: string) => {
+    const signs = ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"];
+    const idx = signs.indexOf(signName);
+    return idx === -1 ? 0 : idx;
   };
 
-  // Helper to get Sign Number for a House
-  const getSignNum = (houseIdx: number) => {
-    return ((ascNum + houseIdx - 1) % 12) + 1;
+  const ascIdx = getSignIndex(ascendantSign);
+
+  const renderPlanets = (houseIndex: number) => {
+    const houseKey = `house_${houseIndex + 1}`;
+    const house = chartData[houseKey];
+    if (!house) return null;
+
+    const planets = house.planets || [];
+
+    return planets.map((p, i) => {
+      const name = typeof p === "string" ? p : p.name;
+      const isRetro = typeof p === "object" && p.retrograde;
+      const isCombust = typeof p === "object" && p.combust;
+
+      const symbol = PLANET_SYMBOLS[name] || name;
+      return (
+        <tspan key={i} className={cn(
+          "font-bold",
+          isRetro && "fill-amber-400 underline",
+          isCombust && "fill-red-400 opacity-80"
+        )}>
+          {symbol}{i < planets.length - 1 ? " " : ""}
+        </tspan>
+      );
+    });
   };
 
   return (
-    <div className="w-full max-w-md aspect-square bg-slate-900 border border-slate-700 relative select-none">
-      <svg viewBox="0 0 100 100" className="w-full h-full stroke-amber-500/50 stroke-1">
-        {/* --- The Grid --- */}
-        {/* Outer Box */}
-        <rect x="0" y="0" width="100" height="100" fill="none" className="stroke-2" />
-        
-        {/* Diagonals (X shape) */}
-        <line x1="0" y1="0" x2="100" y2="100" />
-        <line x1="100" y1="0" x2="0" y2="100" />
-        
-        {/* Diamond (Inner Square) */}
-        <line x1="50" y1="0" x2="0" y2="50" />
-        <line x1="0" y1="50" x2="50" y2="100" />
-        <line x1="50" y1="100" x2="100" y2="50" />
-        <line x1="100" y1="50" x2="50" y2="0" />
+    <div className={cn("flex flex-col items-center gap-3", className)}>
+      {title && <h3 className="text-primary text-lg font-heading gold-glow">{title}</h3>}
+      <div className="w-full max-w-full aspect-square glass-parchment vedic-border relative select-none mx-auto overflow-hidden">
+        <svg
+          viewBox="0 0 100 100"
+          className="w-full h-full stroke-primary/40 stroke-[0.5]"
+          preserveAspectRatio="xMidYMid meet"
+          aria-label="North Indian Kundli Chart"
+          role="img"
+        >
+          {/* Main Grid */}
+          <line x1="0" y1="0" x2="100" y2="100" strokeWidth="0.8" />
+          <line x1="100" y1="0" x2="0" y2="100" strokeWidth="0.8" />
+          <line x1="50" y1="0" x2="0" y2="50" strokeWidth="0.8" />
+          <line x1="0" y1="50" x2="50" y2="100" strokeWidth="0.8" />
+          <line x1="50" y1="100" x2="100" y2="50" strokeWidth="0.8" />
+          <line x1="100" y1="50" x2="50" y2="0" strokeWidth="0.8" />
 
-        {/* --- House Data Rendering --- */}
-        {HOUSE_CENTERS.map((pos, i) => (
-          <text 
-            key={i} 
-            x={pos.x} 
-            y={pos.y} 
-            textAnchor="middle" 
-            dominantBaseline="middle"
-            className="fill-white"
-          >
-            {renderPlanets(i)}
-          </text>
-        ))}
+          <rect x="0" y="0" width="100" height="100" fill="none" strokeWidth="1" className="stroke-primary/20" />
 
-        {/* --- Sign Numbers (Small Gray Numbers) --- */}
-        {/* Hardcoded positions for Sign Numbers in N. Indian Chart */}
-        <text x="50" y="42" textAnchor="middle" className="text-[6px] fill-slate-500">{getSignNum(0)}</text> {/* H1 */}
-        <text x="15" y="8" textAnchor="middle" className="text-[6px] fill-slate-500">{getSignNum(1)}</text>  {/* H2 */}
-        <text x="5" y="18" textAnchor="middle" className="text-[6px] fill-slate-500">{getSignNum(2)}</text>   {/* H3 */}
-        <text x="40" y="52" textAnchor="middle" className="text-[6px] fill-slate-500">{getSignNum(3)}</text>  {/* H4 */}
-        <text x="5" y="85" textAnchor="middle" className="text-[6px] fill-slate-500">{getSignNum(4)}</text>   {/* H5 */}
-        <text x="15" y="95" textAnchor="middle" className="text-[6px] fill-slate-500">{getSignNum(5)}</text>  {/* H6 */}
-        <text x="50" y="60" textAnchor="middle" className="text-[6px] fill-slate-500">{getSignNum(6)}</text>  {/* H7 */}
-        <text x="85" y="95" textAnchor="middle" className="text-[6px] fill-slate-500">{getSignNum(7)}</text>  {/* H8 */}
-        <text x="95" y="85" textAnchor="middle" className="text-[6px] fill-slate-500">{getSignNum(8)}</text>  {/* H9 */}
-        <text x="60" y="52" textAnchor="middle" className="text-[6px] fill-slate-500">{getSignNum(9)}</text>  {/* H10 */}
-        <text x="95" y="18" textAnchor="middle" className="text-[6px] fill-slate-500">{getSignNum(10)}</text> {/* H11 */}
-        <text x="85" y="8" textAnchor="middle" className="text-[6px] fill-slate-500">{getSignNum(11)}</text>  {/* H12 */}
+          {/* Planet Names and Sign Symbols */}
+          {HOUSE_CENTERS.map((pos, i) => (
+            <React.Fragment key={i}>
+              {/* House Sign Symbol */}
+              <text
+                x={SIGN_POSITIONS[i].x}
+                y={SIGN_POSITIONS[i].y}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                className="fill-primary font-heading text-[5px] font-bold"
+              >
+                {SIGN_SYMBOLS[(ascIdx + i) % 12]}
+              </text>
 
-      </svg>
+              {/* Planets */}
+              <text
+                x={pos.x}
+                y={pos.y}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                className="fill-foreground font-serif text-[5px] font-semibold"
+              >
+                {renderPlanets(i)}
+              </text>
+            </React.Fragment>
+          ))}
+        </svg>
+      </div>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-const API_BASE = "http://127.0.0.1:8000";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
 export const searchCity = async (query: string) => {
   if (query.length < 3) return [];
@@ -24,5 +24,15 @@ export const chatWithAstrologer = async (payload: any) => {
     body: JSON.stringify(payload),
   });
   if (!res.ok) throw new Error("Chat failed");
+  return res.json();
+};
+
+export const generateReport = async (payload: any) => {
+  const res = await fetch(`${API_BASE}/generate_report`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error("Report generation failed");
   return res.json();
 };

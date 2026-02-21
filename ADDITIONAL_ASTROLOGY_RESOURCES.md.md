@@ -122,6 +122,16 @@ Once the initial report is generated, you can continue with:
 
 ---
 
+## Tip: Verify Your Chart Accuracy
+
+To check whether your chart data is correct, ask the model to analyze **past life events** from the same chart. If major past events align reasonably well, your birth data and chart are likely reliable.
+
+> 💡 Example prompt: *"Based on this chart, what major life events would have occurred between 2005–2023?"*
+
+If the predictions don't match your actual experience, double-check your **birth time** — even a few minutes can shift the Ascendant and house placements significantly.
+
+---
+
 ## Summary Workflow
 
 1. Download **JHora**
