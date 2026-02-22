@@ -240,7 +240,7 @@ export default function Home() {
                 <div className="space-y-8 relative">
                   <div className="text-center space-y-2">
                     <h2 className="text-2xl font-heading text-primary">Enter Birth Details</h2>
-                    <p className="text-muted-foreground font-serif italic text-sm">For accurate planetary positions and destiny analysis</p>
+
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -255,7 +255,7 @@ export default function Home() {
                     </div>
                     <div className="space-y-2">
                       <label className="flex items-center gap-2 text-xs font-heading text-secondary tracking-widest uppercase">
-                        <Clock className="w-3.5 h-3.5" /> Time (HH:MM)
+                        <Clock className="w-3.5 h-3.5" /> Time (HH:MM, 24h)
                       </label>
                       <input
                         type="text" value={time} onChange={(e) => setTime(e.target.value)}
@@ -266,13 +266,13 @@ export default function Home() {
 
                   <div className="space-y-2 relative">
                     <label className="flex items-center gap-2 text-xs font-heading text-secondary tracking-widest uppercase">
-                      <MapPin className="w-3.5 h-3.5" /> Birth City
+                      <MapPin className="w-3.5 h-3.5" /> Birth Place
                     </label>
                     <div className="relative">
                       <input
                         type="text" value={cityInput}
                         onChange={(e) => { setCityInput(e.target.value); setSelectedCity(null); }}
-                        placeholder="e.g. Mumbai, New York..."
+                        placeholder="e.g. Ahmedabad, Gujarat, India"
                         className="w-full bg-muted/30 border border-border/50 rounded-lg p-3 pl-10 font-serif focus:border-primary focus:ring-1 focus:ring-primary/50 outline-none transition-all"
                       />
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -410,7 +410,7 @@ export default function Home() {
                         <button
                           onClick={() => {
                             const header = `Vedic Astro AI — Chat History\nGenerated: ${new Date().toLocaleString()}\n${'═'.repeat(50)}\n\n`;
-                            const content = chatHistory.map(m => `[${m.role === 'user' ? 'You' : 'Guru'}]:\n${m.text}\n`).join('\n---\n\n');
+                            const content = chatHistory.map(m => `[${m.role === 'user' ? 'You' : 'Ved'}]:\n${m.text}\n`).join('\n---\n\n');
                             const blob = new Blob([header + content], { type: 'text/plain' });
                             const url = URL.createObjectURL(blob);
                             const a = document.createElement('a');
@@ -428,7 +428,7 @@ export default function Home() {
 
                     <div className="flex-1 overflow-y-auto p-4 space-y-4 scroll-thin">
                       <div className="flex gap-3">
-                        <div className="w-8 h-8 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-[10px] text-primary font-heading flex-shrink-0">Guru</div>
+                        <div className="w-8 h-8 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-[10px] text-primary font-heading flex-shrink-0">Ved</div>
                         <div className="bg-muted/40 p-3 rounded-xl rounded-tl-none font-serif text-sm">
                           Humble greetings. I have studied your {chartData.ascendant.sign} chart. How may I guide you through the cosmic threads today?
                         </div>
@@ -440,7 +440,7 @@ export default function Home() {
                           className={`flex gap-3 ${msg.role === "user" ? "flex-row-reverse" : ""}`}
                         >
                           <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-heading flex-shrink-0 ${msg.role === "user" ? "bg-secondary/20 text-secondary border border-secondary/30" : "bg-primary/20 text-primary border border-primary/30"}`}>
-                            {msg.role === "user" ? "Ym" : "Guru"}
+                            {msg.role === "user" ? "You" : "Ved"}
                           </div>
                           <div className={`p-3 rounded-xl max-w-[85%] font-serif text-sm ${msg.role === "user" ? "bg-secondary/10 text-secondary rounded-tr-none border border-secondary/10" : "bg-muted/40 rounded-tl-none text-foreground/90"}`}>
                             <div className="markdown-chat">
@@ -495,7 +495,7 @@ export default function Home() {
                     <Wand2 className="w-12 h-12 text-primary/40 mx-auto mb-4" />
                     <h3 className="text-2xl font-heading text-primary gold-glow mb-4">Deep Cosmic Analysis</h3>
                     <p className="max-w-md mx-auto text-muted-foreground font-serif italic mb-8 px-4">
-                      Generate a comprehensive AI-powered report analyzing your personality, career path, relationship compatibility, and future trends.
+                      Generate a comprehensive AI-powered report.
                     </p>
                     <button
                       onClick={handleGenerateReport}
