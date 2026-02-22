@@ -404,13 +404,13 @@ export default function Home() {
                   <div className="glass-parchment rounded-2xl overflow-hidden flex flex-col h-[600px] shadow-2xl border-primary/20">
                     <div className="p-4 bg-primary/10 border-b border-primary/20 flex items-center justify-between">
                       <h4 className="font-heading text-primary flex items-center gap-2">
-                        <MessageSquare className="w-4 h-4" /> Ask the Ved
+                        <MessageSquare className="w-4 h-4" /> Ask the Rishi
                       </h4>
                       {chatHistory.length > 0 && (
                         <button
                           onClick={() => {
                             const header = `Vedic Astro AI — Chat History\nGenerated: ${new Date().toLocaleString()}\n${'═'.repeat(50)}\n\n`;
-                            const content = chatHistory.map(m => `[${m.role === 'user' ? 'You' : 'Ved'}]:\n${m.text}\n`).join('\n---\n\n');
+                            const content = chatHistory.map(m => `[${m.role === 'user' ? 'You' : 'Rishi'}]:\n${m.text}\n`).join('\n---\n\n');
                             const blob = new Blob([header + content], { type: 'text/plain' });
                             const url = URL.createObjectURL(blob);
                             const a = document.createElement('a');
@@ -428,7 +428,7 @@ export default function Home() {
 
                     <div className="flex-1 overflow-y-auto p-4 space-y-4 scroll-thin">
                       <div className="flex gap-3">
-                        <div className="w-8 h-8 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-[10px] text-primary font-heading flex-shrink-0">Ved</div>
+                        <div className="w-8 h-8 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-[10px] text-primary font-heading flex-shrink-0">Rishi</div>
                         <div className="bg-muted/40 p-3 rounded-xl rounded-tl-none font-serif text-sm">
                           Humble greetings. I have studied your {chartData.ascendant.sign} chart. How may I guide you through the cosmic threads today?
                         </div>
@@ -440,7 +440,7 @@ export default function Home() {
                           className={`flex gap-3 ${msg.role === "user" ? "flex-row-reverse" : ""}`}
                         >
                           <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-heading flex-shrink-0 ${msg.role === "user" ? "bg-secondary/20 text-secondary border border-secondary/30" : "bg-primary/20 text-primary border border-primary/30"}`}>
-                            {msg.role === "user" ? "You" : "Ved"}
+                            {msg.role === "user" ? "You" : "Rishi"}
                           </div>
                           <div className={`p-3 rounded-xl max-w-[85%] font-serif text-sm ${msg.role === "user" ? "bg-secondary/10 text-secondary rounded-tr-none border border-secondary/10" : "bg-muted/40 rounded-tl-none text-foreground/90"}`}>
                             <div className="markdown-chat">
