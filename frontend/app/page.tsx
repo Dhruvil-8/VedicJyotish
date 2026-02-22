@@ -272,7 +272,7 @@ export default function Home() {
                       <input
                         type="text" value={cityInput}
                         onChange={(e) => { setCityInput(e.target.value); setSelectedCity(null); }}
-                        placeholder="e.g. Ahmedabad, Gujarat, India"
+                        placeholder="e.g. Mumbai, Maharashtra, India"
                         className="w-full bg-muted/30 border border-border/50 rounded-lg p-3 pl-10 font-serif focus:border-primary focus:ring-1 focus:ring-primary/50 outline-none transition-all"
                       />
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
