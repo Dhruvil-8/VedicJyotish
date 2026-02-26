@@ -46,6 +46,9 @@ export const metadata: Metadata = {
     title: "Vedic Jyotish | AI Astrologer",
     description: "Vedic astrological analysis powered by high-precision ephemeris and artificial intelligence.",
   },
+  verification: {
+    google: "ZO8CbfiTC918jMAEQDniTu_WAVtlUTm1Yioa4Jb-xhc",
+  },
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
