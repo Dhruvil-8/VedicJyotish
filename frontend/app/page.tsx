@@ -169,6 +169,9 @@ export default function Home() {
                   <strong className="text-primary">This is an AI-generated astrological analysis tool</strong> currently in <strong>testing/beta</strong> phase. All interpretations are produced by AI and should be treated as <strong>educational and informational content only</strong>.
                 </p>
                 <p>
+                  Your birth details are processed via the <strong>Google Gemini AI Studio (Free Tier)</strong> to generate your report. <strong>We do not store or track any of your personal information.</strong>
+                </p>
+                <p>
                   This tool does <strong>not</strong> replace a qualified Vedic astrologer. Do not make critical life decisions based solely on this analysis.
                 </p>
                 <p>

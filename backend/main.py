@@ -25,11 +25,14 @@ from timezonefinder import TimezoneFinder
 
 # --- 1. Configuration & Logging ---
 load_dotenv()
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+ENVIRONMENT = os.getenv("ENVIRONMENT", "production") # Default to production to hide openapi on HF spaces
 IS_PRODUCTION = ENVIRONMENT == "production"
+
+if IS_PRODUCTION:
+    logging.basicConfig(level=logging.WARNING) # Reduce noise and secure PII on public spaces like Hugging Face
+else:
+    logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GEMINI_MODEL_NAME = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
@@ -697,7 +700,7 @@ FORMATTING RULES:
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Report Error: {e}\n{traceback.format_exc()}")
+        logger.error(f"Report Error: {e.__class__.__name__}: Failed to generate response.") # Safe log, no raw tracebacks with user data
         raise HTTPException(status_code=500, detail="Report generation failed. Please try again." if IS_PRODUCTION else str(e))
 
 @app.post("/chat_with_astrologer")
@@ -776,7 +779,7 @@ async def chat_with_astrologer_endpoint(request: Request, chat_request: ChatRequ
         return {"response": response.text}
 
     except Exception as e:
-        logger.error(f"Chat Error: {e}")
+        logger.error(f"Chat Error: {e.__class__.__name__}: Failed to converse with Astrologer.") # Safe log, no raw tracebacks
         raise HTTPException(status_code=500, detail="Chat service encountered an error. Please try again." if IS_PRODUCTION else str(e))
 
 if __name__ == "__main__":
