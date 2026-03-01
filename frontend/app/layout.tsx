@@ -28,7 +28,9 @@ export const metadata: Metadata = {
     "online Kundali",
     "AI astrologer",
     "Navagraha",
-    "karmic map"
+    "karmic map",
+    "free astrology report",
+    "free jyotish"
   ],
   alternates: {
     canonical: "/",
