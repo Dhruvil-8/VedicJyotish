@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Search, Sparkles, MessageSquare, Send, Calendar, Clock, MapPin, ChevronRight, Moon, Star, Wand2, AlertTriangle, ExternalLink } from "lucide-react";
+import { Search, Sparkles, MessageSquare, Send, Calendar, Clock, MapPin, ChevronRight, Moon, Star, Wand2, AlertTriangle, ExternalLink, CheckCircle, XCircle, Info } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
-import { searchCity, calculateChart, chatWithAstrologer, generateReport } from "./components/ui/api";
+import { searchCity, calculateChart, chatWithAstrologerStream, generateReportStream } from "./components/ui/api";
 import NorthIndianChart from "./components/NorthIndianChart";
 import PlanetaryTable from "./components/PlanetaryTable";
 import DashaTimeline from "./components/DashaTimeline";
@@ -41,6 +41,13 @@ export default function Home() {
   const MAX_QUESTIONS = 3;
   const userQuestionCount = chatHistory.filter((m) => m.role === "user").length;
   const chatLimitReached = userQuestionCount >= MAX_QUESTIONS;
+
+  // Toast notification
+  const [toast, setToast] = useState<{ message: string; type: "error" | "success" | "info" } | null>(null);
+  const showToast = (message: string, type: "error" | "success" | "info" = "error") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4500);
+  };
 
   // --- Handlers ---
 
@@ -83,7 +90,9 @@ export default function Home() {
   };
 
   const handleCalculate = async () => {
-    if (!selectedCity) return alert("Please select a city from the list");
+    if (!selectedCity) return showToast("Please select a city from the dropdown list.", "info");
+    if (!date) return showToast("Please enter a valid birth date (DD/MM/YYYY).", "info");
+    if (!time) return showToast("Please enter a valid birth time (HH:MM).", "info");
     setLoading(true);
     try {
       const payload = {
@@ -97,8 +106,17 @@ export default function Home() {
       setChartData(data);
       setStep("dashboard");
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    } catch (e) {
-      alert("Error calculating chart. Check inputs.");
+    } catch (e: any) {
+      // Parse backend 422 validation error detail if available
+      let msg = "Error calculating chart. Please check your inputs and try again.";
+      try {
+        const body = await e?.response?.json?.();
+        if (body?.detail) {
+          const detail = Array.isArray(body.detail) ? body.detail[0]?.msg : body.detail;
+          if (detail) msg = detail.replace(/^Value error, /i, "");
+        }
+      } catch { }
+      showToast(msg);
     } finally {
       setLoading(false);
     }
@@ -107,12 +125,19 @@ export default function Home() {
   const handleGenerateReport = async () => {
     if (!chartData || reportLoading) return;
     setReportLoading(true);
+    setAiReport("");
     try {
-      const res = await generateReport(chartData);
-      setAiReport(res.report);
+      await generateReportStream(
+        chartData,
+        (chunk) => setAiReport((prev) => prev + chunk),
+        () => setReportLoading(false),
+        (err) => {
+          showToast(err || "Celestial alignment failed. Please try again.");
+          setReportLoading(false);
+        }
+      );
     } catch (e) {
-      alert("Celestial alignment failed. Please try again.");
-    } finally {
+      showToast("Celestial alignment failed. Please try again.");
       setReportLoading(false);
     }
   };
@@ -126,16 +151,31 @@ export default function Home() {
     setUserQuestion("");
     setChatLoading(true);
 
+    // Add a placeholder model message that we'll stream into
+    const streamingMsg = { role: "model", text: "" };
+    const historyWithPlaceholder = [...updatedHistory, streamingMsg];
+    setChatHistory(historyWithPlaceholder);
+
     try {
-      const res = await chatWithAstrologer({
-        chart_data: chartData,
-        question: newMsg.text,
-        history: updatedHistory,
-      });
-      setChatHistory([...updatedHistory, { role: "model", text: res.response }]);
+      let accumulated = "";
+      await chatWithAstrologerStream(
+        {
+          chart_data: chartData,
+          question: newMsg.text,
+          history: updatedHistory,
+        },
+        (chunk) => {
+          accumulated += chunk;
+          setChatHistory([...updatedHistory, { role: "model", text: accumulated }]);
+        },
+        () => setChatLoading(false),
+        (err) => {
+          setChatHistory([...updatedHistory, { role: "model", text: err || "Error connecting to the stars." }]);
+          setChatLoading(false);
+        }
+      );
     } catch (e) {
       setChatHistory([...updatedHistory, { role: "model", text: "Error connecting to the stars." }]);
-    } finally {
       setChatLoading(false);
     }
   };
@@ -144,6 +184,32 @@ export default function Home() {
 
   return (
     <main className="min-h-screen selection:bg-primary/30 selection:text-primary">
+
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            key="toast"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className={`fixed top-4 left-1/2 -translate-x-1/2 z-[100] flex items-start gap-3 px-5 py-4 rounded-2xl shadow-xl max-w-sm w-[90vw] backdrop-blur-md border ${toast.type === "error"
+              ? "bg-red-50/90 border-red-200 text-red-800"
+              : toast.type === "success"
+                ? "bg-emerald-50/90 border-emerald-200 text-emerald-800"
+                : "bg-amber-50/90 border-amber-200 text-amber-800"
+              }`}
+          >
+            <div className="flex-shrink-0 mt-0.5">
+              {toast.type === "error" && <XCircle className="w-5 h-5 text-red-500" />}
+              {toast.type === "success" && <CheckCircle className="w-5 h-5 text-emerald-500" />}
+              {toast.type === "info" && <Info className="w-5 h-5 text-amber-500" />}
+            </div>
+            <p className="font-serif text-sm leading-relaxed">{toast.message}</p>
+            <button onClick={() => setToast(null)} className="ml-auto flex-shrink-0 opacity-50 hover:opacity-100 transition-opacity text-lg leading-none">&times;</button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Disclaimer Modal */}
       <AnimatePresence>
@@ -169,7 +235,7 @@ export default function Home() {
                   <strong className="text-primary">This is an AI-generated astrological analysis tool</strong> currently in <strong>testing/beta</strong> phase. All interpretations are produced by AI and should be treated as <strong>educational and informational content only</strong>.
                 </p>
                 <p>
-                  Your birth details are processed via the <strong>Google Gemini AI Studio (Free Tier)</strong> to generate your report. <strong>We do not store or track any of your personal information.</strong>
+                  Your birth details are processed via the <strong>Google Gemini AI Studio (Free Tier)</strong> to generate your report.
                 </p>
                 <p>
                   This tool does <strong>not</strong> replace a qualified Vedic astrologer. Do not make critical life decisions based solely on this analysis.
@@ -185,7 +251,7 @@ export default function Home() {
                   </a>
                   .
                 </p>
-                <div className="flex items-center gap-2 pt-2 text-xs text-muted-foreground">
+                <div className="flex items-center gap-2 pt-2 text-xs text-muted-foreground flex-wrap">
                   <span>Open Source:</span>
                   <a
                     href="https://github.com/Dhruvil-8/VedicJyotish"
@@ -193,6 +259,14 @@ export default function Home() {
                     className="text-primary underline underline-offset-2 hover:text-primary/80 inline-flex items-center gap-1"
                   >
                     github.com/Dhruvil-8/VedicJyotish <ExternalLink className="w-3 h-3" />
+                  </a>
+                  <span className="mx-1 opacity-40">•</span>
+                  <a
+                    href="/privacy"
+                    target="_blank" rel="noopener noreferrer"
+                    className="text-primary underline underline-offset-2 hover:text-primary/80 inline-flex items-center gap-1"
+                  >
+                    Privacy Policy <ExternalLink className="w-3 h-3" />
                   </a>
                 </div>
               </div>
@@ -493,7 +567,7 @@ export default function Home() {
 
               {/* AI Report Section - Full Width */}
               <div className="pt-8 border-t border-primary/10">
-                {!aiReport ? (
+                {!aiReport && !reportLoading ? (
                   <div className="text-center py-12 glass-parchment rounded-3xl border-dashed border-2 border-primary/30">
                     <Wand2 className="w-12 h-12 text-primary/40 mx-auto mb-4" />
                     <h3 className="text-2xl font-heading text-primary gold-glow mb-4">Deep Cosmic Analysis</h3>
@@ -502,18 +576,13 @@ export default function Home() {
                     </p>
                     <button
                       onClick={handleGenerateReport}
-                      disabled={reportLoading}
                       className="px-8 py-4 bg-primary text-primary-foreground font-heading rounded-full shadow-lg hover:shadow-primary/30 transition-all flex items-center gap-3 mx-auto"
                     >
-                      {reportLoading ? (
-                        <>Aligning Multiverses... <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" /></>
-                      ) : (
-                        <>Generate Full Report <Sparkles className="w-5 h-5" /></>
-                      )}
+                      Generate Full Report <Sparkles className="w-5 h-5" />
                     </button>
                   </div>
                 ) : (
-                  <ReportSection report={aiReport} />
+                  <ReportSection report={aiReport} isStreaming={reportLoading} />
                 )}
               </div>
             </motion.div>
@@ -521,8 +590,10 @@ export default function Home() {
         </AnimatePresence>
 
         {/* Footer */}
-        <footer className="mt-24 text-center text-muted-foreground font-serif tracking-widest text-[10px] uppercase opacity-50">
-          <p>© 2025 Vedic Jyotish • Powered by High-Precision Ephemeris & Gemini</p>
+        <footer className="mt-24 text-center text-muted-foreground font-serif tracking-widest text-[10px] uppercase opacity-50 space-x-3">
+          <span>© 2025 Vedic Jyotish • Powered by High-Precision Ephemeris &amp; Gemini</span>
+          <span>•</span>
+          <a href="/privacy" className="underline underline-offset-2 hover:opacity-80 transition-opacity">Privacy Policy</a>
         </footer>
       </div>
     </main>

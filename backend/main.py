@@ -5,14 +5,18 @@ from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 from functools import lru_cache
 import pytz
-import google.generativeai as genai
+from google import genai
 from dotenv import load_dotenv
 import logging
 import traceback
+import warnings
+
+# Suppress harmless Pydantic warnings from the new google-genai SDK
+warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from pydantic import BaseModel, field_validator, Field
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -20,8 +24,12 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 # --- Auto-Location ---
-from geopy.geocoders import Nominatim
+import json
+import urllib.request
+import urllib.parse
 from timezonefinder import TimezoneFinder
+
+PHOTON_API = "https://photon.komoot.io/api/"
 
 # --- 1. Configuration & Logging ---
 load_dotenv()
@@ -48,17 +56,12 @@ if not GEMINI_API_KEY:
     logger.error("CRITICAL: GEMINI_API_KEY is missing.")
 else:
     try:
-        genai.configure(api_key=GEMINI_API_KEY)
-        # Attempt to load model
-        candidate_model = genai.GenerativeModel(GEMINI_MODEL_NAME)
+        # Initialize the new Google GenAI client
+        client = genai.Client(api_key=GEMINI_API_KEY)
         
-        # Health Check: Dry run a simple token count or generation
         try:
-            # We just check if the object is valid, genuine connection happens on first call
-            # or we can try a dummy generate if we want to be 100% sure:
-            # candidate_model.generate_content("ping") 
-            ai_model = candidate_model
-            logger.info(f"Gemini Model '{GEMINI_MODEL_NAME}' loaded successfully.")
+            ai_model = client
+            logger.info(f"Gemini Client loaded successfully for model '{GEMINI_MODEL_NAME}'.")
         except Exception as health_e:
             logger.warning(f"Gemini loaded but failed health check: {health_e}")
             ai_model = None
@@ -66,8 +69,14 @@ else:
     except Exception as e:
         logger.error(f"Failed to configure Gemini: {e}")
 
-# --- 3. FastAPI Setup ---
-limiter = Limiter(key_func=get_remote_address)
+# --- 3. FastAPI Setup & Proxy Rate Limiting ---
+def get_real_ip(request: Request) -> str:
+    """Extracts real user IP behind HF Spaces reverse proxy."""
+    if "x-forwarded-for" in request.headers:
+        return request.headers["x-forwarded-for"].split(",")[0].strip()
+    return request.client.host if request.client else "127.0.0.1"
+
+limiter = Limiter(key_func=get_real_ip)
 app = FastAPI(
     title="Vedic Astrology API",
     version="19.0.0",
@@ -184,23 +193,39 @@ class BirthData(BaseModel):
 
     @field_validator('date')
     def validate_date(cls, v):
-        v = v.replace('-', '/')
+        v = v.strip().replace('-', '/').replace('.', '/')
         try:
-            datetime.strptime(v, "%d/%m/%Y")
+            dt = datetime.strptime(v, "%d/%m/%Y")
+            if not (1900 <= dt.year <= datetime.now().year):
+                raise ValueError(f"Birth year must be between 1900 and {datetime.now().year}")
+            if dt > datetime.now():
+                raise ValueError("Birth date cannot be in the future")
             return v
-        except ValueError:
-            raise ValueError("Invalid date format. Please use DD/MM/YYYY")
+        except ValueError as e:
+            if "does not match" in str(e) or "unconverted" in str(e):
+                raise ValueError("Invalid date. Please use DD/MM/YYYY format (e.g. 08/09/2000)")
+            raise
 
     @field_validator('time')
     def validate_time(cls, v):
+        import re
+        # Normalize common typos: semicolons, dots, spaces, commas, hyphens → colon
+        cleaned = re.sub(r'[;., \-]', ':', v.strip())
+        # Remove any characters that are not digits or colons
+        cleaned = re.sub(r'[^0-9:]', '', cleaned)
+        parts = cleaned.split(':')
         try:
-            parts = v.split(':')
-            if len(parts) == 2:
-                h, m = int(parts[0]), int(parts[1])
-                return f"{h:02d}:{m:02d}"
-            return v
-        except:
-            raise ValueError("Invalid time format. Please use HH:MM")
+            if len(parts) < 2:
+                raise ValueError()
+            h, m = int(parts[0]), int(parts[1])
+            if not (0 <= h <= 23 and 0 <= m <= 59):
+                raise ValueError()
+            return f"{h:02d}:{m:02d}"
+        except (ValueError, IndexError):
+            raise ValueError(
+                f"Invalid time '{v}'. Please use HH:MM format (e.g. 17:45). "
+                "Make sure to use a colon (:) and not a semicolon (;)"
+            )
 
 class ChatMessage(BaseModel):
     role: str
@@ -211,7 +236,6 @@ class ChatRequest(BaseModel):
     question: str = Field(..., min_length=1, max_length=500)
     history: List[ChatMessage] = []
 
-geolocator = Nominatim(user_agent="vedic_astro_secure", timeout=10)
 tf = TimezoneFinder()
 
 # --- Endpoints ---
@@ -227,10 +251,30 @@ def read_root():
 
 @lru_cache(maxsize=256)
 def _geocode_query(query: str):
-    """Cached geocoding to avoid repeated API calls for same city."""
-    locations = geolocator.geocode(query, exactly_one=False, limit=5, language='en')
-    if not locations: return []
-    return [{"name": loc.address, "lat": loc.latitude, "lon": loc.longitude} for loc in locations]
+    """Cached geocoding via Photon API — fast, no rate limits, no geopy dependency."""
+    try:
+        params = urllib.parse.urlencode({"q": query, "limit": 5, "lang": "en"})
+        url = f"{PHOTON_API}?{params}"
+        req = urllib.request.Request(url, headers={"User-Agent": "VedicJyotish/1.0"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+        results = []
+        for f in data.get("features", []):
+            props = f.get("properties", {})
+            coords = f.get("geometry", {}).get("coordinates", [0, 0])
+            parts = [props.get("name", "")]
+            if props.get("city") and props.get("city") != props.get("name"):
+                parts.append(props["city"])
+            if props.get("state"):
+                parts.append(props["state"])
+            if props.get("country"):
+                parts.append(props["country"])
+            address = ", ".join(p for p in parts if p)
+            results.append({"name": address, "lat": coords[1], "lon": coords[0]})
+        return results
+    except Exception as e:
+        logger.error(f"Photon Geo Error: {e}")
+        return []
 
 @app.get("/search_city")
 @limiter.limit("15/minute")
@@ -246,9 +290,11 @@ def get_location_and_jd(data: BirthData):
 
     if data.city and (not lat or lat == 0 or not lon or lon == 0):
         try:
-            loc = geolocator.geocode(data.city)
-            if not loc: raise HTTPException(404, detail="City not found")
-            lat, lon = loc.latitude, loc.longitude
+            results = _geocode_query(data.city)
+            if not results: raise HTTPException(404, detail="City not found")
+            lat, lon = results[0]["lat"], results[0]["lon"]
+        except HTTPException:
+            raise
         except Exception:
             raise HTTPException(500, detail="Geocoding unavailable")
     
@@ -263,7 +309,10 @@ def get_location_and_jd(data: BirthData):
         except:
             tz = 0.0
 
-    t_str = data.time + ":00"
+    # Final defensive sanitization before strptime (belt-and-suspenders)
+    import re
+    safe_time = re.sub(r'[^0-9:]', ':', data.time)  # replace any non-digit/colon char
+    t_str = safe_time + ":00"
     dt_str = f"{data.date} {t_str}"
     local_dt = datetime.strptime(dt_str, "%d/%m/%Y %H:%M:%S")
     utc_dt = local_dt - timedelta(hours=tz)
@@ -692,15 +741,28 @@ FORMATTING RULES:
 - Target 800-1200 words (1-2 full pages)
 - Be specific and reference actual house numbers, signs, and degrees from the data
 - Do NOT suggest any remedies, mantras, gemstones, or rituals — this is a pure analysis report
-- End the report with: "*This report is AI-generated based on traditional Vedic Astrology calculations. It is for educational and informational purposes only and should not be treated as professional astrological advice.*"
+- End the report with this affirmative closing note on its own line: "*This report is crafted using Vedic Jyotish principles and AI-powered. Use these insights as a guiding light on your journey — for deeper personalised guidance, consult a qualified Jyotishi.*"
 """
 
-        response = ai_model.generate_content(report_prompt)
-        return {"report": response.text, "chart_summary": chart_result}
+        async def stream_report():
+            try:
+                response = ai_model.models.generate_content_stream(
+                    model=GEMINI_MODEL_NAME,
+                    contents=report_prompt,
+                )
+                for chunk in response:
+                    if chunk.text:
+                        yield f"data: {json.dumps({'text': chunk.text})}\n\n"
+                yield f"data: {json.dumps({'done': True})}\n\n"
+            except Exception as e:
+                logger.error(f"Report Stream Error: {e.__class__.__name__}: Failed to generate response.")
+                yield f"data: {json.dumps({'error': 'Report generation failed. Please try again.'})}\n\n"
+
+        return StreamingResponse(stream_report(), media_type="text/event-stream")
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Report Error: {e.__class__.__name__}: Failed to generate response.") # Safe log, no raw tracebacks with user data
+        logger.error(f"Report Error: {e.__class__.__name__}: Failed to generate response.")
         raise HTTPException(status_code=500, detail="Report generation failed. Please try again." if IS_PRODUCTION else str(e))
 
 @app.post("/chat_with_astrologer")
@@ -770,16 +832,27 @@ async def chat_with_astrologer_endpoint(request: Request, chat_request: ChatRequ
         3. Keep paragraphs short.
         """
         
-        gemini_history = [{"role": "user", "parts": [f"{sys_prompt}\n\n{chart_context}"]}, {"role": "model", "parts": ["Understood."]}]
+        gemini_history = [{"role": "user", "parts": [{"text": f"{sys_prompt}\n\n{chart_context}"}]}, {"role": "model", "parts": [{"text": "Understood."}]}]
         for msg in chat_request.history:
-            gemini_history.append({"role": "user" if msg.role == "user" else "model", "parts": [msg.text]})
+            gemini_history.append({"role": "user" if msg.role == "user" else "model", "parts": [{"text": msg.text}]})
 
-        chat = ai_model.start_chat(history=gemini_history)
-        response = chat.send_message(chat_request.question)
-        return {"response": response.text}
+        chat = ai_model.chats.create(model=GEMINI_MODEL_NAME, history=gemini_history)
+
+        async def stream_chat():
+            try:
+                response = chat.send_message_stream(chat_request.question)
+                for chunk in response:
+                    if chunk.text:
+                        yield f"data: {json.dumps({'text': chunk.text})}\n\n"
+                yield f"data: {json.dumps({'done': True})}\n\n"
+            except Exception as e:
+                logger.error(f"Chat Stream Error: {e.__class__.__name__}: Failed to converse with Astrologer.")
+                yield f"data: {json.dumps({'error': 'Chat service encountered an error. Please try again.'})}\n\n"
+
+        return StreamingResponse(stream_chat(), media_type="text/event-stream")
 
     except Exception as e:
-        logger.error(f"Chat Error: {e.__class__.__name__}: Failed to converse with Astrologer.") # Safe log, no raw tracebacks
+        logger.error(f"Chat Error: {e.__class__.__name__}: Failed to converse with Astrologer.")
         raise HTTPException(status_code=500, detail="Chat service encountered an error. Please try again." if IS_PRODUCTION else str(e))
 
 if __name__ == "__main__":

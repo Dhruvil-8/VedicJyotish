@@ -3,8 +3,7 @@ uvicorn==0.27.0
 pyswisseph==2.10.3.2
 pytz==2023.3.post1
 pydantic==2.6.0
-geopy==2.4.1
 timezonefinder==6.5.0
-google-generativeai
+google-genai
 python-dotenv==1.0.1
 slowapi==0.1.9

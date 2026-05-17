@@ -6,10 +6,11 @@ import ReactMarkdown from "react-markdown";
 
 interface ReportSectionProps {
     report: string;
+    isStreaming?: boolean;
     onDownload?: () => void;
 }
 
-export default function ReportSection({ report, onDownload }: ReportSectionProps) {
+export default function ReportSection({ report, isStreaming, onDownload }: ReportSectionProps) {
     const handleDownload = () => {
         const reportEl = document.getElementById("vedic-report-content");
         if (!reportEl) return;
@@ -160,12 +161,14 @@ export default function ReportSection({ report, onDownload }: ReportSectionProps
                         </div>
                         <h2 className="text-2xl font-heading text-primary gold-glow">Celestial Insight Report</h2>
                     </div>
-                    <button
-                        onClick={handleDownload}
-                        className="group flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground font-heading text-xs rounded-full hover:shadow-lg hover:scale-105 active:scale-95 transition-all"
-                    >
-                        <Printer className="w-4 h-4" /> Download PDF
-                    </button>
+                    {!isStreaming && report && (
+                        <button
+                            onClick={handleDownload}
+                            className="group flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground font-heading text-xs rounded-full hover:shadow-lg hover:scale-105 active:scale-95 transition-all"
+                        >
+                            <Printer className="w-4 h-4" /> Download PDF
+                        </button>
+                    )}
                 </div>
 
                 {/* Report Content */}
@@ -177,6 +180,9 @@ export default function ReportSection({ report, onDownload }: ReportSectionProps
 
                     <div className="relative z-10 markdown-report">
                         <ReactMarkdown>{report}</ReactMarkdown>
+                        {isStreaming && (
+                            <span className="inline-block w-2 h-5 bg-primary/60 animate-pulse ml-1 align-middle rounded-sm" />
+                        )}
                     </div>
 
                     {/* Footer Decoration */}

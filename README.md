@@ -122,8 +122,6 @@ npm run dev
 ## Future Roadmap
 
 * Improve calculation coverage (more Vargas, Yogas)
-* PDF report export
-* User authentication
 * Multi‑language support
 * More interactive and educational UI
 
