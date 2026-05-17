@@ -248,12 +248,6 @@ export default function Home() {
                       <strong>Gemini Processing:</strong> Computed chart parameters are sent to Google Gemini (Free Tier) to write your readings.
                     </p>
                   </div>
-                  <div className="flex gap-3">
-                    <span className="text-amber-500 text-base mt-0.5">✦</span>
-                    <p>
-                      <strong>Zero Storage:</strong> We do not operate a database or store any personal details. Data clears when you close your tab.
-                    </p>
-                  </div>
                 </div>
 
                 <p className="text-xs text-muted-foreground pt-1 border-t border-amber-900/10">
