@@ -180,10 +180,10 @@ export default function PrivacyPolicyPage() {
                 risk="Low"
               />
               <ThirdParty
-                name="Cloudflare Pages (Cloudflare Inc., USA)"
-                role="Hosting and delivering the frontend web application globally via CDN."
-                data="Standard CDN data: IP address, browser type, and page request logs for performance and security. No astrological data is processed by Cloudflare."
-                policy="https://www.cloudflare.com/privacypolicy/"
+                name="Vercel (Vercel Inc., USA)"
+                role="Hosting and delivering the frontend web application globally via serverless CDN."
+                data="Standard CDN telemetry: IP address, browser type, and request headers for performance and security. No astrological data is processed by Vercel."
+                policy="https://vercel.com/legal/privacy-policy"
                 risk="Low"
               />
             </div>
