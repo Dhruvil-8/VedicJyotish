@@ -15,7 +15,7 @@ const libreBaskerville = Libre_Baskerville({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://vedic-jyotish.pages.dev"),
+  metadataBase: new URL("https://vedic-jyotish.vercel.app"),
   title: "Vedic Jyotish | Ancient Wisdom, Modern Insight",
   description: "Personalized Vedic Jyotish analysis powered by AI and precise astronomical calculations. Rooted in the deep traditions of Sanatan Dharma.",
   keywords: [
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Vedic Jyotish | AI-Powered Birth Chart Analysis",
     description: "Discover your karmic path with precise astronomical calculations and AI analysis based on ancient Vedic astrology (Jyotisha) traditions.",
-    url: "https://vedic-jyotish.pages.dev",
+    url: "https://vedic-jyotish.vercel.app",
     siteName: "Vedic Jyotish",
     locale: "en_US",
     type: "website",

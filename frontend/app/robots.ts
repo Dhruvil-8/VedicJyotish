@@ -6,6 +6,6 @@ export default function robots(): MetadataRoute.Robots {
             userAgent: '*',
             allow: '/',
         },
-        sitemap: 'https://vedic-jyotish.pages.dev/sitemap.xml',
+        sitemap: 'https://vedic-jyotish.vercel.app/sitemap.xml',
     }
 }
