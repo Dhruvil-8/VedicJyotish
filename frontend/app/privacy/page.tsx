@@ -227,7 +227,7 @@ export default function PrivacyPolicyPage() {
               ))}
             </div>
             <p className="mt-4">
-              To exercise any of these rights, please contact us at the email address listed in Section 9. Given that we retain no persistent database, most requests can be fulfilled by simply closing your browser session.
+              To exercise any of these rights, please contact us via the GitHub Issues link listed in Section 9. Given that we retain no persistent database, most requests can be fulfilled by simply closing your browser session.
             </p>
           </Section>
 
