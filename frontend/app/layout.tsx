@@ -1,3 +1,4 @@
+// Vedic Jyotish — Ancient Wisdom, AI Insight (Secure Web & Mobile Architecture)
 import type { Metadata, Viewport } from "next";
 import { Cinzel, Libre_Baskerville } from "next/font/google";
 import "./globals.css";
