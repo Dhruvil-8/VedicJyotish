@@ -5,6 +5,13 @@
 
 ---
 
+🚀 **Live Project Links**
+* 🌐 **Web Application**: [vedic-jyotish.vercel.app](https://vedic-jyotish.vercel.app/)
+* 🤖 **Telegram Chatbot**: [t.me/VedicJyotish_bot](https://t.me/VedicJyotish_bot)
+* 📱 **Android Application**: [Download APK / Releases](https://github.com/Dhruvil-8/VedicJyotish/releases)
+
+---
+
 ## Important Note (Honest Scope)
 
 This project is **not built by an astrologer**.
