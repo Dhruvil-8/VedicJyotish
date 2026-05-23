@@ -2,8 +2,11 @@ import os
 import logging
 import json
 import httpx
+import asyncio
 from datetime import datetime
 from dotenv import load_dotenv
+from fastapi import FastAPI
+import uvicorn
 
 # We use the python-telegram-bot library
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -350,10 +353,46 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return ConversationHandler.END
 
 
+# Create a dummy FastAPI application to satisfy Render's health checks
+app = FastAPI(title="Telegram Astrologer Webhook Interface")
+
+@app.get("/")
+def health_check():
+    return {"status": "healthy", "service": "Vedic Astrology Telegram Bot"}
+
+# We will declare application globally or load it inside startup
+bot_app = None
+
+async def run_bot_in_background():
+    global bot_app
+    if bot_app:
+        print("🤖 Telegram Astrology Bot is polling now...", flush=True)
+        # We must initialize and start the application manually since we run in the background
+        await bot_app.initialize()
+        await bot_app.start()
+        # This will run polling non-blocking
+        await bot_app.updater.start_polling(allowed_updates=Update.ALL_TYPES)
+        while True:
+            await asyncio.sleep(3600)
+
+@app.on_event("startup")
+async def on_startup():
+    asyncio.create_task(run_bot_in_background())
+
+@app.on_event("shutdown")
+async def on_shutdown():
+    global bot_app
+    if bot_app:
+        print("🤖 Stopping Telegram Bot...", flush=True)
+        await bot_app.updater.stop()
+        await bot_app.stop()
+        await bot_app.shutdown()
+
 # ----------------- Bot Initialization -----------------
 
 def main():
     """Starts the bot."""
+    global bot_app
     if not TELEGRAM_BOT_TOKEN:
         print("Telegram Bot Token is not configured. Standing by...")
         # Don't crash start.py if bot token is missing, just block and keep the process alive
@@ -366,7 +405,7 @@ def main():
     request_config = HTTPXRequest(connect_timeout=30.0, read_timeout=30.0)
 
     # Build the Application
-    application = Application.builder().token(TELEGRAM_BOT_TOKEN).request(request_config).build()
+    bot_app = Application.builder().token(TELEGRAM_BOT_TOKEN).request(request_config).build()
 
     conv_handler = ConversationHandler(
         entry_points=[
@@ -385,12 +424,14 @@ def main():
         ],
     )
 
-    application.add_handler(conv_handler)
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CallbackQueryHandler(button_click, pattern="^btn_"))
+    bot_app.add_handler(conv_handler)
+    bot_app.add_handler(CommandHandler("start", start))
+    bot_app.add_handler(CallbackQueryHandler(button_click, pattern="^btn_"))
 
-    print("🤖 Telegram Astrology Bot is starting...")
-    application.run_polling(allowed_updates=Update.ALL_TYPES)
+    # Render injects the port it wants us to listen to inside the PORT env variable
+    port = int(os.getenv("PORT", "8000"))
+    print(f"⚡ Starting dummy FastAPI web server on port {port} for Render...", flush=True)
+    uvicorn.run(app, host="0.0.0.0", port=port)
 
 if __name__ == "__main__":
     import time
