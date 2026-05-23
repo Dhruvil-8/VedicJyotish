@@ -19,6 +19,6 @@ This Hugging Face Space hosts the high-performance FastAPI backend for the **Ved
 * **AI engine:** Google Gemini Pro (`google-genai`)
 
 ## Technical Setup
-This backend processes birth dates, coordinates, and charts locally using Swiss Ephemeris, then streams real-time AI interpretations to the Cloudflare-hosted frontend via Server-Sent Events (SSE).
+This backend processes birth dates, coordinates, and charts locally using Swiss Ephemeris, then streams real-time AI interpretations to the frontend via Server-Sent Events (SSE).
 
 *For the complete codebase and frontend interface, visit [GitHub: Dhruvil-8/VedicJyotish](https://github.com/Dhruvil-8/VedicJyotish).*

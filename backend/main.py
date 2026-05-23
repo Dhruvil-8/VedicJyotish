@@ -236,6 +236,36 @@ class ChatRequest(BaseModel):
     question: str = Field(..., min_length=1, max_length=500)
     history: List[ChatMessage] = []
 
+SENSITIVE_CHART_KEYS = {
+    "date",
+    "time",
+    "birth_date",
+    "birth_time",
+    "date_of_birth",
+    "time_of_birth",
+    "dob",
+    "location",
+    "city",
+    "lat",
+    "lon",
+    "latitude",
+    "longitude",
+    "timezone",
+    "tz",
+}
+
+def sanitize_chart_for_ai(value: Any) -> Any:
+    """Keep AI prompts on computed chart data, not raw birth/place inputs."""
+    if isinstance(value, dict):
+        return {
+            key: sanitize_chart_for_ai(nested_value)
+            for key, nested_value in value.items()
+            if key.lower() not in SENSITIVE_CHART_KEYS
+        }
+    if isinstance(value, list):
+        return [sanitize_chart_for_ai(item) for item in value]
+    return value
+
 tf = TimezoneFinder()
 
 # --- Endpoints ---
@@ -617,7 +647,7 @@ async def generate_report_endpoint(request: Request, data: Dict[str, Any]):
         raise HTTPException(status_code=503, detail="AI Service is currently unavailable.")
     try:
         # data already contains the computed chart results from the frontend
-        chart_result = data
+        chart_result = sanitize_chart_for_ai(data)
 
         # --- Build comprehensive chart context for LLM ---
         # Find current Maha Dasha and Antardasha
@@ -776,7 +806,7 @@ async def chat_with_astrologer_endpoint(request: Request, chat_request: ChatRequ
             return { "response": "I apologize, the question limit has been reached." }
 
         # Build comprehensive context for chat
-        cd = chat_request.chart_data
+        cd = sanitize_chart_for_ai(chat_request.chart_data)
         
         # Find current dasha/antardasha
         current_maha = cd.get('vimshottari_timeline', [{}])[0].get('lord', 'Unknown')

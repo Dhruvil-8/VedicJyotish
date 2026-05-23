@@ -1,5 +1,39 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
+const SENSITIVE_CHART_KEYS = new Set([
+  "date",
+  "time",
+  "birth_date",
+  "birth_time",
+  "date_of_birth",
+  "time_of_birth",
+  "dob",
+  "location",
+  "city",
+  "lat",
+  "lon",
+  "latitude",
+  "longitude",
+  "timezone",
+  "tz",
+]);
+
+export const sanitizeChartForAi = (value: any): any => {
+  if (Array.isArray(value)) {
+    return value.map(sanitizeChartForAi);
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([key]) => !SENSITIVE_CHART_KEYS.has(key.toLowerCase()))
+        .map(([key, nestedValue]) => [key, sanitizeChartForAi(nestedValue)])
+    );
+  }
+
+  return value;
+};
+
 export const searchCity = async (query: string) => {
   if (query.length < 3) return [];
   const res = await fetch(`${API_BASE}/search_city?query=${query}`);
@@ -67,10 +101,11 @@ export const generateReportStream = async (
   onDone?: () => void,
   onError?: (msg: string) => void
 ) => {
+  const aiPayload = sanitizeChartForAi(payload);
   const res = await fetch(`${API_BASE}/generate_report`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(aiPayload),
   });
   if (!res.ok) throw new Error("Report generation failed");
   await readSSEStream(res, onChunk, onDone, onError);
@@ -82,10 +117,14 @@ export const chatWithAstrologerStream = async (
   onDone?: () => void,
   onError?: (msg: string) => void
 ) => {
+  const aiPayload = {
+    ...payload,
+    chart_data: sanitizeChartForAi(payload?.chart_data),
+  };
   const res = await fetch(`${API_BASE}/chat_with_astrologer`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(aiPayload),
   });
   if (!res.ok) throw new Error("Chat failed");
   await readSSEStream(res, onChunk, onDone, onError);

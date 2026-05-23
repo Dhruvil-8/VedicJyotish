@@ -1,7 +1,7 @@
-# Vedic Astro AI
+# Vedic Jyotish AI
 
 > **Ancient Calculations. AI‑Assisted Interpretation.**
-> A full‑stack experimental Vedic Astrology application that focuses on **chart calculation** and **AI‑generated explanations**.
+> A full‑stack Vedic Astrology application that focuses on **chart calculation** and **AI‑generated explanations**.
 
 ---
 
@@ -77,7 +77,7 @@ cd VedicJyotish
 
 ```bash
 cd backend
-python -m venv venv
+py -3.11 -m venv venv
 
 # Windows
 .\venv\Scripts\activate
