@@ -59,3 +59,6 @@ Thumbs.db
 
 # Hugging Face deployment clone
 hf-deploy/
+
+# Compiled installation binaries
+*.apk
