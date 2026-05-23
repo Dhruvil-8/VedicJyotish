@@ -209,9 +209,23 @@ async def handle_city(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
     context.user_data["lat"] = lat
     context.user_data["lon"] = lon
 
+    date = context.user_data.get("date")
+    time = context.user_data.get("time")
+
+    logger.info(f"Diagnostic - handle_city: date={date}, time={time}, user_data_keys={list(context.user_data.keys())}")
+
+    if not date or not time:
+        await update.message.reply_text(
+            "⚠️ *Session Expired or Reset.*\n"
+            "It seems your birth details session has expired or the server recently restarted.\n"
+            "Please start over by typing /start!",
+            parse_mode="Markdown"
+        )
+        return ConversationHandler.END
+
     birth_data = {
-        "date": context.user_data["date"],
-        "time": context.user_data["time"],
+        "date": date,
+        "time": time,
         "city": resolved_name,
         "lat": lat,
         "lon": lon
