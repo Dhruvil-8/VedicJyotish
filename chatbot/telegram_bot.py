@@ -358,6 +358,8 @@ app = FastAPI(title="Telegram Astrologer Webhook Interface")
 
 @app.get("/")
 def health_check():
+    if not TELEGRAM_BOT_TOKEN:
+        return {"status": "warning", "message": "API web server is running, but TELEGRAM_BOT_TOKEN is missing in environment secrets!"}
     return {"status": "healthy", "service": "Vedic Astrology Telegram Bot"}
 
 # We will declare application globally or load it inside startup
@@ -365,6 +367,10 @@ bot_app = None
 
 async def run_bot_in_background():
     global bot_app
+    if not TELEGRAM_BOT_TOKEN:
+        print("⚠️ WARNING: TELEGRAM_BOT_TOKEN is not configured. Telegram bot polling is disabled.", flush=True)
+        return
+
     if bot_app:
         print("🤖 Telegram Astrology Bot is polling now...", flush=True)
         # We must initialize and start the application manually since we run in the background
@@ -393,40 +399,38 @@ async def on_shutdown():
 def main():
     """Starts the bot."""
     global bot_app
-    if not TELEGRAM_BOT_TOKEN:
-        print("Telegram Bot Token is not configured. Standing by...")
-        # Don't crash start.py if bot token is missing, just block and keep the process alive
-        while True:
-            time.sleep(3600)
+    
+    if TELEGRAM_BOT_TOKEN:
+        from telegram.request import HTTPXRequest
 
-    from telegram.request import HTTPXRequest
+        # Set generous 30-second timeouts to handle cloud container network latency on boot
+        request_config = HTTPXRequest(connect_timeout=30.0, read_timeout=30.0)
 
-    # Set generous 30-second timeouts to handle cloud container network latency on boot
-    request_config = HTTPXRequest(connect_timeout=30.0, read_timeout=30.0)
+        # Build the Application
+        bot_app = Application.builder().token(TELEGRAM_BOT_TOKEN).request(request_config).build()
 
-    # Build the Application
-    bot_app = Application.builder().token(TELEGRAM_BOT_TOKEN).request(request_config).build()
+        conv_handler = ConversationHandler(
+            entry_points=[
+                CommandHandler("start", start),
+                CallbackQueryHandler(button_click, pattern="^btn_")
+            ],
+            states={
+                STATE_DATE: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_date)],
+                STATE_TIME: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_time)],
+                STATE_CITY: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_city)],
+                STATE_CHAT: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_chat_question)],
+            },
+            fallbacks=[
+                CommandHandler("exit", cancel),
+                CommandHandler("cancel", cancel)
+            ],
+        )
 
-    conv_handler = ConversationHandler(
-        entry_points=[
-            CommandHandler("start", start),
-            CallbackQueryHandler(button_click, pattern="^btn_")
-        ],
-        states={
-            STATE_DATE: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_date)],
-            STATE_TIME: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_time)],
-            STATE_CITY: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_city)],
-            STATE_CHAT: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_chat_question)],
-        },
-        fallbacks=[
-            CommandHandler("exit", cancel),
-            CommandHandler("cancel", cancel)
-        ],
-    )
-
-    bot_app.add_handler(conv_handler)
-    bot_app.add_handler(CommandHandler("start", start))
-    bot_app.add_handler(CallbackQueryHandler(button_click, pattern="^btn_"))
+        bot_app.add_handler(conv_handler)
+        bot_app.add_handler(CommandHandler("start", start))
+        bot_app.add_handler(CallbackQueryHandler(button_click, pattern="^btn_"))
+    else:
+        print("⚠️ WARNING: TELEGRAM_BOT_TOKEN is missing. Bot polling initialization skipped.", flush=True)
 
     # Render injects the port it wants us to listen to inside the PORT env variable
     port = int(os.getenv("PORT", "8000"))
