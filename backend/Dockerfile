@@ -17,5 +17,5 @@ COPY . .
 # Expose port (Hugging Face Spaces uses 7860 by default)
 EXPOSE 7860
 
-# Run both FastAPI backend and Telegram Bot using the process supervisor
-CMD ["python", "start.py"]
+# Run with multiple workers for concurrent users
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "7860", "--workers", "2", "--timeout-keep-alive", "30"]
