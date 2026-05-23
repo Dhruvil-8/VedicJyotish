@@ -5,7 +5,7 @@ import httpx
 import asyncio
 from datetime import datetime
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 import uvicorn
 
 # We use the python-telegram-bot library
@@ -374,7 +374,27 @@ app = FastAPI(title="Telegram Astrologer Webhook Interface")
 def health_check():
     if not TELEGRAM_BOT_TOKEN:
         return {"status": "warning", "message": "API web server is running, but TELEGRAM_BOT_TOKEN is missing in environment secrets!"}
-    return {"status": "healthy", "service": "Vedic Astrology Telegram Bot"}
+    render_url = os.getenv("RENDER_EXTERNAL_URL")
+    return {
+        "status": "healthy",
+        "service": "Vedic Astrology Telegram Bot",
+        "mode": "webhook" if render_url else "polling",
+        "webhook_url": f"{render_url}/telegram-webhook" if render_url else None
+    }
+
+@app.post("/telegram-webhook")
+async def telegram_webhook(request: Request):
+    global bot_app
+    if not bot_app:
+        return {"status": "error", "message": "Bot application not initialized"}
+    try:
+        data = await request.json()
+        update = Update.de_json(data, bot_app.bot)
+        await bot_app.process_update(update)
+        return {"status": "ok"}
+    except Exception as e:
+        logger.error(f"Error processing webhook update: {e}")
+        return {"status": "error", "message": str(e)}
 
 # We will declare application globally or load it inside startup
 bot_app = None
@@ -382,18 +402,29 @@ bot_app = None
 async def run_bot_in_background():
     global bot_app
     if not TELEGRAM_BOT_TOKEN:
-        print("⚠️ WARNING: TELEGRAM_BOT_TOKEN is not configured. Telegram bot polling is disabled.", flush=True)
+        print("⚠️ WARNING: TELEGRAM_BOT_TOKEN is not configured. Telegram bot polling/webhook is disabled.", flush=True)
         return
 
     if bot_app:
-        print("🤖 Telegram Astrology Bot is polling now...", flush=True)
+        render_url = os.getenv("RENDER_EXTERNAL_URL")
+        
         # We must initialize and start the application manually since we run in the background
         await bot_app.initialize()
         await bot_app.start()
-        # This will run polling non-blocking
-        await bot_app.updater.start_polling(allowed_updates=Update.ALL_TYPES)
-        while True:
-            await asyncio.sleep(3600)
+
+        if render_url:
+            webhook_url = f"{render_url}/telegram-webhook"
+            print(f"🌐 Render environment detected. Setting Telegram Webhook to: {webhook_url}", flush=True)
+            # Clear any active webhook or polling session before setting a new one
+            await bot_app.bot.delete_webhook()
+            await bot_app.bot.set_webhook(url=webhook_url, allowed_updates=Update.ALL_TYPES)
+        else:
+            print("🤖 Local environment detected. Using Telegram Polling...", flush=True)
+            await bot_app.bot.delete_webhook()
+            # This will run polling non-blocking
+            await bot_app.updater.start_polling(allowed_updates=Update.ALL_TYPES)
+            while True:
+                await asyncio.sleep(3600)
 
 @app.on_event("startup")
 async def on_startup():
@@ -404,7 +435,8 @@ async def on_shutdown():
     global bot_app
     if bot_app:
         print("🤖 Stopping Telegram Bot...", flush=True)
-        await bot_app.updater.stop()
+        if bot_app.updater and bot_app.updater.running:
+            await bot_app.updater.stop()
         await bot_app.stop()
         await bot_app.shutdown()
 
