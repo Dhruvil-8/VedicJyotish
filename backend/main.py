@@ -203,7 +203,7 @@ class BirthData(BaseModel):
             return v
         except ValueError as e:
             if "does not match" in str(e) or "unconverted" in str(e):
-                raise ValueError("Invalid date. Please use DD/MM/YYYY format (e.g. 08/09/2000)")
+                raise ValueError("Invalid date. Please use DD/MM/YYYY format")
             raise
 
     @field_validator('time')

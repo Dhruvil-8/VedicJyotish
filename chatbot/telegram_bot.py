@@ -134,7 +134,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         f"✨ *Welcome to Vedic Astrology Bot, {user.first_name}!* ✨\n\n"
         "I can compute your Vedic birth chart (Kundli), outline your Nakshatras and planetary yogas, "
         "and connect you directly to an AI Vedic Astrologer.\n\n"
-        "To get started, please tell me your **Date of Birth** in **DD/MM/YYYY** format (e.g., `08/09/2000`):",
+        "To get started, please tell me your **Date of Birth** in **DD/MM/YYYY** format:",
         parse_mode="Markdown"
     )
     context.user_data.clear()
