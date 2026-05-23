@@ -360,8 +360,13 @@ def main():
         while True:
             time.sleep(3600)
 
+    from telegram.request import HTTPXRequest
+
+    # Set generous 30-second timeouts to handle cloud container network latency on boot
+    request_config = HTTPXRequest(connect_timeout=30.0, read_timeout=30.0)
+
     # Build the Application
-    application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+    application = Application.builder().token(TELEGRAM_BOT_TOKEN).request(request_config).build()
 
     conv_handler = ConversationHandler(
         entry_points=[
