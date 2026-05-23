@@ -60,7 +60,7 @@ const ThirdParty = ({
 };
 
 export default function PrivacyPolicyPage() {
-  const lastUpdated = "17 May 2025";
+  const lastUpdated = "23 May 2026";
 
   return (
     <main className="min-h-screen selection:bg-primary/30 selection:text-primary">
@@ -134,6 +134,13 @@ export default function PrivacyPolicyPage() {
                   <p className="text-xs mt-0.5">Standard server logs may include your IP address and browser user agent. These are retained for a maximum of 7 days for security and debugging purposes only and are never linked to your astrological data.</p>
                 </div>
               </div>
+              <div className="flex gap-3 items-start">
+                <span className="mt-1 w-2 h-2 rounded-full bg-blue-500/60 flex-shrink-0" />
+                <div>
+                  <strong className="text-foreground">Telegram User Identifiers (Chatbot)</strong>
+                  <p className="text-xs mt-0.5">When using the Telegram Chatbot, Telegram provides your first name, username, and Telegram User ID to facilitate secure conversation routing. This information is processed strictly in-memory during your active chat session and is never persisted in a database on our servers.</p>
+                </div>
+              </div>
             </div>
           </Section>
 
@@ -185,6 +192,13 @@ export default function PrivacyPolicyPage() {
                 data="Standard CDN telemetry: IP address, browser type, and request headers for performance and security. No astrological data is processed by Vercel."
                 policy="https://vercel.com/legal/privacy-policy"
                 risk="Low"
+              />
+              <ThirdParty
+                name="Telegram Bot API (Telegram FZ-LLC, Dubai/UK)"
+                role="Enabling conversational access to horoscope calculations and AI astrology chats."
+                data="Your message texts, user ID, first name, and username are processed by Telegram to deliver chat updates. Telegram acts as a third-party processor for messages inside the Telegram app."
+                policy="https://telegram.org/privacy"
+                risk="Medium"
               />
             </div>
 

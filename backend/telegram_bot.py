@@ -1,0 +1,392 @@
+import os
+import logging
+import json
+import httpx
+from datetime import datetime
+from dotenv import load_dotenv
+
+# We use the python-telegram-bot library
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    MessageHandler,
+    CallbackQueryHandler,
+    ConversationHandler,
+    ContextTypes,
+    filters,
+)
+
+# Load environment variables
+load_dotenv()
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+# When running in the same Docker container, the bot can call the API locally on localhost!
+BACKEND_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:7860")
+
+# Enable logging
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+)
+logger = logging.getLogger(__name__)
+
+# Conversation states
+STATE_DATE, STATE_TIME, STATE_CITY, STATE_CHAT = range(4)
+
+# ----------------- Helper Functions -----------------
+
+async def search_city(city_query: str) -> list:
+    """Queries the backend city search endpoint."""
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(
+                f"{BACKEND_URL}/search_city", 
+                params={"query": city_query},
+                timeout=10.0
+            )
+            if response.status_code == 200:
+                return response.json()
+        except Exception as e:
+            logger.error(f"Error searching city: {e}")
+        return []
+
+async def calculate_chart(birth_data: dict) -> dict:
+    """Queries the backend chart calculation endpoint."""
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(
+                f"{BACKEND_URL}/calculate_chart",
+                json=birth_data,
+                timeout=15.0
+            )
+            if response.status_code == 200:
+                return response.json()
+        except Exception as e:
+            logger.error(f"Error calculating chart: {e}")
+        return {}
+
+async def chat_with_astrologer(chart_data: dict, question: str, history: list) -> str:
+    """Queries the backend chat endpoint and returns the AI Astrologer's answer."""
+    async with httpx.AsyncClient() as client:
+        try:
+            payload = {
+                "chart_data": chart_data,
+                "question": question,
+                "history": history
+            }
+            response_text = ""
+            async with client.stream("POST", f"{BACKEND_URL}/chat_with_astrologer", json=payload, timeout=30.0) as response:
+                if response.status_code == 200:
+                    async for line in response.aiter_lines():
+                        if line.startswith("data: "):
+                            data_str = line[6:]
+                            try:
+                                data_json = json.loads(data_str)
+                                if "text" in data_json:
+                                    response_text += data_json["text"]
+                                elif data_json.get("done"):
+                                    break
+                                elif "error" in data_json:
+                                    return f"Error: {data_json['error']}"
+                            except json.JSONDecodeError:
+                                pass
+                    return response_text
+                else:
+                    return "I'm sorry, I could not connect to the astrologer service."
+        except Exception as e:
+            logger.error(f"Error calling chat_with_astrologer: {e}")
+            return "I encountered an error trying to consult the celestial stars. Please try again."
+
+async def generate_full_report(chart_data: dict) -> str:
+    """Queries the backend report generator and aggregates the SSE stream."""
+    async with httpx.AsyncClient() as client:
+        try:
+            response_text = ""
+            async with client.stream("POST", f"{BACKEND_URL}/generate_report", json=chart_data, timeout=45.0) as response:
+                if response.status_code == 200:
+                    async for line in response.aiter_lines():
+                        if line.startswith("data: "):
+                            data_str = line[6:]
+                            try:
+                                data_json = json.loads(data_str)
+                                if "text" in data_json:
+                                    response_text += data_json["text"]
+                                elif data_json.get("done"):
+                                    break
+                                elif "error" in data_json:
+                                    return f"Error: {data_json['error']}"
+                            except json.JSONDecodeError:
+                                pass
+                    return response_text
+        except Exception as e:
+            logger.error(f"Error generating report: {e}")
+        return "Failed to generate your Vedic Astrology report. Please try again later."
+
+
+# ----------------- Command Handlers -----------------
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Starts the conversation and asks for the birth date."""
+    user = update.effective_user
+    await update.message.reply_text(
+        f"✨ *Welcome to Vedic Astrology Bot, {user.first_name}!* ✨\n\n"
+        "I can compute your Vedic birth chart (Kundli), outline your Nakshatras and planetary yogas, "
+        "and connect you directly to an AI Vedic Astrologer.\n\n"
+        "To get started, please tell me your **Date of Birth** in **DD/MM/YYYY** format (e.g., `08/09/2000`):",
+        parse_mode="Markdown"
+    )
+    context.user_data.clear()
+    return STATE_DATE
+
+async def handle_date(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Validates and stores the birth date."""
+    date_str = update.message.text.strip()
+    try:
+        dt = datetime.strptime(date_str, "%d/%m/%Y")
+        if dt.year < 1900 or dt > datetime.now():
+            raise ValueError()
+    except ValueError:
+        await update.message.reply_text(
+            "❌ *Invalid date format.*\n"
+            "Please provide a valid date between 1900 and today in **DD/MM/YYYY** format (e.g., `25/12/1995`):",
+            parse_mode="Markdown"
+        )
+        return STATE_DATE
+
+    context.user_data["date"] = date_str
+    await update.message.reply_text(
+        "🕒 Great! Now, enter your **Time of Birth** in 24-hour **HH:MM** format (e.g., `14:30`):",
+        parse_mode="Markdown"
+    )
+    return STATE_TIME
+
+async def handle_time(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Validates and stores the birth time."""
+    time_str = update.message.text.strip()
+    try:
+        parts = time_str.replace(";", ":").replace(".", ":").split(":")
+        h, m = int(parts[0]), int(parts[1])
+        if not (0 <= h <= 23 and 0 <= m <= 59):
+            raise ValueError()
+        time_str = f"{h:02d}:{m:02d}"
+    except (ValueError, IndexError):
+        await update.message.reply_text(
+            "❌ *Invalid time format.*\n"
+            "Please enter your birth time in 24-hour **HH:MM** format (e.g., `18:45`):",
+            parse_mode="Markdown"
+        )
+        return STATE_TIME
+
+    context.user_data["time"] = time_str
+    await update.message.reply_text(
+        "📍 Excellent. Finally, enter your **City/Place of Birth** (e.g., `Mumbai`):",
+        parse_mode="Markdown"
+    )
+    return STATE_CITY
+
+async def handle_city(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Resolves city using `/search_city` and calculates the chart."""
+    city_name = update.message.text.strip()
+    await update.message.reply_text("🔍 _Searching for city coordinates and drawing up the skies..._", parse_mode="Markdown")
+    
+    cities = await search_city(city_name)
+    if not cities:
+        await update.message.reply_text(
+            "❌ *City not found.*\n"
+            "Please try a different, nearby city or check the spelling:",
+            parse_mode="Markdown"
+        )
+        return STATE_CITY
+    
+    selected_city = cities[0]
+    lat = selected_city["lat"]
+    lon = selected_city["lon"]
+    resolved_name = selected_city["name"]
+    
+    context.user_data["city"] = resolved_name
+    context.user_data["lat"] = lat
+    context.user_data["lon"] = lon
+
+    birth_data = {
+        "date": context.user_data["date"],
+        "time": context.user_data["time"],
+        "city": resolved_name,
+        "lat": lat,
+        "lon": lon
+    }
+    
+    await update.message.reply_text("🪐 _Calculating planetary longitudes, Nakshatras, and D1/D9 charts..._", parse_mode="Markdown")
+    
+    chart_result = await calculate_chart(birth_data)
+    if not chart_result:
+        await update.message.reply_text(
+            "❌ *Horoscope calculation failed.*\n"
+            "Please restart using /start and verify your input details.",
+            parse_mode="Markdown"
+        )
+        return ConversationHandler.END
+
+    context.user_data["chart_data"] = chart_result
+    
+    asc = chart_result["ascendant"]["sign"]
+    moon = chart_result["moon_intelligence"]
+    yogas = chart_result.get("yogas", [])
+    yogas_text = ", ".join(f"*{y['name']}*" for y in yogas) if yogas else "None detected"
+    
+    summary_msg = (
+        "🌌 **YOUR VEDIC HOROSCOPE SUMMARY** 🌌\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        f"📍 **Birth Place:** `{resolved_name}`\n"
+        f"📅 **Date:** `{context.user_data['date']}` | **Time:** `{context.user_data['time']}`\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        f"🌅 **Ascendant (Lagna):** *{asc}*\n"
+        f"🌙 **Moon Sign (Rashi):** *{moon['sign']}*\n"
+        f"⭐ **Nakshatra:** *{moon['nakshatra']}* (Pada {moon['pada']})\n"
+        f"💎 **Nakshatra Strength:** *{moon['strength']}*\n"
+        f"🌀 **Yogas:** {yogas_text}\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        "What would you like to do next? Choose an option below:"
+    )
+    
+    keyboard = [
+        [
+            InlineKeyboardButton("📜 Generate Full Report", callback_data="btn_report"),
+            InlineKeyboardButton("💬 Chat with Astrologer", callback_data="btn_chat")
+        ],
+        [
+            InlineKeyboardButton("🔄 Start Over", callback_data="btn_restart")
+        ]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await update.message.reply_text(summary_msg, reply_markup=reply_markup, parse_mode="Markdown")
+    return ConversationHandler.END
+
+
+# ----------------- Callback Query Handlers (Button Presses) -----------------
+
+async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handles button selections from the inline keyboard."""
+    query = update.callback_query
+    await query.answer()
+    
+    action = query.data
+    chart_data = context.user_data.get("chart_data")
+    
+    if not chart_data:
+        await query.edit_message_text("⚠️ Session expired. Please start over using /start.")
+        return ConversationHandler.END
+
+    if action == "btn_report":
+        await query.edit_message_text("⌛ *Generating your detailed 1-2 page Vedic report...*\n_(This can take up to 20 seconds. Please hold on!)_", parse_mode="Markdown")
+        report = await generate_full_report(chart_data)
+        
+        if len(report) > 4000:
+            parts = [report[i:i+4000] for i in range(0, len(report), 4000)]
+            for i, part in enumerate(parts):
+                if i == 0:
+                    await query.edit_message_text(part, parse_mode="Markdown")
+                else:
+                    await query.message.reply_text(part, parse_mode="Markdown")
+        else:
+            await query.edit_message_text(report, parse_mode="Markdown")
+            
+        keyboard = [[InlineKeyboardButton("💬 Chat with AI Astrologer", callback_data="btn_chat"),
+                     InlineKeyboardButton("🔄 Restart", callback_data="btn_restart")]]
+        await query.message.reply_text("Report complete! You can now chat with the AI Astrologer about your chart:", reply_markup=InlineKeyboardMarkup(keyboard))
+        
+    elif action == "btn_chat":
+        await query.edit_message_text(
+            "🔮 **Entering Consultation Room** 🔮\n\n"
+            "You are now chatting with an expert AI Vedic Astrologer who has access to your full birth chart.\n"
+            "Ask any questions regarding your career, love, health, wealth, or current running periods.\n\n"
+            "💬 *Go ahead, ask your first question:* (Type /exit to leave the chat)",
+            parse_mode="Markdown"
+        )
+        context.user_data["chat_history"] = []
+        return STATE_CHAT
+        
+    elif action == "btn_restart":
+        await query.edit_message_text("Let's start over! Enter your **Date of Birth** (DD/MM/YYYY):", parse_mode="Markdown")
+        return STATE_DATE
+
+    return ConversationHandler.END
+
+
+# ----------------- Chat Mode Handler -----------------
+
+async def handle_chat_question(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handles persistent conversation with the AI Astrologer."""
+    question = update.message.text.strip()
+    
+    if question.lower() == "/exit":
+        await update.message.reply_text(
+            "🌌 *Thank you for consulting the Vedic Astrologer.* \n"
+            "Your chat session has ended. Use /start to draw another horoscope!",
+            parse_mode="Markdown"
+        )
+        return ConversationHandler.END
+        
+    chart_data = context.user_data.get("chart_data")
+    if not chart_data:
+        await update.message.reply_text("⚠️ Session expired. Please start over using /start.")
+        return ConversationHandler.END
+
+    history = context.user_data.get("chat_history", [])
+    await update.message.reply_chat_action(action="typing")
+    
+    astrologer_reply = await chat_with_astrologer(chart_data, question, history)
+    
+    history.append({"role": "user", "text": question})
+    history.append({"role": "model", "text": astrologer_reply})
+    context.user_data["chat_history"] = history
+    
+    await update.message.reply_text(astrologer_reply, parse_mode="Markdown")
+    await update.message.reply_text("💡 _Ask another question or type `/exit` to end consultation._", parse_mode="Markdown")
+    return STATE_CHAT
+
+async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Cancels and ends the conversation."""
+    await update.message.reply_text("Consultation closed. Type /start to begin a new calculation.")
+    return ConversationHandler.END
+
+
+# ----------------- Bot Initialization -----------------
+
+def main():
+    """Starts the bot."""
+    if not TELEGRAM_BOT_TOKEN:
+        print("Telegram Bot Token is not configured. Standing by...")
+        # Don't crash start.py if bot token is missing, just block and keep the process alive
+        while True:
+            time.sleep(3600)
+
+    # Build the Application
+    application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+
+    conv_handler = ConversationHandler(
+        entry_points=[
+            CommandHandler("start", start),
+            CallbackQueryHandler(button_click, pattern="^btn_")
+        ],
+        states={
+            STATE_DATE: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_date)],
+            STATE_TIME: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_time)],
+            STATE_CITY: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_city)],
+            STATE_CHAT: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_chat_question)],
+        },
+        fallbacks=[
+            CommandHandler("exit", cancel),
+            CommandHandler("cancel", cancel)
+        ],
+    )
+
+    application.add_handler(conv_handler)
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CallbackQueryHandler(button_click, pattern="^btn_"))
+
+    print("🤖 Telegram Astrology Bot is starting...")
+    application.run_polling(allowed_updates=Update.ALL_TYPES)
+
+if __name__ == "__main__":
+    import time
+    main()
