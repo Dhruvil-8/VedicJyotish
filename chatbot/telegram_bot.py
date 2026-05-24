@@ -349,6 +349,15 @@ async def handle_chat_question(update: Update, context: ContextTypes.DEFAULT_TYP
         return ConversationHandler.END
 
     history = context.user_data.get("chat_history", [])
+    if len(history) >= 6:
+        await update.message.reply_text(
+            "⚠️ *Limit Reached*\n"
+            "You have reached the limit of 3 questions per session in the free tier.\n"
+            "Please generate the full report for deeper analysis, or type `/exit` to close the consultation.",
+            parse_mode="Markdown"
+        )
+        return STATE_CHAT
+
     await update.message.reply_chat_action(action="typing")
     
     astrologer_reply = await chat_with_astrologer(chart_data, question, history)
