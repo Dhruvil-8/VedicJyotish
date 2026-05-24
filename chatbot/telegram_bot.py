@@ -68,7 +68,7 @@ async def calculate_chart(birth_data: dict) -> dict:
         return {}
 
 async def chat_with_astrologer(chart_data: dict, question: str, history: list) -> str:
-    """Queries the backend chat endpoint and returns the AI Astrologer's answer."""
+    """Queries the backend chat endpoint and returns AI RISHI's answer."""
     async with httpx.AsyncClient() as client:
         try:
             payload = {
@@ -133,7 +133,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text(
         f"✨ *Welcome to Vedic Astrology Bot, {user.first_name}!* ✨\n\n"
         "I can compute your Vedic birth chart (Kundli), outline your Nakshatras and planetary yogas, "
-        "and connect you directly to an AI Vedic Astrologer.\n\n"
+        "and connect you directly to AI RISHI.\n\n"
         "To get started, please tell me your **Date of Birth** in **DD/MM/YYYY** format:",
         parse_mode="Markdown"
     )
@@ -267,7 +267,7 @@ async def handle_city(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
     keyboard = [
         [
             InlineKeyboardButton("📜 Generate Full Report", callback_data="btn_report"),
-            InlineKeyboardButton("💬 Chat with Astrologer", callback_data="btn_chat")
+            InlineKeyboardButton("💬 Chat with AI RISHI", callback_data="btn_chat")
         ],
         [
             InlineKeyboardButton("🔄 Start Over", callback_data="btn_restart")
@@ -307,14 +307,14 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         else:
             await query.edit_message_text(report, parse_mode="Markdown")
             
-        keyboard = [[InlineKeyboardButton("💬 Chat with AI Astrologer", callback_data="btn_chat"),
+        keyboard = [[InlineKeyboardButton("💬 Chat with AI RISHI", callback_data="btn_chat"),
                      InlineKeyboardButton("🔄 Restart", callback_data="btn_restart")]]
-        await query.message.reply_text("Report complete! You can now chat with the AI Astrologer about your chart:", reply_markup=InlineKeyboardMarkup(keyboard))
+        await query.message.reply_text("Report complete! You can now chat with AI RISHI about your chart:", reply_markup=InlineKeyboardMarkup(keyboard))
         
     elif action == "btn_chat":
         await query.edit_message_text(
             "🔮 **Entering Consultation Room** 🔮\n\n"
-            "You are now chatting with an expert AI Vedic Astrologer who has access to your full birth chart.\n"
+            "You are now chatting with expert AI RISHI who has access to your full birth chart.\n"
             "Ask any questions regarding your career, love, health, wealth, or current running periods.\n\n"
             "💬 *Go ahead, ask your first question:* (Type /exit to leave the chat)",
             parse_mode="Markdown"
@@ -332,12 +332,12 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
 # ----------------- Chat Mode Handler -----------------
 
 async def handle_chat_question(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Handles persistent conversation with the AI Astrologer."""
+    """Handles persistent conversation with AI RISHI."""
     question = update.message.text.strip()
     
     if question.lower() == "/exit":
         await update.message.reply_text(
-            "🌌 *Thank you for consulting the Vedic Astrologer.* \n"
+            "🌌 *Thank you for consulting AI RISHI.* \n"
             "Your chat session has ended. Use /start to draw another horoscope!",
             parse_mode="Markdown"
         )
@@ -368,7 +368,7 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 
 # Create a dummy FastAPI application to satisfy Render's health checks
-app = FastAPI(title="Telegram Astrologer Webhook Interface")
+app = FastAPI(title="Telegram AI Rishi Webhook Interface")
 
 @app.get("/")
 def health_check():
