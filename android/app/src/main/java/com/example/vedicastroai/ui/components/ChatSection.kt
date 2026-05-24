@@ -18,6 +18,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.TextAlign
 import com.example.vedicastroai.data.models.ChatMessage
 import com.example.vedicastroai.theme.VedicCharcoal
 import com.example.vedicastroai.theme.VedicGold
@@ -189,51 +190,69 @@ fun ChatSection(
             )
         }
 
-        // --- INPUT BAR ---
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            OutlinedTextField(
-                value = inputValue,
-                onValueChange = onInputChange,
-                modifier = Modifier.weight(1f),
-                placeholder = {
-                    Text(
-                        text = if (questionCount >= 3) "Free tier limit reached" else "Ask Rishi a question...",
-                        fontSize = 13.sp
-                    )
-                },
-                singleLine = true,
-                enabled = !isStreaming && questionCount < 3,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White,
-                    disabledContainerColor = Color(0xFFE5E5E5),
-                    focusedBorderColor = VedicTerracotta,
-                    unfocusedBorderColor = VedicGold,
-                    cursorColor = VedicTerracotta
-                ),
-                shape = RoundedCornerShape(24.dp)
-            )
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            FloatingActionButton(
-                onClick = onSendClick,
-                containerColor = if (questionCount >= 3 || isStreaming) Color.Gray else VedicTerracotta,
-                contentColor = Color.White,
-                shape = CircleShape,
-                modifier = Modifier.size(48.dp),
-                elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp)
+        // --- INPUT BAR OR LIMIT NOTIFICATION ---
+        if (questionCount >= 3) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp, horizontal = 4.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.Send,
-                    contentDescription = "Send question",
-                    modifier = Modifier.size(18.dp)
+                Text(
+                    text = "You've reached the 3-question limit for this session. Generate the full report for deeper analysis.",
+                    color = Color.Gray,
+                    fontSize = 12.sp,
+                    fontStyle = FontStyle.Italic,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 18.sp
                 )
+            }
+        } else {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedTextField(
+                    value = inputValue,
+                    onValueChange = onInputChange,
+                    modifier = Modifier.weight(1f),
+                    placeholder = {
+                        Text(
+                            text = "Ask Rishi a question...",
+                            fontSize = 13.sp
+                        )
+                    },
+                    singleLine = true,
+                    enabled = !isStreaming,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White,
+                        disabledContainerColor = Color(0xFFE5E5E5),
+                        focusedBorderColor = VedicTerracotta,
+                        unfocusedBorderColor = VedicGold,
+                        cursorColor = VedicTerracotta
+                    ),
+                    shape = RoundedCornerShape(24.dp)
+                )
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                FloatingActionButton(
+                    onClick = onSendClick,
+                    containerColor = if (isStreaming) Color.Gray else VedicTerracotta,
+                    contentColor = Color.White,
+                    shape = CircleShape,
+                    modifier = Modifier.size(48.dp),
+                    elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Send,
+                        contentDescription = "Send question",
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
             }
         }
     }

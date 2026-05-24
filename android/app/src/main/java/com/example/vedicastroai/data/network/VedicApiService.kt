@@ -207,6 +207,30 @@ class VedicApiService(baseUrl: String) {
             }
         })
     }
+
+    private fun sanitizeChartForAi(element: JsonElement): JsonElement {
+        return when {
+            element.isJsonObject -> {
+                val obj = element.asJsonObject
+                val newObj = JsonObject()
+                for ((key, value) in obj.entrySet()) {
+                    if (key.lowercase() !in sensitiveChartKeys) {
+                        newObj.add(key, sanitizeChartForAi(value))
+                    }
+                }
+                newObj
+            }
+            element.isJsonArray -> {
+                val arr = element.asJsonArray
+                val newArr = JsonArray()
+                for (item in arr) {
+                    newArr.add(sanitizeChartForAi(item))
+                }
+                newArr
+            }
+            else -> element
+        }
+    }
 }
 
 class ApiException(val code: Int, message: String) : Exception(message)

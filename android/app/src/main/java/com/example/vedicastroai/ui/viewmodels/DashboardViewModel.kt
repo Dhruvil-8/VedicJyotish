@@ -45,9 +45,20 @@ class DashboardViewModel : ViewModel() {
     val questionCount = _questionCount.asStateFlow()
 
     fun init(chart: ChartResponse) {
-        if (isInitialized) return
+        if (isInitialized && this::chartData.isInitialized && this.chartData == chart) return
         this.chartData = chart
         isInitialized = true
+
+        // Reset report state
+        _reportText.value = ""
+        _isGeneratingReport.value = false
+        _reportError.value = null
+
+        // Reset chat state
+        _chatInput.value = ""
+        _isChatStreaming.value = false
+        _chatError.value = null
+        _questionCount.value = 0
 
         // Initialize Chat with Rishi greeting
         _chatMessages.value = listOf(
@@ -129,8 +140,8 @@ class DashboardViewModel : ViewModel() {
         viewModelScope.launch {
             var accumulatedText = ""
             try {
-                // Pass history excluding the last empty model message
-                val history = _chatMessages.value.dropLast(1)
+                // Pass history excluding the first welcome greeting and the last empty model message
+                val history = _chatMessages.value.subList(1, _chatMessages.value.size - 1)
                 ApiClient.service.chatStream(
                     chartData = chartData,
                     question = question,
