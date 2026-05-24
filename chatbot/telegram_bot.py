@@ -1,11 +1,13 @@
 import os
 import logging
 import json
+import secrets
 import httpx
 import asyncio
+from contextlib import asynccontextmanager
 from datetime import datetime
 from dotenv import load_dotenv
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 import uvicorn
 
 # We use the python-telegram-bot library
@@ -25,6 +27,11 @@ load_dotenv()
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 # When running in the same Docker container, the bot can call the API locally on localhost!
 BACKEND_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:7860")
+# A random secret generated per boot to authenticate Telegram webhook calls
+WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", secrets.token_hex(32))
+
+# Max input length for user messages to prevent abuse
+MAX_INPUT_LENGTH = 500
 
 # Enable logging
 logging.basicConfig(
@@ -36,6 +43,59 @@ logger = logging.getLogger(__name__)
 STATE_DATE, STATE_TIME, STATE_CITY, STATE_CHAT = range(4)
 
 # ----------------- Helper Functions -----------------
+
+async def safe_reply_markdown(message_or_query, text: str, is_edit: bool = False):
+    """Send a Markdown message with automatic fallback to plain text.
+    
+    Telegram's MarkdownV1 parser is strict — if the AI response contains
+    unescaped *, _, `, or [ characters, the API throws a 400 error.
+    This helper catches that and retries without parse_mode.
+    """
+    try:
+        if is_edit:
+            return await message_or_query.edit_message_text(text, parse_mode="Markdown")
+        else:
+            return await message_or_query.reply_text(text, parse_mode="Markdown")
+    except Exception:
+        # Fallback: strip Markdown and send as plain text
+        if is_edit:
+            return await message_or_query.edit_message_text(text)
+        else:
+            return await message_or_query.reply_text(text)
+
+def _split_text_safely(text: str, max_len: int = 4000) -> list:
+    """Split long text on paragraph boundaries to avoid breaking Markdown mid-tag.
+    
+    Naive splitting at a fixed character offset (e.g. text[i:i+4000]) can
+    cut through **bold** or *italic* markers, causing Telegram parse errors.
+    This splits on double-newlines (paragraph breaks) first, falling back to
+    single newlines, then hard character boundaries.
+    """
+    if len(text) <= max_len:
+        return [text]
+    
+    parts = []
+    while text:
+        if len(text) <= max_len:
+            parts.append(text)
+            break
+        
+        # Try to split at a paragraph boundary (\n\n)
+        split_pos = text.rfind("\n\n", 0, max_len)
+        if split_pos == -1:
+            # Fallback: split at a single newline
+            split_pos = text.rfind("\n", 0, max_len)
+        if split_pos == -1:
+            # Last resort: split at a space
+            split_pos = text.rfind(" ", 0, max_len)
+        if split_pos == -1:
+            # Absolute last resort: hard cut
+            split_pos = max_len
+        
+        parts.append(text[:split_pos].rstrip())
+        text = text[split_pos:].lstrip()
+    
+    return parts
 
 async def search_city(city_query: str) -> list:
     """Queries the backend city search endpoint."""
@@ -77,7 +137,7 @@ async def chat_with_astrologer(chart_data: dict, question: str, history: list) -
                 "history": history
             }
             response_text = ""
-            async with client.stream("POST", f"{BACKEND_URL}/chat_with_astrologer", json=payload, timeout=30.0) as response:
+            async with client.stream("POST", f"{BACKEND_URL}/chat_with_astrologer", json=payload, timeout=60.0) as response:
                 if response.status_code == 200:
                     async for line in response.aiter_lines():
                         if line.startswith("data: "):
@@ -89,14 +149,19 @@ async def chat_with_astrologer(chart_data: dict, question: str, history: list) -
                                 elif data_json.get("done"):
                                     break
                                 elif "error" in data_json:
-                                    return f"Error: {data_json['error']}"
+                                    return f"The astrologer service encountered an issue. Please try again."
                             except json.JSONDecodeError:
                                 pass
-                    return response_text
+                    return response_text.strip() if response_text.strip() else "I received an empty reading. Please rephrase your question and try again."
+                elif response.status_code == 429:
+                    return "The astrologer is receiving many consultations right now. Please wait a moment and try again."
                 else:
-                    return "I'm sorry, I could not connect to the astrologer service."
+                    return "I'm sorry, I could not connect to the astrologer service. Please try again later."
+        except httpx.TimeoutException:
+            logger.error("Timeout calling chat_with_astrologer")
+            return "The consultation is taking longer than expected. Please try a shorter question."
         except Exception as e:
-            logger.error(f"Error calling chat_with_astrologer: {e}")
+            logger.error(f"Error calling chat_with_astrologer: {type(e).__name__}")
             return "I encountered an error trying to consult the celestial stars. Please try again."
 
 async def generate_full_report(chart_data: dict) -> str:
@@ -104,7 +169,7 @@ async def generate_full_report(chart_data: dict) -> str:
     async with httpx.AsyncClient() as client:
         try:
             response_text = ""
-            async with client.stream("POST", f"{BACKEND_URL}/generate_report", json=chart_data, timeout=45.0) as response:
+            async with client.stream("POST", f"{BACKEND_URL}/generate_report", json=chart_data, timeout=90.0) as response:
                 if response.status_code == 200:
                     async for line in response.aiter_lines():
                         if line.startswith("data: "):
@@ -116,12 +181,15 @@ async def generate_full_report(chart_data: dict) -> str:
                                 elif data_json.get("done"):
                                     break
                                 elif "error" in data_json:
-                                    return f"Error: {data_json['error']}"
+                                    return "Report generation encountered an issue. Please try again."
                             except json.JSONDecodeError:
                                 pass
-                    return response_text
+                    return response_text.strip() if response_text.strip() else "Report came back empty. Please try again."
+        except httpx.TimeoutException:
+            logger.error("Timeout generating report")
+            return "Report generation timed out. The server might be busy — please try again in a moment."
         except Exception as e:
-            logger.error(f"Error generating report: {e}")
+            logger.error(f"Error generating report: {type(e).__name__}")
         return "Failed to generate your Vedic Astrology report. Please try again later."
 
 
@@ -189,6 +257,15 @@ async def handle_time(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
 async def handle_city(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Resolves city using `/search_city` and calculates the chart."""
     city_name = update.message.text.strip()
+
+    # Sanitize: city name should be reasonable length and not contain injection chars
+    if len(city_name) > 100 or not city_name:
+        await update.message.reply_text(
+            "❌ *Invalid city name.*\nPlease enter a valid city name (max 100 characters):",
+            parse_mode="Markdown"
+        )
+        return STATE_CITY
+
     await update.message.reply_text("🔍 _Searching for city coordinates and drawing up the skies..._", parse_mode="Markdown")
     
     cities = await search_city(city_name)
@@ -212,7 +289,7 @@ async def handle_city(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
     date = context.user_data.get("date")
     time = context.user_data.get("time")
 
-    logger.info(f"Diagnostic - handle_city: date={date}, time={time}, user_data_keys={list(context.user_data.keys())}")
+    # Validate presence of required birth data
 
     if not date or not time:
         await update.message.reply_text(
@@ -294,18 +371,19 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         return ConversationHandler.END
 
     if action == "btn_report":
-        await query.edit_message_text("⌛ *Generating your detailed 1-2 page Vedic report...*\n_(This can take up to 20 seconds. Please hold on!)_", parse_mode="Markdown")
+        await query.edit_message_text("⌛ *Generating your detailed 1-2 page Vedic report...*\n_(This can take up to 30 seconds. Please hold on!)_", parse_mode="Markdown")
         report = await generate_full_report(chart_data)
         
         if len(report) > 4000:
-            parts = [report[i:i+4000] for i in range(0, len(report), 4000)]
+            # Split on paragraph boundaries to avoid breaking Markdown mid-tag
+            parts = _split_text_safely(report, 4000)
             for i, part in enumerate(parts):
                 if i == 0:
-                    await query.edit_message_text(part, parse_mode="Markdown")
+                    await safe_reply_markdown(query, part, is_edit=True)
                 else:
-                    await query.message.reply_text(part, parse_mode="Markdown")
+                    await safe_reply_markdown(query.message, part)
         else:
-            await query.edit_message_text(report, parse_mode="Markdown")
+            await safe_reply_markdown(query, report, is_edit=True)
             
         keyboard = [[InlineKeyboardButton("💬 Chat with AI RISHI", callback_data="btn_chat"),
                      InlineKeyboardButton("🔄 Restart", callback_data="btn_restart")]]
@@ -342,6 +420,14 @@ async def handle_chat_question(update: Update, context: ContextTypes.DEFAULT_TYP
             parse_mode="Markdown"
         )
         return ConversationHandler.END
+
+    # Enforce max input length to prevent abuse
+    if len(question) > MAX_INPUT_LENGTH:
+        await update.message.reply_text(
+            f"⚠️ *Message too long.*\nPlease keep your question under {MAX_INPUT_LENGTH} characters.",
+            parse_mode="Markdown"
+        )
+        return STATE_CHAT
         
     chart_data = context.user_data.get("chart_data")
     if not chart_data:
@@ -349,7 +435,9 @@ async def handle_chat_question(update: Update, context: ContextTypes.DEFAULT_TYP
         return ConversationHandler.END
 
     history = context.user_data.get("chat_history", [])
-    if len(history) >= 6:
+    # Count only user messages (every other entry) for the question limit
+    user_question_count = sum(1 for msg in history if msg.get("role") == "user")
+    if user_question_count >= 3:
         await update.message.reply_text(
             "⚠️ *Limit Reached*\n"
             "You have reached the limit of 3 questions per session in the free tier.\n"
@@ -366,8 +454,17 @@ async def handle_chat_question(update: Update, context: ContextTypes.DEFAULT_TYP
     history.append({"role": "model", "text": astrologer_reply})
     context.user_data["chat_history"] = history
     
-    await update.message.reply_text(astrologer_reply, parse_mode="Markdown")
-    await update.message.reply_text("💡 _Ask another question or type `/exit` to end consultation._", parse_mode="Markdown")
+    remaining = 3 - sum(1 for msg in history if msg.get("role") == "user")
+    
+    await safe_reply_markdown(update.message, astrologer_reply)
+    if remaining > 0:
+        await update.message.reply_text(f"💡 _Ask another question ({remaining} remaining) or type `/exit` to end consultation._", parse_mode="Markdown")
+    else:
+        await update.message.reply_text(
+            "⚠️ *You have used all 3 free questions.*\n"
+            "Type `/exit` to end the consultation, or generate a full report for deeper analysis.",
+            parse_mode="Markdown"
+        )
     return STATE_CHAT
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -376,8 +473,25 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return ConversationHandler.END
 
 
-# Create a dummy FastAPI application to satisfy Render's health checks
-app = FastAPI(title="Telegram AI Rishi Webhook Interface")
+# We will declare application globally or load it inside startup
+bot_app = None
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Modern lifespan context manager for FastAPI startup/shutdown."""
+    # Startup
+    asyncio.create_task(run_bot_in_background())
+    yield
+    # Shutdown
+    if bot_app:
+        logger.info("Stopping Telegram Bot...")
+        if bot_app.updater and bot_app.updater.running:
+            await bot_app.updater.stop()
+        await bot_app.stop()
+        await bot_app.shutdown()
+
+# Create FastAPI application with lifespan
+app = FastAPI(title="Telegram AI Rishi Webhook Interface", lifespan=lifespan)
 
 @app.get("/")
 def health_check():
@@ -388,30 +502,35 @@ def health_check():
         "status": "healthy",
         "service": "Vedic Astrology Telegram Bot",
         "mode": "webhook" if render_url else "polling",
-        "webhook_url": f"{render_url}/telegram-webhook" if render_url else None
     }
 
 @app.post("/telegram-webhook")
 async def telegram_webhook(request: Request):
     global bot_app
     if not bot_app:
-        return {"status": "error", "message": "Bot application not initialized"}
+        raise HTTPException(status_code=503, detail="Service unavailable")
+
+    # Validate the webhook secret token from Telegram
+    token_header = request.headers.get("X-Telegram-Bot-Api-Secret-Token", "")
+    if not secrets.compare_digest(token_header, WEBHOOK_SECRET):
+        logger.warning("Webhook request rejected: invalid secret token")
+        raise HTTPException(status_code=403, detail="Forbidden")
+
     try:
         data = await request.json()
         update = Update.de_json(data, bot_app.bot)
         await bot_app.process_update(update)
         return {"status": "ok"}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error processing webhook update: {e}")
-        return {"status": "error", "message": str(e)}
-
-# We will declare application globally or load it inside startup
-bot_app = None
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 async def run_bot_in_background():
     global bot_app
     if not TELEGRAM_BOT_TOKEN:
-        print("⚠️ WARNING: TELEGRAM_BOT_TOKEN is not configured. Telegram bot polling/webhook is disabled.", flush=True)
+        logger.warning("TELEGRAM_BOT_TOKEN is not configured. Telegram bot polling/webhook is disabled.")
         return
 
     if bot_app:
@@ -423,31 +542,21 @@ async def run_bot_in_background():
 
         if render_url:
             webhook_url = f"{render_url}/telegram-webhook"
-            print(f"🌐 Render environment detected. Setting Telegram Webhook to: {webhook_url}", flush=True)
+            logger.info(f"Render environment detected. Setting Telegram Webhook to: {webhook_url}")
             # Clear any active webhook or polling session before setting a new one
             await bot_app.bot.delete_webhook()
-            await bot_app.bot.set_webhook(url=webhook_url, allowed_updates=Update.ALL_TYPES)
+            await bot_app.bot.set_webhook(
+                url=webhook_url,
+                allowed_updates=Update.ALL_TYPES,
+                secret_token=WEBHOOK_SECRET
+            )
         else:
-            print("🤖 Local environment detected. Using Telegram Polling...", flush=True)
+            logger.info("Local environment detected. Using Telegram Polling...")
             await bot_app.bot.delete_webhook()
             # This will run polling non-blocking
             await bot_app.updater.start_polling(allowed_updates=Update.ALL_TYPES)
             while True:
                 await asyncio.sleep(3600)
-
-@app.on_event("startup")
-async def on_startup():
-    asyncio.create_task(run_bot_in_background())
-
-@app.on_event("shutdown")
-async def on_shutdown():
-    global bot_app
-    if bot_app:
-        print("🤖 Stopping Telegram Bot...", flush=True)
-        if bot_app.updater and bot_app.updater.running:
-            await bot_app.updater.stop()
-        await bot_app.stop()
-        await bot_app.shutdown()
 
 # ----------------- Bot Initialization -----------------
 
@@ -473,25 +582,31 @@ def main():
                 STATE_DATE: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_date)],
                 STATE_TIME: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_time)],
                 STATE_CITY: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_city)],
-                STATE_CHAT: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_chat_question)],
+                STATE_CHAT: [
+                    MessageHandler(filters.TEXT & ~filters.COMMAND, handle_chat_question),
+                    CommandHandler("exit", cancel),
+                ],
             },
             fallbacks=[
                 CommandHandler("exit", cancel),
-                CommandHandler("cancel", cancel)
+                CommandHandler("cancel", cancel),
+                CommandHandler("start", start),
             ],
+            per_message=False,
         )
 
+        # IMPORTANT: Only register the ConversationHandler.
+        # Do NOT register duplicate standalone handlers — they intercept callbacks
+        # before the ConversationHandler can transition states (e.g. to STATE_CHAT),
+        # which was the root cause of "first question treated as answer" bug.
         bot_app.add_handler(conv_handler)
-        bot_app.add_handler(CommandHandler("start", start))
-        bot_app.add_handler(CallbackQueryHandler(button_click, pattern="^btn_"))
     else:
-        print("⚠️ WARNING: TELEGRAM_BOT_TOKEN is missing. Bot polling initialization skipped.", flush=True)
+        logger.warning("TELEGRAM_BOT_TOKEN is missing. Bot polling initialization skipped.")
 
     # Render injects the port it wants us to listen to inside the PORT env variable
     port = int(os.getenv("PORT", "8000"))
-    print(f"⚡ Starting dummy FastAPI web server on port {port} for Render...", flush=True)
+    logger.info(f"Starting FastAPI web server on port {port}...")
     uvicorn.run(app, host="0.0.0.0", port=port)
 
 if __name__ == "__main__":
-    import time
     main()
