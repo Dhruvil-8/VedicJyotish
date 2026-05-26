@@ -282,7 +282,6 @@ SENSITIVE_CHART_KEYS = {
     "longitude",
     "timezone",
     "tz",
-    "name",
 }
 
 def sanitize_chart_for_ai(value: Any) -> Any:

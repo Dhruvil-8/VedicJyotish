@@ -26,7 +26,6 @@ const SENSITIVE_CHART_KEYS = new Set([
   "longitude",
   "timezone",
   "tz",
-  "name",
 ]);
 
 export const sanitizeChartForAi = (value: any): any => {
