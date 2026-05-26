@@ -14,6 +14,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
+# Run as non-root user for security
+RUN adduser --disabled-password --gecos '' appuser
+USER appuser
+
 # Expose port (Hugging Face Spaces uses 7860 by default)
 EXPOSE 7860
 

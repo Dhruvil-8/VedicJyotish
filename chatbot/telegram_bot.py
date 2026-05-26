@@ -29,13 +29,22 @@ TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 BACKEND_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:7860")
 # A random secret generated per boot to authenticate Telegram webhook calls
 WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", secrets.token_hex(32))
+API_SECRET_KEY = os.getenv("API_SECRET_KEY")
+
+def get_api_headers() -> dict:
+    headers = {}
+    if API_SECRET_KEY:
+        headers["X-API-Key"] = API_SECRET_KEY
+    return headers
 
 # Max input length for user messages to prevent abuse
 MAX_INPUT_LENGTH = 500
 
-# Enable logging
+# Enable logging (production-safe: reduce noise to protect user data in logs)
+ENVIRONMENT = os.getenv("ENVIRONMENT", "production")
+log_level = logging.WARNING if ENVIRONMENT == "production" else logging.INFO
 logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=log_level
 )
 logger = logging.getLogger(__name__)
 
@@ -104,6 +113,7 @@ async def search_city(city_query: str) -> list:
             response = await client.get(
                 f"{BACKEND_URL}/search_city", 
                 params={"query": city_query},
+                headers=get_api_headers(),
                 timeout=10.0
             )
             if response.status_code == 200:
@@ -119,6 +129,7 @@ async def calculate_chart(birth_data: dict) -> dict:
             response = await client.post(
                 f"{BACKEND_URL}/calculate_chart",
                 json=birth_data,
+                headers=get_api_headers(),
                 timeout=15.0
             )
             if response.status_code == 200:
@@ -137,7 +148,7 @@ async def chat_with_astrologer(chart_data: dict, question: str, history: list) -
                 "history": history
             }
             response_text = ""
-            async with client.stream("POST", f"{BACKEND_URL}/chat_with_astrologer", json=payload, timeout=60.0) as response:
+            async with client.stream("POST", f"{BACKEND_URL}/chat_with_astrologer", json=payload, headers=get_api_headers(), timeout=60.0) as response:
                 if response.status_code == 200:
                     async for line in response.aiter_lines():
                         if line.startswith("data: "):
@@ -169,7 +180,7 @@ async def generate_full_report(chart_data: dict) -> str:
     async with httpx.AsyncClient() as client:
         try:
             response_text = ""
-            async with client.stream("POST", f"{BACKEND_URL}/generate_report", json=chart_data, timeout=90.0) as response:
+            async with client.stream("POST", f"{BACKEND_URL}/generate_report", json=chart_data, headers=get_api_headers(), timeout=90.0) as response:
                 if response.status_code == 200:
                     async for line in response.aiter_lines():
                         if line.startswith("data: "):

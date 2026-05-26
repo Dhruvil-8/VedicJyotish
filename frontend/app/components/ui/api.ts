@@ -1,4 +1,14 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+const API_KEY = process.env.NEXT_PUBLIC_APP_TOKEN || "";
+
+
+const getHeaders = (extraHeaders: Record<string, string> = {}) => {
+  const headers: Record<string, string> = { ...extraHeaders };
+  if (API_KEY) {
+    headers["X-API-Key"] = API_KEY;
+  }
+  return headers;
+};
 
 const SENSITIVE_CHART_KEYS = new Set([
   "date",
@@ -16,6 +26,7 @@ const SENSITIVE_CHART_KEYS = new Set([
   "longitude",
   "timezone",
   "tz",
+  "name",
 ]);
 
 export const sanitizeChartForAi = (value: any): any => {
@@ -36,7 +47,9 @@ export const sanitizeChartForAi = (value: any): any => {
 
 export const searchCity = async (query: string) => {
   if (query.length < 3) return [];
-  const res = await fetch(`${API_BASE}/search_city?query=${query}`);
+  const res = await fetch(`${API_BASE}/search_city?query=${encodeURIComponent(query)}`, {
+    headers: getHeaders(),
+  });
   if (!res.ok) return [];
   return res.json();
 };
@@ -44,7 +57,7 @@ export const searchCity = async (query: string) => {
 export const calculateChart = async (data: any) => {
   const res = await fetch(`${API_BASE}/calculate_chart`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: getHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(data),
   });
   if (!res.ok) {
@@ -104,7 +117,7 @@ export const generateReportStream = async (
   const aiPayload = sanitizeChartForAi(payload);
   const res = await fetch(`${API_BASE}/generate_report`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: getHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(aiPayload),
   });
   if (!res.ok) throw new Error("Report generation failed");
@@ -123,7 +136,7 @@ export const chatWithAstrologerStream = async (
   };
   const res = await fetch(`${API_BASE}/chat_with_astrologer`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: getHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(aiPayload),
   });
   if (!res.ok) throw new Error("Chat failed");

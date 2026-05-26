@@ -17,7 +17,7 @@
 This project is **not built by an astrologer**.
 
 * All astrological logic, calculations, and code structure are **fully written using Google Gemini (gemini‑3‑pro)**.
-* My role is **engineering, integration, and validation**, not astrological authorship.
+* My role is **integration, and validation**, not astrological authorship.
 * The AI **does not calculate astrology** — it only **interprets already‑calculated results**.
 
 This project should be viewed as:

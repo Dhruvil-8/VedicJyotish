@@ -19,7 +19,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-class VedicApiService(baseUrl: String) {
+class VedicApiService(baseUrl: String, private val apiKey: String? = null) {
 
     var baseUrl: String = baseUrl.trimEnd('/')
         set(value) { field = value.trimEnd('/') }
@@ -48,6 +48,16 @@ class VedicApiService(baseUrl: String) {
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(120, TimeUnit.SECONDS)   // SSE streams can be long
         .writeTimeout(30, TimeUnit.SECONDS)
+        .apply {
+            if (!apiKey.isNullOrEmpty()) {
+                addInterceptor { chain ->
+                    val request = chain.request().newBuilder()
+                        .addHeader("X-API-Key", apiKey)
+                        .build()
+                    chain.proceed(request)
+                }
+            }
+        }
         .build()
 
     // ──────────────────────────────────────────────────────

@@ -45,6 +45,7 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GEMINI_MODEL_NAME = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 MAX_QUESTIONS = int(os.getenv("MAX_QUESTIONS", "3"))
+API_SECRET_KEY = os.getenv("API_SECRET_KEY")
 
 # Build allowed origins list (support comma-separated for multiple frontends)
 ALLOWED_ORIGINS = [u.strip() for u in FRONTEND_URL.split(",") if u.strip()]
@@ -71,9 +72,14 @@ else:
 
 # --- 3. FastAPI Setup & Proxy Rate Limiting ---
 def get_real_ip(request: Request) -> str:
-    """Extracts real user IP behind HF Spaces reverse proxy."""
-    if "x-forwarded-for" in request.headers:
-        return request.headers["x-forwarded-for"].split(",")[0].strip()
+    """Extracts real user IP behind HF Spaces reverse proxy.
+    Uses the rightmost IP to prevent X-Forwarded-For spoofing.
+    The rightmost entry is the one added by the trusted reverse proxy.
+    """
+    xff = request.headers.get("x-forwarded-for", "")
+    if xff:
+        ips = [ip.strip() for ip in xff.split(",") if ip.strip()]
+        return ips[-1] if ips else (request.client.host if request.client else "127.0.0.1")
     return request.client.host if request.client else "127.0.0.1"
 
 limiter = Limiter(key_func=get_real_ip)
@@ -88,27 +94,51 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# --- 4. Security Headers Middleware ---
+# --- 4. API Key Validation Middleware ---
+class ApiKeyValidationMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        # Allow OPTIONS request for CORS preflight, and probe status at "/"
+        if request.method == "OPTIONS" or request.url.path == "/":
+            return await call_next(request)
+
+        # Allow swagger docs/openapi in local dev
+        if not IS_PRODUCTION and request.url.path in ["/docs", "/redoc", "/openapi.json"]:
+            return await call_next(request)
+
+        # If API_SECRET_KEY is set, validate it
+        if API_SECRET_KEY:
+            api_key = request.headers.get("X-API-Key")
+            if not api_key or api_key != API_SECRET_KEY:
+                return JSONResponse(
+                    status_code=401,
+                    content={"detail": "Unauthorized: Missing or invalid API Key."}
+                )
+
+        return await call_next(request)
+
+app.add_middleware(ApiKeyValidationMiddleware)
+
+# --- 5. Security Headers Middleware ---
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
         response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
-        response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
         if IS_PRODUCTION:
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         return response
 
 app.add_middleware(SecurityHeadersMiddleware)
 
-# --- 5. CORS Security (Locked to allowed origins) ---
+# --- 6. CORS Security (Locked to allowed origins) ---
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization"],
+    allow_headers=["Content-Type", "X-API-Key"],
 )
 
 # --- 5. Swiss Ephemeris Setup ---
@@ -252,6 +282,7 @@ SENSITIVE_CHART_KEYS = {
     "longitude",
     "timezone",
     "tz",
+    "name",
 }
 
 def sanitize_chart_for_ai(value: Any) -> Any:
@@ -275,8 +306,7 @@ def read_root():
     return {
         "message": "Vedic Astrology API is running",
         "status": "online",
-        "documentation": "https://github.com/Dhruvil-8/VedicJyotish",
-        "environment": ENVIRONMENT
+        "documentation": "https://github.com/Dhruvil-8/VedicJyotish"
     }
 
 @lru_cache(maxsize=256)
@@ -336,7 +366,7 @@ def get_location_and_jd(data: BirthData):
             local_tz = pytz.timezone(tz_str)
             dt_obj = datetime.strptime(f"{data.date} {data.time}", "%d/%m/%Y %H:%M")
             tz = local_tz.localize(dt_obj).utcoffset().total_seconds() / 3600.0
-        except:
+        except Exception:
             tz = 0.0
 
     # Final defensive sanitization before strptime (belt-and-suspenders)
@@ -824,7 +854,7 @@ async def chat_with_astrologer_endpoint(request: Request, chat_request: ChatRequ
                             current_antar = f"{ad['lord']} ({ad['start']} to {ad['end']})"
                             break
                     break
-            except: pass
+            except Exception: pass
 
         # Planet summary with full detail
         planet_summary = []
