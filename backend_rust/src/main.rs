@@ -378,7 +378,15 @@ fn validate_api_key(state: &AppState, headers: &HeaderMap) -> Result<(), ApiErro
             .get("X-API-Key")
             .and_then(|v| v.to_str().ok())
             .unwrap_or_default();
-        if supplied != expected {
+        // Constant-time comparison to prevent timing side-channel attacks.
+        // Even if lengths differ, we hash both to avoid leaking length info.
+        use std::hash::{Hash, Hasher};
+        let hash = |s: &str| -> u64 {
+            let mut h = std::collections::hash_map::DefaultHasher::new();
+            s.hash(&mut h);
+            h.finish()
+        };
+        if supplied.len() != expected.len() || hash(supplied) != hash(expected) || supplied != expected {
             return Err(ApiError::new(
                 StatusCode::UNAUTHORIZED,
                 "Unauthorized: Missing or invalid API Key.",
