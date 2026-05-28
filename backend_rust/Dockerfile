@@ -15,6 +15,7 @@ RUN apt-get update && \
         build-essential \
         pkg-config \
         libssl-dev \
+        unzip \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -39,6 +40,10 @@ RUN find src -name "*.rs" -exec touch {} +
 RUN cargo build --release --bin backend_rust && \
     strip target/release/backend_rust
 
+# Extract the compressed locations database to keep git repository compact
+COPY data/locations.db.zip ./data/
+RUN unzip ./data/locations.db.zip -d ./data/ && rm ./data/locations.db.zip
+
 # ── Stage 2: Runtime ─────────────────────────────────────────
 FROM debian:bookworm-slim AS runtime
 
@@ -57,8 +62,8 @@ WORKDIR /app
 # Copy the compiled binary
 COPY --from=builder /app/target/release/backend_rust ./backend_rust
 
-# Copy the locations database for offline city search
-COPY data/locations.db ./data/locations.db
+# Copy the unzipped locations database for offline city search
+COPY --from=builder /app/data/locations.db ./data/locations.db
 
 # Set ownership
 RUN chown -R appuser:appuser /app

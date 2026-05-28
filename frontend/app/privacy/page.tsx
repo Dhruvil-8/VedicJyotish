@@ -117,7 +117,7 @@ export default function PrivacyPolicyPage() {
                 <span className="mt-1 w-2 h-2 rounded-full bg-primary/60 flex-shrink-0" />
                 <div>
                   <strong className="text-foreground">Birth City / Location</strong>
-                  <p className="text-xs mt-0.5">The city name or geographic coordinates (latitude/longitude) you enter. The city name text is sent to the Photon Geocoding API (see Section 4) to resolve coordinates. Coordinates are used solely for timezone and planetary calculations.</p>
+                  <p className="text-xs mt-0.5">The city name or geographic coordinates (latitude/longitude) you enter. The city name text is resolved locally against our offline database to resolve coordinates. Coordinates are used solely for timezone and planetary calculations.</p>
                 </div>
               </div>
               <div className="flex gap-3 items-start">
@@ -151,7 +151,6 @@ export default function PrivacyPolicyPage() {
               <li>To perform high-precision Vedic astrological calculations (Swiss Ephemeris).</li>
               <li>To generate an AI-powered astrological interpretation report via Google Gemini.</li>
               <li>To power the "Chat with Astrologer" conversational feature via Google Gemini.</li>
-              <li>To resolve your city name to geographic coordinates via the Photon Geocoding API.</li>
               <li>To ensure the security and reliability of the Service.</li>
             </ul>
             <p className="mt-3 font-semibold text-foreground">
@@ -172,13 +171,7 @@ export default function PrivacyPolicyPage() {
                 policy="https://ai.google.dev/gemini-api/terms"
                 risk="Medium"
               />
-              <ThirdParty
-                name="Photon Geocoding API (Komoot GmbH, Germany)"
-                role="Resolving city name text to geographic coordinates (latitude/longitude)."
-                data="Only the city name string you type (e.g., 'Mumbai'). No birth date, time, or personal identifiers are ever transmitted."
-                policy="https://photon.komoot.io/"
-                risk="Low"
-              />
+
               <ThirdParty
                 name="Hugging Face Spaces (Hugging Face Inc., USA)"
                 role="Hosting the backend API server (FastAPI)."
