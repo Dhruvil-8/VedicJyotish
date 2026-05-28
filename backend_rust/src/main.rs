@@ -39,6 +39,7 @@ use serde::Deserialize;
 use serde_json::json;
 use std::{env, net::SocketAddr, sync::Arc};
 use tower_http::cors::{AllowOrigin, CorsLayer};
+use tower_http::limit::RequestBodyLimitLayer;
 use tracing::info;
 
 // ─── Application State ─────────────────────────────────────────────────────
@@ -161,6 +162,7 @@ async fn main() {
         )
         .with_state(state)
         .layer(middleware::from_fn(security_headers))
+        .layer(RequestBodyLimitLayer::new(1024 * 1024)) // 1MB max request body
         .layer(cors);
 
     let port = env::var("PORT")
@@ -173,7 +175,32 @@ async fn main() {
     let listener = tokio::net::TcpListener::bind(addr)
         .await
         .expect("bind Rust API listener");
-    axum::serve(listener, app).await.expect("run Rust API");
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal())
+        .await
+        .expect("run Rust API");
+}
+
+/// Wait for Ctrl-C or SIGTERM (on Unix) to initiate graceful shutdown,
+/// allowing in-flight requests and SSE streams to complete.
+async fn shutdown_signal() {
+    let ctrl_c = tokio::signal::ctrl_c();
+    #[cfg(unix)]
+    {
+        let mut sigterm = tokio::signal::unix::signal(
+            tokio::signal::unix::SignalKind::terminate(),
+        )
+        .expect("install SIGTERM handler");
+        tokio::select! {
+            _ = ctrl_c => {},
+            _ = sigterm.recv() => {},
+        }
+    }
+    #[cfg(not(unix))]
+    {
+        ctrl_c.await.ok();
+    }
+    info!("Shutdown signal received, draining connections...");
 }
 
 // ─── Endpoint Handlers ─────────────────────────────────────────────────────
@@ -271,20 +298,14 @@ async fn calculate_compatibility(
     let girl_nak_name = &girl_chart.moon_intelligence.nakshatra;
     let girl_pada = girl_chart.moon_intelligence.pada;
     
-    let nakshatra_list = [
-        "Ashwini", "Bharani", "Krittika", "Rohini", "Mrigashira", "Ardra", "Punarvasu", "Pushya", "Ashlesha",
-        "Magha", "Purva Phalguni", "Uttara Phalguni", "Hasta", "Chitra", "Swati", "Vishakha", "Anuradha", "Jyeshtha",
-        "Moola", "Purva Ashadha", "Uttara Ashadha", "Shravana", "Dhanishta", "Satabhisha", "Purva Bhadrapada", "Uttara Bhadrapada", "Revati"
-    ];
-    
-    let boy_nak_idx = nakshatra_list.iter().position(|&x| x == boy_nak_name).ok_or_else(|| {
+    let boy_nak_idx = crate::constants::NAKSHATRA_NAMES.iter().position(|&x| x == boy_nak_name).ok_or_else(|| {
         ApiError::new(
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("Unknown boy moon nakshatra: {boy_nak_name}"),
         )
     })? as u8 + 1;
     
-    let girl_nak_idx = nakshatra_list.iter().position(|&x| x == girl_nak_name).ok_or_else(|| {
+    let girl_nak_idx = crate::constants::NAKSHATRA_NAMES.iter().position(|&x| x == girl_nak_name).ok_or_else(|| {
         ApiError::new(
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("Unknown girl moon nakshatra: {girl_nak_name}"),

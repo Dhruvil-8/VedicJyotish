@@ -58,7 +58,12 @@ pub async fn compute_chart_with_profile(
     normalize_birth_data(&mut data)?;
     let (lat, lon) = resolve_coordinates(&data).await?;
     let resolved_time = timezones::resolve(&data.date, &data.time, lat, lon, data.timezone)?;
-    let snapshot = swiss::calculate_snapshot(resolved_time.jd_ut, lat, lon)?;
+    let jd = resolved_time.jd_ut;
+    let snapshot = tokio::task::spawn_blocking(move || {
+        swiss::calculate_snapshot(jd, lat, lon)
+    })
+    .await
+    .map_err(|e| ApiError::new(StatusCode::INTERNAL_SERVER_ERROR, format!("Task join error: {e}")))??;
 
     let asc_idx = sign_index(snapshot.ascendant_degree);
     let sun_deg = snapshot
@@ -895,7 +900,14 @@ pub async fn compute_transits(
         transit_data.timezone,
     )?;
     
-    let snapshot = swiss::calculate_snapshot(resolved_time.jd_ut, lat, lon)?;
+    let jd_transit = resolved_time.jd_ut;
+    let lat_t = lat;
+    let lon_t = lon;
+    let snapshot = tokio::task::spawn_blocking(move || {
+        swiss::calculate_snapshot(jd_transit, lat_t, lon_t)
+    })
+    .await
+    .map_err(|e| ApiError::new(StatusCode::INTERNAL_SERVER_ERROR, format!("Task join error: {e}")))??;
     let transit_sun_deg = snapshot
         .planets
         .iter()

@@ -6,6 +6,8 @@
 //! - /calculate_chart:      10/minute
 //! - /generate_report:       5/minute
 //! - /chat_with_astrologer:  5/minute
+//!
+//! Stale entries (idle >10 min) are periodically evicted to prevent unbounded memory growth.
 
 use axum::{
     http::{header, StatusCode},
@@ -18,7 +20,7 @@ use serde_json::json;
 use std::{
     collections::HashMap,
     sync::Mutex,
-    time::Instant,
+    time::{Duration, Instant},
 };
 
 struct TokenBucket {
@@ -58,6 +60,7 @@ struct IpLimiters {
     search: TokenBucket,
     chart: TokenBucket,
     ai: TokenBucket,
+    last_seen: Instant,
 }
 
 impl IpLimiters {
@@ -69,6 +72,7 @@ impl IpLimiters {
             chart: TokenBucket::new(10.0, 10.0 / 60.0),
             // 5/minute -> max 5, refill rate 5/60 = 0.0833/sec
             ai: TokenBucket::new(5.0, 5.0 / 60.0),
+            last_seen: Instant::now(),
         }
     }
 }
@@ -76,6 +80,18 @@ impl IpLimiters {
 static IP_LIMITERS: Lazy<Mutex<HashMap<String, IpLimiters>>> = Lazy::new(|| {
     Mutex::new(HashMap::new())
 });
+
+/// Evict IP entries idle for longer than the cutoff to prevent unbounded memory growth.
+/// Runs probabilistically when the map exceeds a threshold to minimize overhead.
+const STALE_CUTOFF: Duration = Duration::from_secs(600); // 10 minutes
+const CLEANUP_THRESHOLD: usize = 100;
+
+fn maybe_cleanup(limiters: &mut HashMap<String, IpLimiters>) {
+    if limiters.len() > CLEANUP_THRESHOLD {
+        let cutoff = Instant::now() - STALE_CUTOFF;
+        limiters.retain(|_, v| v.last_seen > cutoff);
+    }
+}
 
 /// Extract real client IP behind proxy (e.g. Hugging Face Space reverse proxy)
 fn get_real_ip(headers: &header::HeaderMap) -> String {
@@ -107,12 +123,13 @@ fn rate_limit_response() -> Response {
 pub async fn limit_search(request: Request, next: Next) -> Response {
     let ip = get_real_ip(request.headers());
     
-    // Wrap MutexGuard in a tight scope to guarantee it is dropped before `.await` boundary,
-    // ensuring the future returned is strictly Send and satisfies Axum MethodRouter layer bounds.
     let allowed = {
         let mut limiters = IP_LIMITERS.lock().unwrap();
         let ip_limiter = limiters.entry(ip).or_insert_with(IpLimiters::new);
-        ip_limiter.search.check_and_consume(1.0)
+        ip_limiter.last_seen = Instant::now();
+        let result = ip_limiter.search.check_and_consume(1.0);
+        maybe_cleanup(&mut limiters);
+        result
     };
     
     if !allowed {
@@ -129,7 +146,10 @@ pub async fn limit_chart(request: Request, next: Next) -> Response {
     let allowed = {
         let mut limiters = IP_LIMITERS.lock().unwrap();
         let ip_limiter = limiters.entry(ip).or_insert_with(IpLimiters::new);
-        ip_limiter.chart.check_and_consume(1.0)
+        ip_limiter.last_seen = Instant::now();
+        let result = ip_limiter.chart.check_and_consume(1.0);
+        maybe_cleanup(&mut limiters);
+        result
     };
     
     if !allowed {
@@ -146,7 +166,10 @@ pub async fn limit_ai(request: Request, next: Next) -> Response {
     let allowed = {
         let mut limiters = IP_LIMITERS.lock().unwrap();
         let ip_limiter = limiters.entry(ip).or_insert_with(IpLimiters::new);
-        ip_limiter.ai.check_and_consume(1.0)
+        ip_limiter.last_seen = Instant::now();
+        let result = ip_limiter.ai.check_and_consume(1.0);
+        maybe_cleanup(&mut limiters);
+        result
     };
     
     if !allowed {

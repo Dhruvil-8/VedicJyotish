@@ -4,12 +4,23 @@
 //! with Server-Sent Events (SSE) streaming for real-time token delivery.
 
 use axum::response::{sse::Event, Sse};
-use futures_util::stream::{self, Stream};
+use futures_util::stream::Stream;
+use once_cell::sync::Lazy;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::{env, pin::Pin, time::Duration};
 use tokio_stream::StreamExt;
 use tracing::error;
+
+// ─── Shared HTTP Client (connection reuse across all Gemini calls) ──────────
+
+static GEMINI_CLIENT: Lazy<Client> = Lazy::new(|| {
+    Client::builder()
+        .timeout(Duration::from_secs(120))
+        .pool_max_idle_per_host(5)
+        .build()
+        .expect("Failed to create Gemini HTTP client")
+});
 
 // ─── Configuration ──────────────────────────────────────────────────────────
 
@@ -496,17 +507,6 @@ pub async fn stream_chat(
         )
     })?;
 
-    // If question limit reached, we caught it above. Handle the special case:
-    if let Err("question_limit_reached") =
-        build_chat_request(&chart_data, &question, &history)
-    {
-        let done_stream = stream::once(async {
-            let msg = serde_json::json!({"response": "I apologize, the question limit has been reached."});
-            Ok::<_, std::convert::Infallible>(Event::default().data(msg.to_string()))
-        });
-        return Ok(Sse::new(Box::pin(done_stream) as SseStream));
-    }
-
     Ok(stream_gemini(api_key, request_body).await)
 }
 
@@ -514,17 +514,15 @@ pub async fn stream_chat(
 async fn stream_gemini(api_key: String, request_body: GeminiRequest) -> Sse<SseStream> {
     let model = gemini_model();
     let url = format!(
-        "https://generativelanguage.googleapis.com/v1beta/models/{model}:streamGenerateContent?alt=sse&key={api_key}"
+        "https://generativelanguage.googleapis.com/v1beta/models/{model}:streamGenerateContent?alt=sse"
     );
 
-    let client = Client::builder()
-        .timeout(Duration::from_secs(120))
-        .build()
-        .unwrap_or_default();
+    let client = &*GEMINI_CLIENT;
 
     let stream = async_stream::try_stream! {
         let response = client
             .post(&url)
+            .header("x-goog-api-key", &api_key)
             .json(&request_body)
             .send()
             .await;

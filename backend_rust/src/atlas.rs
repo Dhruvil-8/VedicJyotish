@@ -1,4 +1,4 @@
-use std::{env, path::PathBuf};
+use std::{env, path::PathBuf, sync::Mutex};
 
 use axum::http::StatusCode;
 use once_cell::sync::Lazy;
@@ -12,42 +12,53 @@ static LOCATION_DB_PATH: Lazy<PathBuf> = Lazy::new(|| {
         .unwrap_or_else(|_| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("data/locations.db"))
 });
 
+/// Cached read-only SQLite connection to avoid open/close overhead per request.
+static DB_CONN: Lazy<Option<Mutex<Connection>>> = Lazy::new(|| {
+    if !LOCATION_DB_PATH.exists() {
+        return None;
+    }
+    Connection::open_with_flags(
+        LOCATION_DB_PATH.as_path(),
+        OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
+    )
+    .ok()
+    .map(Mutex::new)
+});
+
 pub fn search_city(query: &str) -> Result<Vec<CityResult>, ApiError> {
     let query = query.trim();
     if query.chars().count() < 3 {
         return Ok(Vec::new());
     }
 
-    if !LOCATION_DB_PATH.exists() {
-        return Err(ApiError::new(
-            StatusCode::SERVICE_UNAVAILABLE,
-            format!(
-                "Local location database not found at {}. Run `cargo run --bin import_geonames -- <cities.txt>` first.",
-                LOCATION_DB_PATH.display()
-            ),
-        ));
-    }
-
-    let conn = Connection::open_with_flags(
-        LOCATION_DB_PATH.as_path(),
-        OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
-    )
-    .map_err(|_| {
-        ApiError::new(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Could not open location database.",
-        )
-    })?;
+    let conn_guard = DB_CONN
+        .as_ref()
+        .ok_or_else(|| {
+            ApiError::new(
+                StatusCode::SERVICE_UNAVAILABLE,
+                format!(
+                    "Local location database not found at {}. Run `cargo run --bin import_geonames -- <cities.txt>` first.",
+                    LOCATION_DB_PATH.display()
+                ),
+            )
+        })?
+        .lock()
+        .map_err(|_| {
+            ApiError::new(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Location database lock poisoned.",
+            )
+        })?;
 
     let fts_query = build_fts_query(query);
     let mut results = if fts_query.is_empty() {
         Vec::new()
     } else {
-        search_fts(&conn, &fts_query)?
+        search_fts(&conn_guard, &fts_query)?
     };
 
     if results.is_empty() {
-        results = search_like(&conn, query)?;
+        results = search_like(&conn_guard, query)?;
     }
 
     Ok(results)

@@ -329,6 +329,8 @@ impl Default for CapabilityResponse {
                 "CORS is restricted to FRONTEND_URL in production.".to_string(),
                 "Security headers are applied to every response.".to_string(),
                 "AI context endpoint removes raw birth inputs from the prompt context.".to_string(),
+                "Request body size capped at 1MB.".to_string(),
+                "Gemini API key sent via header, not URL query string.".to_string(),
             ],
             implemented: vec![
                 Capability {
@@ -355,37 +357,67 @@ impl Default for CapabilityResponse {
                     api: Some("/api/v1/ai/chart-context".to_string()),
                     notes: "Structured chart plus compact prompt context for report/chat model input.".to_string(),
                 },
-            ],
-            planned: vec![
-                Capability {
-                    key: "full_varga_suite".to_string(),
-                    status: "planned".to_string(),
-                    api: None,
-                    notes: "D2, D3, D4, D7, D10, D12, D16, D20, D24, D27, D30, D40, D45, D60 with fixture validation.".to_string(),
-                },
-                Capability {
-                    key: "shadbala_ashtakavarga".to_string(),
-                    status: "planned".to_string(),
-                    api: None,
-                    notes: "Strength systems require source-specific rules and golden fixtures before exposing.".to_string(),
-                },
-                Capability {
-                    key: "jhora_grade_dashas".to_string(),
-                    status: "planned".to_string(),
-                    api: None,
-                    notes: "Vimshottari depth plus Yogini, Chara, Narayana, Kalachakra, Ashtottari, and related systems.".to_string(),
-                },
-                Capability {
-                    key: "ai_streaming".to_string(),
-                    status: "planned".to_string(),
-                    api: Some("/generate_report and /chat_with_astrologer".to_string()),
-                    notes: "Gemini-compatible streaming layer should consume /api/v1/ai/chart-context output.".to_string(),
-                },
                 Capability {
                     key: "planetary_transits".to_string(),
                     status: "implemented".to_string(),
                     api: Some("/calculate_transits".to_string()),
                     notes: "Computes active planetary transits overlaid against natal lagna and moon houses.".to_string(),
+                },
+                Capability {
+                    key: "full_varga_suite".to_string(),
+                    status: "implemented".to_string(),
+                    api: Some("/api/v1/chart/full".to_string()),
+                    notes: "All 18 Parashari divisional charts: D2-D60 with sign and planet placement.".to_string(),
+                },
+                Capability {
+                    key: "ashtakavarga".to_string(),
+                    status: "implemented".to_string(),
+                    api: Some("/api/v1/chart/full".to_string()),
+                    notes: "Bhinnashtakavarga (BAV) for 8 contributors and Sarvashtakavarga (SAV) totals.".to_string(),
+                },
+                Capability {
+                    key: "doshas".to_string(),
+                    status: "implemented".to_string(),
+                    api: Some("/api/v1/chart/full".to_string()),
+                    notes: "8 major Vedic doshas: Kala Sarpa, Manglik (17 exceptions), Pitru, Guru Chandala, Kalathra, Ganda Moola, Ghata, Shrapit.".to_string(),
+                },
+                Capability {
+                    key: "compatibility_matching".to_string(),
+                    status: "implemented".to_string(),
+                    api: Some("/api/v1/match/compatibility".to_string()),
+                    notes: "Ashtakoota Guna Milan (North Indian 36-guna and South Indian 10-porutham).".to_string(),
+                },
+                Capability {
+                    key: "chara_karakas".to_string(),
+                    status: "implemented".to_string(),
+                    api: Some("/api/v1/chart/full".to_string()),
+                    notes: "8-planet Jaimini Chara Karaka assignment (AK through DK).".to_string(),
+                },
+                Capability {
+                    key: "dig_bala".to_string(),
+                    status: "implemented".to_string(),
+                    api: Some("/api/v1/chart/full".to_string()),
+                    notes: "Directional strength points and percentage for classical planets.".to_string(),
+                },
+                Capability {
+                    key: "ai_streaming".to_string(),
+                    status: "implemented".to_string(),
+                    api: Some("/generate_report and /chat_with_astrologer".to_string()),
+                    notes: "Gemini-powered SSE streaming for report generation and astrologer chat.".to_string(),
+                },
+            ],
+            planned: vec![
+                Capability {
+                    key: "shadbala".to_string(),
+                    status: "planned".to_string(),
+                    api: None,
+                    notes: "Full six-fold strength system requires source-specific rules and golden fixtures.".to_string(),
+                },
+                Capability {
+                    key: "jhora_grade_dashas".to_string(),
+                    status: "planned".to_string(),
+                    api: None,
+                    notes: "Yogini, Chara, Narayana, Kalachakra, Ashtottari, and related dasha systems.".to_string(),
                 },
             ],
         }
