@@ -71,5 +71,6 @@ hf-deploy/
 # 🦀 RUST BACKEND
 # ==========================
 backend_rust/target/
-backend_rust/data/
+backend_rust/data/locations.db
+backend_rust/data/raw/
 backend_rust/.env
