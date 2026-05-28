@@ -16,6 +16,36 @@ use crate::{
     panchanga, service, swiss, timezones, ApiError,
 };
 
+fn assign_chara_karakas(planets: &mut [PlanetData]) {
+    let classical_names = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu"];
+    let mut sort_list = Vec::new();
+    for p in planets.iter() {
+        if classical_names.contains(&p.name.as_str()) {
+            let mut deg = p.full_degree % 30.0;
+            if p.name == "Rahu" {
+                deg = 30.0 - deg;
+            }
+            sort_list.push((p.name.clone(), deg));
+        }
+    }
+
+    sort_list.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+
+    let labels = ["AK", "AmK", "BK", "MK", "PiK", "PK", "GK", "DK"];
+    let mut karaka_map = HashMap::new();
+    for (i, (name, _)) in sort_list.into_iter().enumerate() {
+        if i < labels.len() {
+            karaka_map.insert(name, labels[i].to_string());
+        }
+    }
+
+    for p in planets.iter_mut() {
+        if let Some(label) = karaka_map.get(&p.name) {
+            p.chara_karaka = Some(label.clone());
+        }
+    }
+}
+
 pub async fn compute_chart(data: BirthData) -> Result<ChartResponse, ApiError> {
     compute_chart_with_profile(data, CalculationProfile::default()).await
 }
@@ -41,11 +71,12 @@ pub async fn compute_chart_with_profile(
     let mut planets = Vec::new();
     for raw in snapshot.planets {
         planets.push(build_planet(
-            raw.name,
+            &raw.name,
             raw.longitude,
             raw.speed,
             asc_idx,
             sun_deg,
+            snapshot.ascendant_degree,
         ));
     }
 
@@ -56,7 +87,9 @@ pub async fn compute_chart_with_profile(
         )
     })?;
     let ketu_deg = swiss::normalize_degree(rahu.full_degree + 180.0);
-    planets.push(build_planet("Ketu", ketu_deg, -1.0, asc_idx, sun_deg));
+    planets.push(build_planet("Ketu", ketu_deg, -1.0, asc_idx, sun_deg, snapshot.ascendant_degree));
+
+    assign_chara_karakas(&mut planets);
 
     let moon = planets
         .iter()
@@ -87,8 +120,33 @@ pub async fn compute_chart_with_profile(
             retrograde: p.retrograde,
             combust: p.combust,
             navamsa_sign: p.navamsa_sign.clone(),
+            chara_karaka: p.chara_karaka.clone(),
         })
         .collect();
+
+    let get_planet_sign = |name: &str| -> usize {
+        planets
+            .iter()
+            .find(|p| p.name == name)
+            .map(|p| sign_index(p.full_degree))
+            .unwrap_or(0)
+    };
+
+    let positions = [
+        get_planet_sign("Sun"),
+        get_planet_sign("Moon"),
+        get_planet_sign("Mars"),
+        get_planet_sign("Mercury"),
+        get_planet_sign("Jupiter"),
+        get_planet_sign("Venus"),
+        get_planet_sign("Saturn"),
+        asc_idx,
+    ];
+
+    let ashtakavarga = crate::ashtakavarga::calculate(&positions);
+
+    let (divisional_charts, divisional_planets) =
+        crate::vargas::calculate_varga_charts(snapshot.ascendant_degree, &planets);
 
     Ok(ChartResponse {
         profile,
@@ -115,6 +173,9 @@ pub async fn compute_chart_with_profile(
         navamsa_chart,
         planetary_table,
         yogas,
+        ashtakavarga: Some(ashtakavarga),
+        divisional_charts: Some(divisional_charts),
+        divisional_planets: Some(divisional_planets),
     })
 }
 
@@ -198,12 +259,39 @@ async fn resolve_coordinates(data: &BirthData) -> Result<(f64, f64), ApiError> {
     }
 }
 
+fn calculate_dig_bala(name: &str, planet_long: f64, asc_long: f64) -> Option<(f64, f64)> {
+    let powerless_house = match name {
+        "Sun" => Some(3),
+        "Moon" => Some(9),
+        "Mars" => Some(3),
+        "Mercury" => Some(6),
+        "Jupiter" => Some(6),
+        "Venus" => Some(9),
+        "Saturn" => Some(0),
+        _ => None,
+    };
+
+    if let Some(h) = powerless_house {
+        let powerless_long = (asc_long + (h as f64) * 30.0) % 360.0;
+        let mut diff = (planet_long - powerless_long).abs();
+        if diff > 180.0 {
+            diff = 360.0 - diff;
+        }
+        let points = (diff / 3.0 * 100.0).round() / 100.0;
+        let percentage = (diff / 180.0 * 100.0 * 100.0).round() / 100.0;
+        Some((points, percentage))
+    } else {
+        None
+    }
+}
+
 fn build_planet(
     name: &str,
     longitude: f64,
     speed: f64,
     asc_idx: usize,
     sun_deg: f64,
+    asc_degree: f64,
 ) -> PlanetData {
     let sign_idx = sign_index(longitude);
     let sign = SIGNS[sign_idx].to_string();
@@ -219,6 +307,13 @@ fn build_planet(
     let combust = check_combustion(name, longitude, sun_deg);
     let navamsa_sign = SIGNS[get_navamsa_sign(sign_idx, deg_in_sign)].to_string();
 
+    let (dig_bala_points, dig_bala_percentage) =
+        if let Some((pts, pct)) = calculate_dig_bala(name, longitude, asc_degree) {
+            (Some(pts), Some(pct))
+        } else {
+            (None, None)
+        };
+
     PlanetData {
         name: name.to_string(),
         sign,
@@ -233,6 +328,9 @@ fn build_planet(
         retrograde,
         combust,
         navamsa_sign,
+        chara_karaka: None,
+        dig_bala_points,
+        dig_bala_percentage,
     }
 }
 
@@ -859,5 +957,63 @@ pub async fn compute_transits(
         natal_ascendant: natal.ascendant,
         transit_planets,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_full_chart_tier1_vargas() {
+        let birth = BirthData {
+            date: "22/05/1991".to_string(),
+            time: "20:29:00".to_string(),
+            city: Some("Chennai".to_string()),
+            lat: Some(13.0878),
+            lon: Some(80.2785),
+            timezone: Some(5.5),
+        };
+
+        let res = compute_chart(birth).await.unwrap();
+
+        // 1. Check Chara Karakas
+        let planetary = res.planetary_table;
+        let classical = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu"];
+        for p in &planetary {
+            if classical.contains(&p.name.as_str()) {
+                assert!(p.chara_karaka.is_some(), "Classical planet {} must have a Chara Karaka assigned", p.name);
+            } else if p.name == "Ketu" {
+                assert!(p.chara_karaka.is_none(), "Ketu must not have a Chara Karaka");
+            }
+        }
+
+        // 2. Check Dig Bala
+        let house_data: Vec<&PlanetData> = res.chart_data.values().flat_map(|h| &h.planets).collect();
+        for p in &house_data {
+            if classical.contains(&p.name.as_str()) && p.name != "Rahu" {
+                assert!(p.dig_bala_points.is_some(), "Planet {} must have Dig Bala points", p.name);
+                assert!(p.dig_bala_percentage.is_some(), "Planet {} must have Dig Bala percentage", p.name);
+            }
+        }
+
+        // 3. Check Divisional Charts
+        let vargas = res.divisional_charts.unwrap();
+        let expected_vargas = ["D2", "D3", "D4", "D5", "D6", "D7", "D8", "D10", "D11", "D12", "D16", "D20", "D24", "D27", "D30", "D40", "D45", "D60"];
+        for v in &expected_vargas {
+            assert!(vargas.contains_key(*v), "Varga chart {} must be present", v);
+            let chart = vargas.get(*v).unwrap();
+            for h in 1..=12 {
+                assert!(chart.contains_key(&format!("house_{h}")), "Varga {} must contain house_{}", v, h);
+            }
+        }
+
+        // 4. Check Divisional Planets
+        let v_planets = res.divisional_planets.unwrap();
+        for v in &expected_vargas {
+            assert!(v_planets.contains_key(*v), "Varga planets for {} must be present", v);
+            let p_list = v_planets.get(*v).unwrap();
+            assert_eq!(p_list.len(), 9, "Varga {} must contain 9 planets", v);
+        }
+    }
 }
 

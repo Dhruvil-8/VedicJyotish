@@ -65,6 +65,12 @@ pub struct CityResult {
 }
 
 #[derive(Debug, Clone, Serialize)]
+pub struct AshtakavargaResponse {
+    pub bhinnashtakavarga: HashMap<String, Vec<u8>>,
+    pub sarvashtakavarga: Vec<u8>,
+}
+
+#[derive(Debug, Clone, Serialize)]
 pub struct ChartResponse {
     pub profile: CalculationProfile,
     pub location: LocationInfo,
@@ -76,6 +82,12 @@ pub struct ChartResponse {
     pub navamsa_chart: HashMap<String, NavamsaHouseData>,
     pub planetary_table: Vec<PlanetaryRow>,
     pub yogas: Vec<Yoga>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ashtakavarga: Option<AshtakavargaResponse>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub divisional_charts: Option<HashMap<String, HashMap<String, VargaHouseData>>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub divisional_planets: Option<HashMap<String, Vec<VargaPlanetRow>>>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -145,6 +157,12 @@ pub struct PlanetData {
     pub retrograde: bool,
     pub combust: bool,
     pub navamsa_sign: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub chara_karaka: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dig_bala_points: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dig_bala_percentage: Option<f64>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -158,6 +176,21 @@ pub struct PlanetaryRow {
     pub retrograde: bool,
     pub combust: bool,
     pub navamsa_sign: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub chara_karaka: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct VargaHouseData {
+    pub sign: String,
+    pub planets: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct VargaPlanetRow {
+    pub name: String,
+    pub sign: String,
+    pub deg_in_sign: f64,
 }
 
 #[derive(Debug, Clone, Serialize)]

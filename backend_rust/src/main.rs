@@ -7,6 +7,7 @@
 //! - API key authentication, CORS, security headers, and rate limiting
 //! - Structured tracing-based logging
 
+mod ashtakavarga;
 mod atlas;
 mod constants;
 mod context;
@@ -18,6 +19,8 @@ mod ratelimit;
 mod service;
 mod swiss;
 mod timezones;
+mod vargas;
+
 
 use axum::{
     body::Body,
