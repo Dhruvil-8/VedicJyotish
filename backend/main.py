@@ -42,7 +42,7 @@ else:
     logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-GEMINI_MODEL_NAME = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+GEMINI_MODEL_NAME = os.getenv("GEMINI_MODEL", "gemini-flash-lite-latest")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 MAX_QUESTIONS = int(os.getenv("MAX_QUESTIONS", "3"))
 API_SECRET_KEY = os.getenv("API_SECRET_KEY")

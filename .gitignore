@@ -65,4 +65,11 @@ Thumbs.db
 hf-deploy/
 
 # Compiled installation binaries
-*.apk
+*.apk
+
+# ==========================
+# 🦀 RUST BACKEND (Local Only)
+# ==========================
+backend_rust/
+backend_rust/target/
+backend_rust/data/
