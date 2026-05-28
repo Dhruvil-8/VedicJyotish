@@ -417,3 +417,52 @@ pub struct TransitPlanetData {
     pub retrograde: bool,
     pub combust: bool,
 }
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct CompatibilityRequest {
+    pub boy: BirthData,
+    pub girl: BirthData,
+    #[serde(default = "default_match_method")]
+    pub method: String, // "North" or "South"
+}
+
+fn default_match_method() -> String {
+    "North".to_string()
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct CompatibilityResponse {
+    pub boy_details: PartnerDetails,
+    pub girl_details: PartnerDetails,
+    pub method: String,
+    pub varna: KootaResult,
+    pub vashya: KootaResult,
+    pub tara: KootaResult,
+    pub yoni: KootaResult,
+    pub graha_maitri: KootaResult,
+    pub gana: KootaResult,
+    pub bhakoot: KootaResult,
+    pub naadi: KootaResult,
+    pub mahendra: bool,
+    pub vedha: bool,
+    pub rajju: bool,
+    pub sthree_dheerga: bool,
+    pub total_score: f64,
+    pub max_score: f64,
+    pub minimum_porutham_matched: bool, // South Indian Tamil style
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PartnerDetails {
+    pub sign: String,
+    pub nakshatra: String,
+    pub pada: u8,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct KootaResult {
+    pub name: String,
+    pub score: f64,
+    pub max_score: f64,
+    pub matched: bool,
+}

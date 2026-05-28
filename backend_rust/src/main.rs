@@ -9,6 +9,7 @@
 
 mod ashtakavarga;
 mod atlas;
+mod compatibility;
 mod dosha;
 mod constants;
 mod context;
@@ -154,6 +155,10 @@ async fn main() {
             "/api/v1/ai/chart-context",
             post(ai_chart_context).layer(middleware::from_fn(ratelimit::limit_chart)),
         )
+        .route(
+            "/api/v1/match/compatibility",
+            post(calculate_compatibility).layer(middleware::from_fn(ratelimit::limit_chart)),
+        )
         .with_state(state)
         .layer(middleware::from_fn(security_headers))
         .layer(cors);
@@ -246,6 +251,55 @@ async fn ai_chart_context(
     validate_api_key(&state, &headers)?;
     let chart = engine::compute_chart_with_profile(request.birth_data, request.profile).await?;
     Ok(Json(context::build_ai_chart_context(chart)))
+}
+
+async fn calculate_compatibility(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(request): Json<models::CompatibilityRequest>,
+) -> Result<Json<models::CompatibilityResponse>, ApiError> {
+    validate_api_key(&state, &headers)?;
+    
+    let boy_chart_fut = engine::compute_chart(request.boy);
+    let girl_chart_fut = engine::compute_chart(request.girl);
+    
+    let (boy_chart, girl_chart) = tokio::try_join!(boy_chart_fut, girl_chart_fut)?;
+    
+    let boy_nak_name = &boy_chart.moon_intelligence.nakshatra;
+    let boy_pada = boy_chart.moon_intelligence.pada;
+    
+    let girl_nak_name = &girl_chart.moon_intelligence.nakshatra;
+    let girl_pada = girl_chart.moon_intelligence.pada;
+    
+    let nakshatra_list = [
+        "Ashwini", "Bharani", "Krittika", "Rohini", "Mrigashira", "Ardra", "Punarvasu", "Pushya", "Ashlesha",
+        "Magha", "Purva Phalguni", "Uttara Phalguni", "Hasta", "Chitra", "Swati", "Vishakha", "Anuradha", "Jyeshtha",
+        "Moola", "Purva Ashadha", "Uttara Ashadha", "Shravana", "Dhanishta", "Satabhisha", "Purva Bhadrapada", "Uttara Bhadrapada", "Revati"
+    ];
+    
+    let boy_nak_idx = nakshatra_list.iter().position(|&x| x == boy_nak_name).ok_or_else(|| {
+        ApiError::new(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Unknown boy moon nakshatra: {boy_nak_name}"),
+        )
+    })? as u8 + 1;
+    
+    let girl_nak_idx = nakshatra_list.iter().position(|&x| x == girl_nak_name).ok_or_else(|| {
+        ApiError::new(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Unknown girl moon nakshatra: {girl_nak_name}"),
+        )
+    })? as u8 + 1;
+    
+    let compatibility_report = compatibility::compute_guna_milan(
+        boy_nak_idx,
+        boy_pada,
+        girl_nak_idx,
+        girl_pada,
+        &request.method,
+    );
+    
+    Ok(Json(compatibility_report))
 }
 
 async fn generate_report(
