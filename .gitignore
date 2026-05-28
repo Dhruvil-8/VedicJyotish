@@ -68,8 +68,8 @@ hf-deploy/
 *.apk
 
 # ==========================
-# 🦀 RUST BACKEND (Local Only)
+# 🦀 RUST BACKEND
 # ==========================
-backend_rust/
 backend_rust/target/
-backend_rust/data/
+backend_rust/data/
+backend_rust/.env
