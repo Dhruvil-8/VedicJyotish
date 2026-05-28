@@ -16,7 +16,7 @@
 
 This project is **not built by an astrologer**.
 
-* All astrological logic, calculations, and code structure are **fully written using Google Gemini (gemini‑3‑pro)**.
+* All astrological logic, calculations, and code structure are **fully written using Large Language Models (LLMs)**.
 * My role is **integration, and validation**, not astrological authorship.
 * The AI **does not calculate astrology** — it only **interprets already‑calculated results**.
 
@@ -24,7 +24,7 @@ This project should be viewed as:
 
 > **An AI‑assisted Vedic astrology software experiment**
 
-> 💡 **Deep-Analysis Note**: Current live mode uses Gemini Flash Lite. You can use [this method](https://github.com/Dhruvil-8/VedicJyotish/blob/main/ADDITIONAL_ASTROLOGY_RESOURCES.md.md) with a Pro-tier Gemini model (like Gemini 1.5/2.0 Pro) to get significantly more detailed and comprehensive insights.
+> 💡 **Deep-Analysis Note**: Current live mode uses Gemini Flash Lite. You can use [this method](https://github.com/Dhruvil-8/VedicJyotish/blob/main/ADDITIONAL_ASTROLOGY_RESOURCES.md.md) with a Pro-tier Gemini model to get significantly more detailed and comprehensive insights.
 
 ---
 
