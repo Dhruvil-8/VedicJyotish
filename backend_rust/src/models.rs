@@ -71,6 +71,52 @@ pub struct AshtakavargaResponse {
 }
 
 #[derive(Debug, Clone, Serialize)]
+pub struct DoshaResponse {
+    pub kala_sarpa: KalaSarpaResult,
+    pub manglik_lagna: ManglikResult,
+    pub manglik_moon: ManglikResult,
+    pub manglik_venus: ManglikResult,
+    pub pitru: PitruResult,
+    pub guru_chandala: GuruChandalaResult,
+    pub kalathra_lagna: bool,
+    pub kalathra_moon: bool,
+    pub ganda_moola: GandaMoolaResult,
+    pub ghata: bool,
+    pub shrapit: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct KalaSarpaResult {
+    pub has_dosha: bool,
+    pub type_index: Option<u8>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ManglikResult {
+    pub has_dosha: bool,
+    pub has_exceptions: bool,
+    pub exceptions_triggered: Vec<u8>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PitruResult {
+    pub has_dosha: bool,
+    pub rules_triggered: Vec<u8>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct GuruChandalaResult {
+    pub has_dosha: bool,
+    pub jupiter_stronger: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct GandaMoolaResult {
+    pub has_dosha: bool,
+    pub nakshatra_name: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
 pub struct ChartResponse {
     pub profile: CalculationProfile,
     pub location: LocationInfo,
@@ -88,6 +134,8 @@ pub struct ChartResponse {
     pub divisional_charts: Option<HashMap<String, HashMap<String, VargaHouseData>>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub divisional_planets: Option<HashMap<String, Vec<VargaPlanetRow>>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub doshas: Option<DoshaResponse>,
 }
 
 #[derive(Debug, Clone, Serialize)]

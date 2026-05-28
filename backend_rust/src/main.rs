@@ -9,6 +9,7 @@
 
 mod ashtakavarga;
 mod atlas;
+mod dosha;
 mod constants;
 mod context;
 mod engine;

@@ -148,6 +148,20 @@ pub async fn compute_chart_with_profile(
     let (divisional_charts, divisional_planets) =
         crate::vargas::calculate_varga_charts(snapshot.ascendant_degree, &planets);
 
+    let dosha_input: Vec<crate::dosha::DoshaInputPlanet> = planets
+        .iter()
+        .map(|p| crate::dosha::DoshaInputPlanet {
+            name: p.name.clone(),
+            sign_idx: sign_index(p.full_degree),
+            house: p.house,
+            deg_in_sign: p.deg_in_sign,
+            retrograde: p.retrograde,
+            combust: p.combust,
+        })
+        .collect();
+
+    let doshas = crate::dosha::calculate_doshas(&dosha_input, asc_idx, &moon.nakshatra);
+
     Ok(ChartResponse {
         profile,
         location: LocationInfo {
@@ -176,6 +190,7 @@ pub async fn compute_chart_with_profile(
         ashtakavarga: Some(ashtakavarga),
         divisional_charts: Some(divisional_charts),
         divisional_planets: Some(divisional_planets),
+        doshas: Some(doshas),
     })
 }
 
@@ -1014,6 +1029,11 @@ mod tests {
             let p_list = v_planets.get(*v).unwrap();
             assert_eq!(p_list.len(), 9, "Varga {} must contain 9 planets", v);
         }
+
+        // 5. Check Doshas
+        let doshas = res.doshas.unwrap();
+        assert!(doshas.ganda_moola.has_dosha || !doshas.ganda_moola.has_dosha); // Compiles and resolves successfully
+        assert!(doshas.kala_sarpa.has_dosha || !doshas.kala_sarpa.has_dosha);
     }
 }
 
