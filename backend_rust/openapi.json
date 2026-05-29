@@ -1,0 +1,218 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "VedicJyotish Rust Backend API",
+    "description": "High-performance modular Vedic Astrology Engine built using Rust, Axum, and Swiss Ephemeris. Computes birth charts, divisional vargas, friendships, transits, dasha sequences, and formats dynamic contexts for AI interpretation.",
+    "version": "0.1.0"
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:7860",
+      "description": "Local development server"
+    }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "summary": "API Status",
+        "description": "Returns status, engine version, and uptime metadata.",
+        "responses": {
+          "200": {
+            "description": "API is online",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": { "type": "string", "example": "Vedic Astrology API is running" },
+                    "status": { "type": "string", "example": "online" },
+                    "engine": { "type": "string", "example": "rust-swiss-eph" },
+                    "version": { "type": "string", "example": "0.1.0" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/search_city": {
+      "get": {
+        "summary": "City Atlas Lookup",
+        "description": "Performs prefix queries against the local SQLite GeoNames atlas database to retrieve matching coordinates and timezone overrides.",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "description": "City search query prefix (minimum 3 characters)",
+            "schema": { "type": "string", "minLength": 3 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Matching cities sorted by population rank",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CityResult"
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Query"
+          }
+        }
+      }
+    },
+    "/calculate_chart": {
+      "post": {
+        "summary": "Basic Chart Calculation",
+        "description": "Calculates core planetary longitudes, basic house distributions (D1 and D9), and detected classical yogas.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BirthData"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Calculated planetary positions, D1/D9 houses, and Vimshottari intervals",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/chart/full": {
+      "post": {
+        "summary": "Enterprise Chart Calculation",
+        "description": "Calculates complete Vedic parameters including Five-fold friendships, Vaisheshikamsa varga counts, and active Sade Sati transits with customizable calculation profiles.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChartCalculationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Enterprise-grade birth chart structure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/chart/argala": {
+      "post": {
+        "summary": "Jaimini Argala Solver",
+        "description": "Solves planetary interventions (Argala) and obstructions (Virodhargala) relative to houses and planets.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChartCalculationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Argala and Virodhargala maps"
+          }
+        }
+      }
+    },
+    "/api/v1/chart/dasha/chara": {
+      "post": {
+        "summary": "Jaimini Chara Dasha Timeline",
+        "description": "Computes the exact chronological Chara Dasha sign timeline, applying lord strengths and modality constraints.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChartCalculationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sign-based timing timeline"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "BirthData": {
+        "type": "object",
+        "required": [
+          "date",
+          "time",
+          "city"
+        ],
+        "properties": {
+          "date": { "type": "string", "description": "DD/MM/YYYY", "example": "28/05/1998" },
+          "time": { "type": "string", "description": "HH:MM (24-hour)", "example": "12:30" },
+          "city": { "type": "string", "description": "Birth city name", "example": "Mumbai" },
+          "lat": { "type": "number", "description": "Optional latitude override", "example": 19.076 },
+          "lon": { "type": "number", "description": "Optional longitude override", "example": 72.877 },
+          "timezone": { "type": "number", "description": "Optional timezone offset override in hours", "example": 5.5 }
+        }
+      },
+      "CalculationProfile": {
+        "type": "object",
+        "properties": {
+          "ayanamsa": { "type": "string", "default": "Lahiri", "enum": ["Lahiri", "Raman", "KP", "FaganBradley", "Yukteshwar"] },
+          "node_type": { "type": "string", "default": "Mean", "enum": ["Mean", "True"] },
+          "house_system": { "type": "string", "default": "WholeSign", "enum": ["WholeSign", "Sripati", "Placidus", "Campanus"] },
+          "dasha_year": { "type": "string", "default": "Sidereal365.256363004" }
+        }
+      },
+      "ChartCalculationRequest": {
+        "type": "object",
+        "required": [
+          "birth_data"
+        ],
+        "properties": {
+          "birth_data": { "$ref": "#/components/schemas/BirthData" },
+          "profile": { "$ref": "#/components/schemas/CalculationProfile" }
+        }
+      },
+      "CityResult": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "example": "Mumbai, MH, IN" },
+          "lat": { "type": "number", "example": 19.076 },
+          "lon": { "type": "number", "example": 72.877 }
+        }
+      }
+    }
+  }
+}

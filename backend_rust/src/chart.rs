@@ -1,13 +1,29 @@
 use crate::constants::SIGNS;
-use crate::models::{PlanetData, VargaHouseData, VargaPlanetRow};
+use crate::models::{PlanetData, HouseData, NavamsaHouseData, VargaHouseData, VargaPlanetRow};
 use std::collections::HashMap;
 
-/// Helper to get sign index (0 to 11) from absolute longitude
-fn sign_index(long: f64) -> usize {
-    (long / 30.0).floor() as usize % 12
+// ─── Coordinate Helper Functions ─────────────────────────────────────────────
+
+pub fn sign_index(long: f64) -> usize {
+    ((long / 30.0).floor() as usize) % 12
 }
 
-/// Helper to check sign category (Movable, Fixed, Dual)
+pub fn get_navamsa_sign(sign_idx: usize, degree_in_sign: f64) -> usize {
+    let pada = (degree_in_sign / (30.0 / 9.0)).floor() as usize;
+    let seed = if is_fire(sign_idx) {
+        0
+    } else if is_water(sign_idx) {
+        3
+    } else if is_air(sign_idx) {
+        6
+    } else {
+        9
+    };
+    (seed + pada) % 12
+}
+
+// ─── Sign Classification Helpers ─────────────────────────────────────────────
+
 fn is_movable(sign: usize) -> bool {
     matches!(sign, 0 | 3 | 6 | 9)
 }
@@ -20,7 +36,6 @@ fn is_dual(sign: usize) -> bool {
     matches!(sign, 2 | 5 | 8 | 11)
 }
 
-/// Helper to check sign element (Fire, Earth, Air, Water)
 fn is_fire(sign: usize) -> bool {
     matches!(sign, 0 | 4 | 8)
 }
@@ -35,6 +50,55 @@ fn is_air(sign: usize) -> bool {
 
 fn is_water(sign: usize) -> bool {
     matches!(sign, 3 | 7 | 11)
+}
+
+// ─── Rasi and Navamsa Building Functions ──────────────────────────────────────
+
+pub fn build_rasi_chart(asc_idx: usize, planets: &[PlanetData]) -> HashMap<String, HouseData> {
+    let mut chart = HashMap::new();
+    for house in 1..=12 {
+        let sign = SIGNS[(asc_idx + house - 1) % 12].to_string();
+        let house_planets = planets
+            .iter()
+            .filter(|planet| planet.house == house as u8)
+            .cloned()
+            .collect();
+        chart.insert(
+            format!("house_{house}"),
+            HouseData {
+                sign,
+                planets: house_planets,
+            },
+        );
+    }
+    chart
+}
+
+pub fn build_navamsa_chart(
+    ascendant_degree: f64,
+    planets: &[PlanetData],
+) -> HashMap<String, NavamsaHouseData> {
+    let asc_idx = sign_index(ascendant_degree);
+    let nav_asc_idx = get_navamsa_sign(asc_idx, ascendant_degree % 30.0);
+    let mut chart = HashMap::new();
+
+    for house in 1..=12 {
+        let sign = SIGNS[(nav_asc_idx + house - 1) % 12].to_string();
+        let house_planets = planets
+            .iter()
+            .filter(|planet| planet.navamsa_sign == sign)
+            .map(|planet| planet.name.clone())
+            .collect();
+        chart.insert(
+            format!("house_{house}"),
+            NavamsaHouseData {
+                sign,
+                planets: house_planets,
+            },
+        );
+    }
+
+    chart
 }
 
 // ─── Divisional Sign Calculators ─────────────────────────────────────────────
@@ -251,7 +315,6 @@ pub fn calculate_varga_charts(
         let v_key = format!("D{factor}");
         let v_asc_sign = get_varga_sign(factor, asc_sign, asc_deg_in_sign);
 
-        // 1. Calculate planetary details in this varga
         let mut v_planets = Vec::new();
         for p in planets {
             let p_rasi_sign = sign_index(p.full_degree);
@@ -267,7 +330,6 @@ pub fn calculate_varga_charts(
         }
         planets_res.insert(v_key.clone(), v_planets);
 
-        // 2. Arrange into a 12-house chart relative to varga ascendant
         let mut v_houses = HashMap::new();
         for house in 1..=12 {
             let target_sign_idx = (v_asc_sign + house - 1) % 12;
@@ -291,14 +353,150 @@ pub fn calculate_varga_charts(
                     planets: house_planets,
                 },
             );
+
         }
         charts_res.insert(v_key, v_houses);
+
     }
 
     (charts_res, planets_res)
 }
 
+fn is_supportive(planet: &str, sign: &str) -> bool {
+
+    use crate::constants::{STRENGTH_CHART, MOOLATRIKONA};
+    if let Some(rule) = STRENGTH_CHART.get(planet) {
+        if sign == rule.exalt {
+            return true;
+        }
+        if rule.own.iter().any(|&own| own == sign) {
+            return true;
+        }
+    }
+    if let Some((mt_sign, _, _)) = MOOLATRIKONA.get(planet) {
+        if sign == *mt_sign {
+            return true;
+        }
+    }
+    false
+}
+
+pub fn calculate_vaisheshikamsa(
+    planets: &[PlanetData],
+    divisional_planets: &HashMap<String, Vec<VargaPlanetRow>>,
+) -> HashMap<String, crate::models::VaisheshikamsaResponse> {
+    let mut res = HashMap::new();
+
+    let saptavarga_keys = ["D1", "D2", "D3", "D7", "D9", "D12", "D30"];
+    let dashavarga_keys = ["D1", "D2", "D3", "D7", "D9", "D10", "D12", "D16", "D30", "D60"];
+    let shodasavarga_keys = [
+        "D1", "D2", "D3", "D4", "D7", "D9", "D10", "D12", "D16", "D20", "D24", "D27", "D30", "D40", "D45", "D60",
+    ];
+
+    for p in planets {
+        let name = &p.name;
+        if name == "Ketu" || name == "Lagna" {
+            // Shadowy nodes like Ketu and non-planet points are usually skipped in standard Vaisheshikamsa, but we can return 0
+            res.insert(name.clone(), crate::models::VaisheshikamsaResponse {
+                saptavarga_count: 0,
+                saptavarga_grade: "None".to_string(),
+                dashavarga_count: 0,
+                dashavarga_grade: "None".to_string(),
+                shodasavarga_count: 0,
+                shodasavarga_grade: "None".to_string(),
+            });
+            continue;
+        }
+
+        let mut sap_count = 0;
+        let mut dash_count = 0;
+        let mut shod_count = 0;
+
+        // Check Rasi D1 first
+        let is_d1_supportive = is_supportive(name, &p.sign);
+        if is_d1_supportive {
+            sap_count += 1;
+            dash_count += 1;
+            shod_count += 1;
+        }
+
+        // Check other Vargas
+        for (v_key, p_rows) in divisional_planets {
+
+            if let Some(row) = p_rows.iter().find(|r| r.name == *name) {
+                let is_sup = is_supportive(name, &row.sign);
+                if is_sup {
+                    if saptavarga_keys.contains(&v_key.as_str()) {
+                        sap_count += 1;
+                    }
+                    if dashavarga_keys.contains(&v_key.as_str()) {
+                        dash_count += 1;
+                    }
+                    if shodasavarga_keys.contains(&v_key.as_str()) {
+                        shod_count += 1;
+                    }
+                }
+            }
+        }
+
+        // Map grades
+        let saptavarga_grade = match sap_count {
+            2 => "Parijata",
+            3 => "Uttama",
+            4 => "Gopura",
+            5 => "Simhasana",
+            6 => "Paravata",
+            7 => "Devaloka",
+            _ => "None",
+        }.to_string();
+
+        let dashavarga_grade = match dash_count {
+            2 => "Parijata",
+            3 => "Uttama",
+            4 => "Gopura",
+            5 => "Simhasana",
+            6 => "Paravata",
+            7 => "Devaloka",
+            8 => "Brahmalokamsa",
+            9 => "Indrasana",
+            10 => "Shridhama",
+            _ => "None",
+        }.to_string();
+
+        let shodasavarga_grade = match shod_count {
+            2 => "Bhedaka",
+            3 => "Kusuma",
+            4 => "Nagapushpa",
+            5 => "Kanduka",
+            6 => "Kerala",
+            7 => "Kalpavriksha",
+            8 => "Chandanavana",
+            9 => "Purnachandra",
+            10 => "Uchchaisrava",
+            11 => "Dhanvantari",
+            12 => "Suryakanta",
+            13 => "Vidruma",
+            14 => "Indrasana",
+            15 => "Goloka",
+            16 => "Shrivallabha",
+            _ => "None",
+        }.to_string();
+
+        res.insert(name.clone(), crate::models::VaisheshikamsaResponse {
+            saptavarga_count: sap_count,
+            saptavarga_grade,
+            dashavarga_count: dash_count,
+            dashavarga_grade,
+            shodasavarga_count: shod_count,
+            shodasavarga_grade,
+        });
+    }
+
+    res
+}
+
 // ─── Unit Tests ───────────────────────────────────────────────────────────────
+
 
 #[cfg(test)]
 mod tests {
@@ -306,18 +504,11 @@ mod tests {
 
     #[test]
     fn test_drekkana_d3() {
-        // Sun at 12 deg Taurus. Taurus is fixed sign (1).
-        // Degree 12.0 falls in 2nd Drekkana (l = 1).
-        // Sign = (1 + 4 * 1) % 12 = 5 (Virgo).
         assert_eq!(get_varga_sign(3, 1, 12.0), 5);
     }
 
     #[test]
     fn test_navamsa_d9() {
-        // Jupiter at 19 deg Cancer (water sign, index 3).
-        // 19 deg / (30/9) = 19 / 3.333 = 5.7 -> l = 5.
-        // Seed for Water sign = 3 (Cancer).
-        // Navamsa Sign = (3 + 5) % 12 = 8 (Sagittarius).
         assert_eq!(get_varga_sign(9, 3, 19.0), 8);
     }
 }

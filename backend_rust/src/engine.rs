@@ -4,14 +4,14 @@ use axum::http::StatusCode;
 use chrono::Datelike;
 
 use crate::{
-    atlas,
+    atlas, chart, yoga,
     constants::{
-        AIR_SIGNS, COMBUSTION_DEGREES, DASHA_SEQ, FIRE_SIGNS, FUNCTIONAL_MALEFICS, MOOLATRIKONA,
-        NAKSHATRA_NAMES, SIGNS, STRENGTH_CHART, WATER_SIGNS,
+        COMBUSTION_DEGREES, DASHA_SEQ, FUNCTIONAL_MALEFICS, MOOLATRIKONA,
+        NAKSHATRA_NAMES, SIGNS, STRENGTH_CHART,
     },
     models::{
-        AscendantInfo, BirthData, CalculationProfile, ChartResponse, HouseData, LocationInfo,
-        MoonIntelligence, Nakshatra, NavamsaHouseData, PlanetData, PlanetaryRow, Yoga,
+        AscendantInfo, BirthData, CalculationProfile, ChartResponse, LocationInfo,
+        MoonIntelligence, Nakshatra, PlanetData, PlanetaryRow,
     },
     panchanga, service, swiss, timezones, ApiError,
 };
@@ -46,6 +46,44 @@ fn assign_chara_karakas(planets: &mut [PlanetData]) {
     }
 }
 
+fn assign_fivefold_friendship(planets: &mut [PlanetData]) {
+    let mut house_map = HashMap::new();
+    for p in planets.iter() {
+        house_map.insert(p.name.clone(), p.house);
+    }
+
+    let sign_lord = |sign_idx: usize| -> &'static str {
+        match sign_idx {
+            0 => "Mars",      // Aries
+            1 => "Venus",     // Taurus
+            2 => "Mercury",   // Gemini
+            3 => "Moon",      // Cancer
+            4 => "Sun",       // Leo
+            5 => "Mercury",   // Virgo
+            6 => "Venus",     // Libra
+            7 => "Mars",      // Scorpio
+            8 => "Jupiter",   // Sagittarius
+            9 => "Saturn",    // Capricorn
+            10 => "Saturn",   // Aquarius
+            11 => "Jupiter",  // Pisces
+            _ => "Unknown",
+        }
+    };
+
+    for i in 0..planets.len() {
+        let p = &planets[i];
+        if p.strength == "Neutral" || p.strength == "Friend" || p.strength == "Enemy" {
+            let sign_idx = crate::chart::sign_index(p.full_degree);
+            let lord = sign_lord(sign_idx);
+            if let Some(&lord_house) = house_map.get(lord) {
+                let relationship = crate::maitri::get_fivefold_relationship(&p.name, lord, p.house, lord_house);
+                planets[i].strength = relationship.to_string();
+            }
+        }
+    }
+}
+
+
 pub async fn compute_chart(data: BirthData) -> Result<ChartResponse, ApiError> {
     compute_chart_with_profile(data, CalculationProfile::default()).await
 }
@@ -65,7 +103,7 @@ pub async fn compute_chart_with_profile(
     .await
     .map_err(|e| ApiError::new(StatusCode::INTERNAL_SERVER_ERROR, format!("Task join error: {e}")))??;
 
-    let asc_idx = sign_index(snapshot.ascendant_degree);
+    let asc_idx = chart::sign_index(snapshot.ascendant_degree);
     let sun_deg = snapshot
         .planets
         .iter()
@@ -95,6 +133,7 @@ pub async fn compute_chart_with_profile(
     planets.push(build_planet("Ketu", ketu_deg, -1.0, asc_idx, sun_deg, snapshot.ascendant_degree));
 
     assign_chara_karakas(&mut planets);
+    assign_fivefold_friendship(&mut planets);
 
     let moon = planets
         .iter()
@@ -109,10 +148,10 @@ pub async fn compute_chart_with_profile(
     let moon_nak = get_nakshatra(moon.full_degree);
     let timeline = service::vimshottari_timeline(&moon_nak, resolved_time.local_naive);
 
-    let chart_data = build_rasi_chart(asc_idx, &planets);
-    let navamsa_chart = build_navamsa_chart(snapshot.ascendant_degree, &planets);
+    let chart_data = chart::build_rasi_chart(asc_idx, &planets);
+    let navamsa_chart = chart::build_navamsa_chart(snapshot.ascendant_degree, &planets);
     let panchanga = panchanga::calculate(&planets, resolved_time.local_naive)?;
-    let yogas = detect_yogas(&planets, asc_idx);
+    let yogas = yoga::detect_yogas(&planets, asc_idx);
     let planetary_table = planets
         .iter()
         .map(|p| PlanetaryRow {
@@ -133,7 +172,7 @@ pub async fn compute_chart_with_profile(
         planets
             .iter()
             .find(|p| p.name == name)
-            .map(|p| sign_index(p.full_degree))
+            .map(|p| chart::sign_index(p.full_degree))
             .unwrap_or(0)
     };
 
@@ -151,13 +190,16 @@ pub async fn compute_chart_with_profile(
     let ashtakavarga = crate::ashtakavarga::calculate(&positions);
 
     let (divisional_charts, divisional_planets) =
-        crate::vargas::calculate_varga_charts(snapshot.ascendant_degree, &planets);
+        chart::calculate_varga_charts(snapshot.ascendant_degree, &planets);
 
-    let dosha_input: Vec<crate::dosha::DoshaInputPlanet> = planets
+    let vaisheshikamsa = chart::calculate_vaisheshikamsa(&planets, &divisional_planets);
+
+
+    let dosha_input: Vec<yoga::DoshaInputPlanet> = planets
         .iter()
-        .map(|p| crate::dosha::DoshaInputPlanet {
+        .map(|p| yoga::DoshaInputPlanet {
             name: p.name.clone(),
-            sign_idx: sign_index(p.full_degree),
+            sign_idx: chart::sign_index(p.full_degree),
             house: p.house,
             deg_in_sign: p.deg_in_sign,
             retrograde: p.retrograde,
@@ -165,9 +207,60 @@ pub async fn compute_chart_with_profile(
         })
         .collect();
 
-    let doshas = crate::dosha::calculate_doshas(&dosha_input, asc_idx, &moon.nakshatra);
+    let doshas = yoga::calculate_doshas(&dosha_input, asc_idx, &moon.nakshatra);
+
+    let jaimini = calculate_jaimini_lagnas(&planets, asc_idx, snapshot.ascendant_degree);
+
+    let aspects = crate::drishti::calculate_drishti(asc_idx, &planets);
+
+    let argala = crate::argala::calculate_argala(&planets);
+
+    let chara_dasha = crate::dasha::calculate_chara_dasha(SIGNS[asc_idx], &planets, &data.date);
+
+
+
+
+    let now = chrono::Local::now();
+    let today_date = now.format("%d/%m/%Y").to_string();
+    let today_time = "12:00:00".to_string();
+    let now_resolved = timezones::resolve(&today_date, &today_time, lat, lon, data.timezone);
+    let ss_res = if let Ok(resolved) = now_resolved {
+        let jd_today = resolved.jd_ut;
+        let saturn_raw = tokio::task::spawn_blocking(move || {
+            let _guard = swiss::SWISS_LOCK.lock().expect("Swiss Ephemeris lock poisoned");
+            let mut xx = [0.0_f64; 6];
+            let mut serr = [0_i8; 256];
+            unsafe {
+                swiss_eph::swe_set_sid_mode(swiss_eph::SE_SIDM_LAHIRI, 0.0, 0.0);
+                let res = swiss_eph::swe_calc_ut(
+                    jd_today,
+                    swiss_eph::SE_SATURN,
+                    crate::constants::PLANET_FLAGS,
+                    xx.as_mut_ptr(),
+                    serr.as_mut_ptr(),
+                );
+                if res >= 0 { Some(xx[0]) } else { None }
+            }
+        })
+        .await
+        .ok()
+        .flatten();
+
+        if let Some(sat_long) = saturn_raw {
+            let saturn_sign_idx = chart::sign_index(sat_long);
+            let saturn_sign = SIGNS[saturn_sign_idx];
+            Some(calculate_sade_sati(&moon.sign, saturn_sign))
+
+        } else {
+            None
+        }
+    } else {
+        None
+    };
 
     Ok(ChartResponse {
+
+
         profile,
         location: LocationInfo {
             city: data.city,
@@ -196,8 +289,17 @@ pub async fn compute_chart_with_profile(
         divisional_charts: Some(divisional_charts),
         divisional_planets: Some(divisional_planets),
         doshas: Some(doshas),
+        jaimini: Some(jaimini),
+        aspects: Some(aspects),
+        vaisheshikamsa: Some(vaisheshikamsa),
+        sade_sati: ss_res,
+        argala: Some(argala),
+        chara_dasha: Some(chara_dasha),
     })
 }
+
+
+
 
 fn validate_profile(profile: &CalculationProfile) -> Result<(), ApiError> {
     let ayanamsa_ok = profile.ayanamsa.eq_ignore_ascii_case("lahiri");
@@ -313,7 +415,7 @@ fn build_planet(
     sun_deg: f64,
     asc_degree: f64,
 ) -> PlanetData {
-    let sign_idx = sign_index(longitude);
+    let sign_idx = chart::sign_index(longitude);
     let sign = SIGNS[sign_idx].to_string();
     let deg_in_sign = longitude % 30.0;
     let house = ((sign_idx + 12 - asc_idx) % 12 + 1) as u8;
@@ -325,7 +427,7 @@ fn build_planet(
         speed < 0.0
     };
     let combust = check_combustion(name, longitude, sun_deg);
-    let navamsa_sign = SIGNS[get_navamsa_sign(sign_idx, deg_in_sign)].to_string();
+    let navamsa_sign = SIGNS[chart::get_navamsa_sign(sign_idx, deg_in_sign)].to_string();
 
     let (dig_bala_points, dig_bala_percentage) =
         if let Some((pts, pct)) = calculate_dig_bala(name, longitude, asc_degree) {
@@ -354,53 +456,9 @@ fn build_planet(
     }
 }
 
-fn build_rasi_chart(asc_idx: usize, planets: &[PlanetData]) -> HashMap<String, HouseData> {
-    let mut chart = HashMap::new();
-    for house in 1..=12 {
-        let sign = SIGNS[(asc_idx + house - 1) % 12].to_string();
-        let house_planets = planets
-            .iter()
-            .filter(|planet| planet.house == house as u8)
-            .cloned()
-            .collect();
-        chart.insert(
-            format!("house_{house}"),
-            HouseData {
-                sign,
-                planets: house_planets,
-            },
-        );
-    }
-    chart
-}
+// consolidated duplicates deleted
 
-fn build_navamsa_chart(
-    ascendant_degree: f64,
-    planets: &[PlanetData],
-) -> HashMap<String, NavamsaHouseData> {
-    let asc_idx = sign_index(ascendant_degree);
-    let nav_asc_idx = get_navamsa_sign(asc_idx, ascendant_degree % 30.0);
-    let mut chart = HashMap::new();
-
-    for house in 1..=12 {
-        let sign = SIGNS[(nav_asc_idx + house - 1) % 12].to_string();
-        let house_planets = planets
-            .iter()
-            .filter(|planet| planet.navamsa_sign == sign)
-            .map(|planet| planet.name.clone())
-            .collect();
-        chart.insert(
-            format!("house_{house}"),
-            NavamsaHouseData {
-                sign,
-                planets: house_planets,
-            },
-        );
-    }
-
-    chart
-}
-
+// Helper get_nakshatra, dignity, combustion kept for building planet rows
 fn get_nakshatra(degree: f64) -> Nakshatra {
     let span = 13.333_333_333_f64;
     let idx = (degree / span).floor() as usize;
@@ -459,358 +517,7 @@ fn check_combustion(name: &str, planet_deg: f64, sun_deg: f64) -> bool {
     diff <= *range
 }
 
-fn get_navamsa_sign(sign_idx: usize, degree_in_sign: f64) -> usize {
-    let pada = (degree_in_sign / (30.0 / 9.0)).floor() as usize;
-    let seed = if FIRE_SIGNS.contains(&sign_idx) {
-        0
-    } else if WATER_SIGNS.contains(&sign_idx) {
-        3
-    } else if AIR_SIGNS.contains(&sign_idx) {
-        6
-    } else {
-        9
-    };
-    (seed + pada) % 12
-}
-
-fn sign_lord(sign_idx: usize) -> &'static str {
-    match sign_idx {
-        0 => "Mars",      // Aries
-        1 => "Venus",     // Taurus
-        2 => "Mercury",   // Gemini
-        3 => "Moon",      // Cancer
-        4 => "Sun",       // Leo
-        5 => "Mercury",   // Virgo
-        6 => "Venus",     // Libra
-        7 => "Mars",      // Scorpio
-        8 => "Jupiter",   // Sagittarius
-        9 => "Saturn",    // Capricorn
-        10 => "Saturn",   // Aquarius
-        11 => "Jupiter",  // Pisces
-        _ => "Unknown",
-    }
-}
-
-fn detect_yogas(planets: &[PlanetData], asc_idx: usize) -> Vec<Yoga> {
-    let mut yogas = Vec::new();
-    let p_house: HashMap<&str, u8> = planets
-        .iter()
-        .map(|planet| (planet.name.as_str(), planet.house))
-        .collect();
-    let mut house_planets: HashMap<u8, Vec<&str>> = HashMap::new();
-    for planet in planets {
-        house_planets
-            .entry(planet.house)
-            .or_default()
-            .push(planet.name.as_str());
-    }
-
-    if let (Some(jupiter), Some(moon)) = (p_house.get("Jupiter"), p_house.get("Moon")) {
-        let diff = ((*jupiter as i16 - *moon as i16).rem_euclid(12)) as u8;
-        if [0, 3, 6, 9].contains(&diff) {
-            yogas.push(yoga(
-                "Gaja Kesari Yoga",
-                "Jupiter in Kendra from Moon. Bestows wisdom, wealth, and fame.",
-                "benefic",
-            ));
-        }
-    }
-
-    same_house_yoga(
-        &mut yogas,
-        &p_house,
-        "Sun",
-        "Mercury",
-        "Budhaditya Yoga",
-        "Sun and Mercury conjoined. Gives sharp intellect and communication skills.",
-    );
-    same_house_yoga(
-        &mut yogas,
-        &p_house,
-        "Moon",
-        "Mars",
-        "Chandra Mangal Yoga",
-        "Moon and Mars conjoined. Gives financial prosperity through courage.",
-    );
-
-    for (planet_name, yoga_name, description) in [
-        (
-            "Mars",
-            "Ruchaka Yoga",
-            "Mars in own/exalted sign in Kendra. Gives courage, strength, and leadership.",
-        ),
-        (
-            "Mercury",
-            "Bhadra Yoga",
-            "Mercury in own/exalted sign in Kendra. Gives eloquence and intelligence.",
-        ),
-        (
-            "Jupiter",
-            "Hamsa Yoga",
-            "Jupiter in own/exalted sign in Kendra. Gives spirituality and wisdom.",
-        ),
-        (
-            "Venus",
-            "Malavya Yoga",
-            "Venus in own/exalted sign in Kendra. Gives luxury, beauty, and comfort.",
-        ),
-        (
-            "Saturn",
-            "Sasa Yoga",
-            "Saturn in own/exalted sign in Kendra. Gives authority and discipline.",
-        ),
-    ] {
-        if let Some(planet) = planets.iter().find(|planet| planet.name == planet_name) {
-            if [1, 4, 7, 10].contains(&planet.house)
-                && matches!(
-                    planet.strength.as_str(),
-                    "Exalted" | "Own Sign" | "Moolatrikona"
-                )
-            {
-                yogas.push(yoga(yoga_name, description, "benefic"));
-            }
-        }
-    }
-
-    if let Some(moon_house) = p_house.get("Moon") {
-        let second = (*moon_house % 12) + 1;
-        let twelfth = ((*moon_house as i16 - 2).rem_euclid(12) + 1) as u8;
-        let empty_second = house_planets
-            .get(&second)
-            .map(|items| items.iter().all(|p| matches!(*p, "Moon" | "Rahu" | "Ketu")))
-            .unwrap_or(true);
-        let empty_twelfth = house_planets
-            .get(&twelfth)
-            .map(|items| items.iter().all(|p| matches!(*p, "Moon" | "Rahu" | "Ketu")))
-            .unwrap_or(true);
-        if empty_second && empty_twelfth {
-            yogas.push(yoga(
-                "Kemadruma Yoga",
-                "No planets in 2nd or 12th from Moon. May indicate financial struggles or loneliness.",
-                "malefic",
-            ));
-        }
-    }
-
-    // ─── Vipareeta Raja Yoga ───────────────────────────────────────────────
-    let lord_6 = sign_lord((asc_idx + 5) % 12);
-    let lord_8 = sign_lord((asc_idx + 7) % 12);
-    let lord_12 = sign_lord((asc_idx + 11) % 12);
-    let mut vipareeta_yogas = Vec::new();
-
-    for (lord_name, house_num) in [
-        (lord_6, "6th Lord"),
-        (lord_8, "8th Lord"),
-        (lord_12, "12th Lord"),
-    ] {
-        if let Some(&h) = p_house.get(lord_name) {
-            if h == 6 || h == 8 || h == 12 {
-                vipareeta_yogas.push(format!("{} ({}) in House {}", house_num, lord_name, h));
-            }
-        }
-    }
-
-    if !vipareeta_yogas.is_empty() {
-        yogas.push(yoga(
-            "Vipareeta Raja Yoga",
-            &format!(
-                "Dusthana lord conjoined or placed in another dusthana house: {}. Neutralizes adversity and brings sudden rise, unexpected gains, and stellar resilience.",
-                vipareeta_yogas.join(", ")
-            ),
-            "benefic",
-        ));
-    }
-
-    // ─── Sunapha / Anapha / Durudhara Yogas ────────────────────────────────
-    if let Some(&moon_house) = p_house.get("Moon") {
-        let second_from_moon = (moon_house % 12) + 1;
-        let twelfth_from_moon = if moon_house == 1 { 12 } else { moon_house - 1 };
-
-        let has_planets_in_second = house_planets
-            .get(&second_from_moon)
-            .map(|list| list.iter().any(|&p| !matches!(p, "Moon" | "Sun" | "Rahu" | "Ketu")))
-            .unwrap_or(false);
-
-        let has_planets_in_twelfth = house_planets
-            .get(&twelfth_from_moon)
-            .map(|list| list.iter().any(|&p| !matches!(p, "Moon" | "Sun" | "Rahu" | "Ketu")))
-            .unwrap_or(false);
-
-        if has_planets_in_second && has_planets_in_twelfth {
-            yogas.push(yoga(
-                "Durudhara Yoga",
-                "Planets occupy both the 2nd and 12th houses from the Moon. Confers financial abundance, sharp intellect, immense wisdom, and natural leadership capabilities.",
-                "benefic",
-            ));
-        } else if has_planets_in_second {
-            yogas.push(yoga(
-                "Sunapha Yoga",
-                "Planets occupy the 2nd house from the Moon. Bestows mental strength, self-earned wealth, fame, and a prosperous, comfortable life.",
-                "benefic",
-            ));
-        } else if has_planets_in_twelfth {
-            yogas.push(yoga(
-                "Anapha Yoga",
-                "Planets occupy the 12th house from the Moon. Confers a highly magnetic personality, excellent health, spiritual inclinations, and refined tastes.",
-                "benefic",
-            ));
-        }
-    }
-
-    // ─── Adhi Yoga ─────────────────────────────────────────────────────────
-    if let Some(&moon_house) = p_house.get("Moon") {
-        let h6 = ((moon_house + 5 - 1) % 12) + 1;
-        let h7 = ((moon_house + 6 - 1) % 12) + 1;
-        let h8 = ((moon_house + 7 - 1) % 12) + 1;
-
-        let mut benefics_found = Vec::new();
-        for p in &["Jupiter", "Venus", "Mercury"] {
-            if let Some(&h) = p_house.get(p) {
-                if h == h6 || h == h7 || h == h8 {
-                    benefics_found.push(*p);
-                }
-            }
-        }
-        if !benefics_found.is_empty() {
-            yogas.push(yoga(
-                "Adhi Yoga",
-                &format!(
-                    "Natural benefics ({}) occupy the 6th, 7th, or 8th houses from the Moon. Grants high status, fame, prosperity, leadership, and a highly influential life.",
-                    benefics_found.join(", ")
-                ),
-                "benefic",
-            ));
-        }
-    }
-
-    // ─── Amala Yoga ────────────────────────────────────────────────────────
-    let h10_lagna = 10;
-    let mut amala_lagna = Vec::new();
-    let mut amala_moon = Vec::new();
-
-    if let Some(&moon_house) = p_house.get("Moon") {
-        let h10_moon = ((moon_house + 9 - 1) % 12) + 1;
-
-        for p in &["Jupiter", "Venus", "Mercury"] {
-            if let Some(&h) = p_house.get(p) {
-                if h == h10_lagna {
-                    amala_lagna.push(*p);
-                }
-                if h == h10_moon {
-                    amala_moon.push(*p);
-                }
-            }
-        }
-    }
-
-    if !amala_lagna.is_empty() || !amala_moon.is_empty() {
-        let mut sources = Vec::new();
-        if !amala_lagna.is_empty() {
-            sources.push(format!("{} in 10th from Lagna", amala_lagna.join(", ")));
-        }
-        if !amala_moon.is_empty() {
-            sources.push(format!("{} in 10th from Moon", amala_moon.join(", ")));
-        }
-        yogas.push(yoga(
-            "Amala Yoga",
-            &format!(
-                "Natural benefics occupy the 10th house from Lagna or Moon: {}. Bestows professional success, dynamic wealth, a pure reputation, and philanthropic disposition.",
-                sources.join(" & ")
-            ),
-            "benefic",
-        ));
-    }
-
-    // ─── Guru Mangala Yoga ──────────────────────────────────────────────────
-    if let (Some(&jup_h), Some(&mars_h)) = (p_house.get("Jupiter"), p_house.get("Mars")) {
-        let diff = (jup_h as i16 - mars_h as i16).abs();
-        if diff == 0 || diff == 6 {
-            let relationship = if diff == 0 { "conjoined" } else { "mutually aspecting (7th house opposition)" };
-            yogas.push(yoga(
-                "Guru Mangala Yoga",
-                &format!(
-                    "Jupiter and Mars are {} in the chart. Bestows dynamic energy, strong leadership, success in business/enterprises, and great prosperity.",
-                    relationship
-                ),
-                "benefic",
-            ));
-        }
-    }
-
-    // ─── Nabhasa Ashraya Yogas (Rajju / Musala / Nala) ─────────────────────
-    let main_planets = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"];
-    let mut all_movable = true;
-    let mut all_fixed = true;
-    let mut all_dual = true;
-
-    for p_name in &main_planets {
-        if let Some(p_data) = planets.iter().find(|p| p.name == *p_name) {
-            let sign_idx = sign_index(p_data.full_degree);
-            if ![0, 3, 6, 9].contains(&sign_idx) {
-                all_movable = false;
-            }
-            if ![1, 4, 7, 10].contains(&sign_idx) {
-                all_fixed = false;
-            }
-            if ![2, 5, 8, 11].contains(&sign_idx) {
-                all_dual = false;
-            }
-        } else {
-            all_movable = false;
-            all_fixed = false;
-            all_dual = false;
-        }
-    }
-
-    if all_movable {
-        yogas.push(yoga(
-            "Rajju Yoga",
-            "All main planets are in movable signs (Aries, Cancer, Libra, Capricorn). Bestows an active, enterprising life, fondness for travel, and rapid progress.",
-            "benefic",
-        ));
-    } else if all_fixed {
-        yogas.push(yoga(
-            "Musala Yoga",
-            "All main planets are in fixed signs (Taurus, Leo, Scorpio, Aquarius). Confers determination, stability, focus, self-respect, and steady long-term accumulation of wealth.",
-            "benefic",
-        ));
-    } else if all_dual {
-        yogas.push(yoga(
-            "Nala Yoga",
-            "All main planets are in dual signs (Gemini, Virgo, Sagittarius, Pisces). Bestows high intellect, multi-dimensional skills, adaptability, and an analytical mind.",
-            "benefic",
-        ));
-    }
-
-    yogas
-}
-
-fn same_house_yoga(
-    yogas: &mut Vec<Yoga>,
-    p_house: &HashMap<&str, u8>,
-    p1: &str,
-    p2: &str,
-    name: &str,
-    description: &str,
-) {
-    if let (Some(h1), Some(h2)) = (p_house.get(p1), p_house.get(p2)) {
-        if h1 == h2 {
-            yogas.push(yoga(name, description, "benefic"));
-        }
-    }
-}
-
-fn yoga(name: &str, description: &str, kind: &str) -> Yoga {
-    Yoga {
-        name: name.to_string(),
-        description: description.to_string(),
-        kind: kind.to_string(),
-    }
-}
-
-fn sign_index(degree: f64) -> usize {
-    ((degree / 30.0).floor() as usize).min(11)
-}
+// Deprecated sign_index helper deleted
 
 fn normalize_time(input: &str) -> Result<String, ApiError> {
     let mut normalized = String::new();
@@ -864,7 +571,6 @@ fn round2(value: f64) -> f64 {
 pub async fn compute_transits(
     request: crate::models::TransitRequest,
 ) -> Result<crate::models::TransitResponse, ApiError> {
-    // 1. Calculate natal chart
     let natal = compute_chart(request.birth_data.clone()).await?;
     let asc_sign = &natal.ascendant.sign;
     let asc_idx = SIGNS
@@ -878,10 +584,8 @@ pub async fn compute_transits(
         .position(|&s| s == moon_sign)
         .unwrap_or(0);
 
-    // 2. Resolve coordinates of birth location to calculate transits at that coordinate
     let (lat, lon) = resolve_coordinates(&request.birth_data).await?;
     
-    // Resolve transit time
     let mut transit_data = BirthData {
         date: request.transit_date.clone(),
         time: request.transit_time.clone(),
@@ -917,9 +621,8 @@ pub async fn compute_transits(
 
     let mut transit_planets = Vec::new();
     
-    // Build standard planets
     for raw in snapshot.planets {
-        let t_idx = sign_index(raw.longitude);
+        let t_idx = chart::sign_index(raw.longitude);
         let sign = SIGNS[t_idx].to_string();
         let deg_in_sign = raw.longitude % 30.0;
         let house_lagna = ((t_idx + 12 - asc_idx) % 12 + 1) as u8;
@@ -943,7 +646,6 @@ pub async fn compute_transits(
         });
     }
     
-    // Build Ketu (180 degrees from Rahu)
     let rahu = transit_planets
         .iter()
         .find(|p| p.name == "Rahu")
@@ -954,7 +656,6 @@ pub async fn compute_transits(
             )
         })?;
     
-    // Get full degree of Rahu
     let rahu_idx = SIGNS
         .iter()
         .position(|&s| s == rahu.transit_sign)
@@ -962,7 +663,7 @@ pub async fn compute_transits(
     let rahu_full = rahu_idx as f64 * 30.0 + rahu.transit_degree;
     let ketu_deg = swiss::normalize_degree(rahu_full + 180.0);
     
-    let k_idx = sign_index(ketu_deg);
+    let k_idx = chart::sign_index(ketu_deg);
     let k_sign = SIGNS[k_idx].to_string();
     let k_deg_in_sign = ketu_deg % 30.0;
     let k_house_lagna = ((k_idx + 12 - asc_idx) % 12 + 1) as u8;
@@ -978,15 +679,158 @@ pub async fn compute_transits(
         combust: false,
     });
 
+    let saturn_sign = transit_planets
+        .iter()
+        .find(|p| p.name == "Saturn")
+        .map(|p| p.transit_sign.as_str())
+        .unwrap_or("Aries");
+    let natal_moon_sign = &natal.moon_intelligence.sign;
+    let ss_res = calculate_sade_sati(natal_moon_sign, saturn_sign);
+
     Ok(crate::models::TransitResponse {
         transit_date: transit_data.date,
         transit_time: transit_data.time,
         natal_ascendant: natal.ascendant,
         transit_planets,
+        sade_sati: Some(ss_res),
     })
 }
 
+
+// ─── Jaimini Calculations ────────────────────────────────────────────────────
+
+pub fn calculate_jaimini_lagnas(
+    planets: &[PlanetData],
+    asc_idx: usize,
+    asc_degree: f64,
+) -> crate::models::JaiminiResponse {
+    let sign_lord = |sign_idx: usize| -> &'static str {
+        match sign_idx {
+            0 => "Mars",      // Aries
+            1 => "Venus",     // Taurus
+            2 => "Mercury",   // Gemini
+            3 => "Moon",      // Cancer
+            4 => "Sun",       // Leo
+            5 => "Mercury",   // Virgo
+            6 => "Venus",     // Libra
+            7 => "Mars",      // Scorpio
+            8 => "Jupiter",   // Sagittarius
+            9 => "Saturn",    // Capricorn
+            10 => "Saturn",   // Aquarius
+            11 => "Jupiter",  // Pisces
+            _ => "Unknown",
+        }
+    };
+
+    // 1. Arudha Lagna (AL)
+    let lagna_lord_name = sign_lord(asc_idx);
+    let lagna_lord_house = planets.iter().find(|p| p.name == lagna_lord_name).map(|p| p.house).unwrap_or(1);
+    let mut al_house = ((2 * lagna_lord_house as i16 - 1 - 1).rem_euclid(12) + 1) as u8;
+    if al_house == 1 {
+        al_house = 10;
+    } else if al_house == 7 {
+        al_house = 4;
+    }
+    let al_sign_idx = (asc_idx + al_house as usize - 1) % 12;
+    let arudha_lagna = crate::models::JaiminiPoint {
+        sign: SIGNS[al_sign_idx].to_string(),
+        sign_index: al_sign_idx,
+        house: al_house,
+    };
+
+    // 2. Upapada Lagna (UL)
+    let lord_12_name = sign_lord((asc_idx + 11) % 12);
+    let lord_12_house = planets.iter().find(|p| p.name == lord_12_name).map(|p| p.house).unwrap_or(1);
+    let dist = (lord_12_house as i16 - 12).rem_euclid(12) + 1;
+    let mut ul_house = ((lord_12_house as i16 + dist - 1 - 1).rem_euclid(12) + 1) as u8;
+    if ul_house == 12 {
+        ul_house = 9;
+    } else if ul_house == 6 {
+        ul_house = 3;
+    }
+    let ul_sign_idx = (asc_idx + ul_house as usize - 1) % 12;
+    let upapada_lagna = crate::models::JaiminiPoint {
+        sign: SIGNS[ul_sign_idx].to_string(),
+        sign_index: ul_sign_idx,
+        house: ul_house,
+    };
+
+    // 3. Karakamsha Lagna
+    let ak_planet = planets.iter().find(|p| p.chara_karaka.as_deref() == Some("AK"));
+    let (kk_sign, kk_sign_idx, kk_house) = if let Some(ak) = ak_planet {
+        let sig = ak.navamsa_sign.clone();
+        let idx = SIGNS.iter().position(|&s| s == sig).unwrap_or(0);
+        let nav_asc_idx = chart::get_navamsa_sign(asc_idx, asc_degree % 30.0);
+        let h = ((idx + 12 - nav_asc_idx) % 12 + 1) as u8;
+        (sig, idx, h)
+    } else {
+        ("Aries".to_string(), 0, 1)
+    };
+    let karakamsha_lagna = crate::models::JaiminiPoint {
+        sign: kk_sign,
+        sign_index: kk_sign_idx,
+        house: kk_house,
+    };
+
+    // 4. Chara Karakas Map
+    let mut chara_karakas = HashMap::new();
+    for p in planets {
+        if let Some(ck) = &p.chara_karaka {
+            chara_karakas.insert(p.name.clone(), ck.clone());
+        }
+    }
+
+    crate::models::JaiminiResponse {
+        arudha_lagna,
+        upapada_lagna,
+        karakamsha_lagna,
+        chara_karakas,
+    }
+}
+
+
+pub fn calculate_sade_sati(natal_moon_sign: &str, transit_saturn_sign: &str) -> crate::models::SadeSatiResponse {
+
+    let moon_idx = SIGNS.iter().position(|&s| s == natal_moon_sign).unwrap_or(0);
+    let saturn_idx = SIGNS.iter().position(|&s| s == transit_saturn_sign).unwrap_or(0);
+
+    let diff = (saturn_idx + 12 - moon_idx) % 12;
+
+    let (is_active, phase, description) = match diff {
+        11 => (
+            true,
+            Some("Phase 1: Rising".to_string()),
+            "Saturn is transiting the 12th house relative to your natal Moon. This marks the beginning of Sade Sati, which focuses on letting go, deep introspection, and adjusting to changes.".to_string(),
+        ),
+        0 => (
+            true,
+            Some("Phase 2: Peak".to_string()),
+            "Saturn is transiting directly over your natal Moon (1st house). This is the peak phase of Sade Sati, testing your mental resilience, focus, and core character.".to_string(),
+        ),
+        1 => (
+            true,
+            Some("Phase 3: Setting".to_string()),
+            "Saturn is transiting the 2nd house relative to your natal Moon. This is the final phase of Sade Sati, highlighting finances, family responsibilities, and consolidating lessons learned.".to_string(),
+        ),
+        _ => (
+            false,
+            None,
+            "Saturn is not currently transiting the 12th, 1st, or 2nd houses from your Moon. You are not currently going through Sade Sati.".to_string(),
+        ),
+    };
+
+    crate::models::SadeSatiResponse {
+        is_active,
+        phase,
+        saturn_sign: transit_saturn_sign.to_string(),
+        moon_sign: natal_moon_sign.to_string(),
+        description,
+    }
+}
+
+
 #[cfg(test)]
+
 mod tests {
     use super::*;
 

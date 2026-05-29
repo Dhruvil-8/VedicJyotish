@@ -254,7 +254,6 @@ CRITICAL RULES:
 - Do NOT include any introductory preamble, greetings, or flowery opening paragraphs
 - Do NOT include placeholders like "[Client Name]" or "[Your Name]"
 - Do NOT roleplay or claim years of experience
-- Do NOT include a "Date of Analysis" header
 - Start DIRECTLY with the first analysis section heading
 
 {chart_context}
@@ -317,98 +316,8 @@ fn build_chat_request(
         return Err("question_limit_reached");
     }
 
-    let sanitized = sanitize_for_ai(chart_data);
-
-    // Find current dasha
-    let (current_maha, _, current_antar, _) = find_current_dasha(&sanitized);
-
-    // Planet summary
-    let mut planet_summary = Vec::new();
-    if let Some(table) = sanitized.get("planetary_table").and_then(|v| v.as_array()) {
-        for p in table {
-            let name = p.get("name").and_then(|v| v.as_str()).unwrap_or("?");
-            let sign = p.get("sign").and_then(|v| v.as_str()).unwrap_or("?");
-            let house = p.get("house").and_then(|v| v.as_u64()).unwrap_or(0);
-            let dignity = p.get("dignity").and_then(|v| v.as_str()).unwrap_or("?");
-            let nak = p.get("nakshatra").and_then(|v| v.as_str()).unwrap_or("?");
-            let pada = p.get("pada").and_then(|v| v.as_u64()).unwrap_or(0);
-            let navamsa = p.get("navamsa_sign").and_then(|v| v.as_str()).unwrap_or("?");
-
-            let mut flags = Vec::new();
-            if p.get("retrograde").and_then(|v| v.as_bool()).unwrap_or(false) {
-                flags.push("R");
-            }
-            if p.get("combust").and_then(|v| v.as_bool()).unwrap_or(false) {
-                flags.push("C");
-            }
-            let flag_str = if flags.is_empty() {
-                String::new()
-            } else {
-                format!(" [{flags}]", flags = flags.join(","))
-            };
-
-            planet_summary.push(format!(
-                "{name}: {sign} H{house} ({dignity}, Nak:{nak} P{pada}, Nav:{navamsa}{flag_str})"
-            ));
-        }
-    }
-
-    // Yoga summary
-    let yoga_str = sanitized
-        .get("yogas")
-        .and_then(|v| v.as_array())
-        .map(|yogas| {
-            yogas
-                .iter()
-                .filter_map(|y| {
-                    let name = y.get("name")?.as_str()?;
-                    let kind = y.get("type")?.as_str()?;
-                    Some(format!("{name} ({kind})"))
-                })
-                .collect::<Vec<_>>()
-                .join(", ")
-        })
-        .unwrap_or_default();
-    let yoga_str = if yoga_str.is_empty() {
-        "None".to_string()
-    } else {
-        yoga_str
-    };
-
-    let asc_sign = sanitized
-        .pointer("/ascendant/sign")
-        .and_then(|v| v.as_str())
-        .unwrap_or("?");
-    let moon_sign = sanitized
-        .pointer("/moon_intelligence/sign")
-        .and_then(|v| v.as_str())
-        .unwrap_or("?");
-    let moon_nak = sanitized
-        .pointer("/moon_intelligence/nakshatra")
-        .and_then(|v| v.as_str())
-        .unwrap_or("?");
-    let moon_pada = sanitized
-        .pointer("/moon_intelligence/pada")
-        .and_then(|v| v.as_u64())
-        .unwrap_or(0);
-    let nav_lagna = sanitized
-        .pointer("/navamsa_chart/house_1/sign")
-        .and_then(|v| v.as_str())
-        .unwrap_or("?");
-
-    let analysis_date = chrono::Local::now().format("%d-%B-%Y").to_string();
-
-    let chart_context = format!(
-        r#"Chart (Analyzed on {analysis_date}):
-Ascendant: {asc_sign}
-Moon: {moon_sign} ({moon_nak} Pada {moon_pada})
-Current Maha Dasha: {current_maha} | Antar Dasha: {current_antar}
-Navamsa Lagna: {nav_lagna}
-Yogas: {yoga_str}
-Planets:
-{planets}"#,
-        planets = planet_summary.join("\n")
-    );
+    let topic = crate::context::detect_topic_from_question(question);
+    let chart_context = crate::context::render_topic_prompt_context_json(chart_data, topic);
 
     let system_instruction = GeminiContent {
         role: None,

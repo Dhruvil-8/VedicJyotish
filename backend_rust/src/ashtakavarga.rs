@@ -152,7 +152,7 @@ mod tests {
 
     #[test]
     fn test_ashtakavarga_with_pvr_chart_7() {
-        // From PyJHora test case Chart 7:
+        // From standard test case Chart 7:
         // Mesham (0): Mars, Moon, Saturn
         // Rishabam (1) to Kanni (5): Empty
         // Thulaam (6): Rahu, Jupiter

@@ -10,7 +10,7 @@
 mod ashtakavarga;
 mod atlas;
 mod compatibility;
-mod dosha;
+mod yoga;
 mod constants;
 mod context;
 mod engine;
@@ -21,7 +21,14 @@ mod ratelimit;
 mod service;
 mod swiss;
 mod timezones;
-mod vargas;
+mod chart;
+mod drishti;
+mod maitri;
+mod argala;
+mod dasha;
+
+
+
 
 
 use axum::{
@@ -97,6 +104,24 @@ async fn main() {
         .compact()
         .init();
 
+    // Verify locations database presence on startup
+    let db_path = env::var("LOCATION_DB_PATH")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|_| {
+            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("data/locations.db")
+        });
+    if !db_path.exists() {
+        tracing::warn!(
+            "Locations database not found at {}. City search endpoint (/search_city) will be offline.",
+            db_path.display()
+        );
+    } else {
+        tracing::info!(
+            "Locations database successfully verified at {}.",
+            db_path.display()
+        );
+    }
+
     // Initialize Swiss Ephemeris
     swiss::init();
 
@@ -159,6 +184,56 @@ async fn main() {
         .route(
             "/api/v1/match/compatibility",
             post(calculate_compatibility).layer(middleware::from_fn(ratelimit::limit_chart)),
+        )
+        .route(
+            "/api/v1/chart/rasi",
+            post(chart_rasi).layer(middleware::from_fn(ratelimit::limit_chart)),
+        )
+        .route(
+            "/api/v1/chart/navamsa",
+            post(chart_navamsa).layer(middleware::from_fn(ratelimit::limit_chart)),
+        )
+        .route(
+            "/api/v1/chart/varga",
+            post(chart_varga).layer(middleware::from_fn(ratelimit::limit_chart)),
+        )
+        .route(
+            "/api/v1/chart/yogas",
+            post(chart_yogas).layer(middleware::from_fn(ratelimit::limit_chart)),
+        )
+        .route(
+            "/api/v1/chart/doshas",
+            post(chart_doshas).layer(middleware::from_fn(ratelimit::limit_chart)),
+        )
+        .route(
+            "/api/v1/chart/jaimini",
+            post(chart_jaimini).layer(middleware::from_fn(ratelimit::limit_chart)),
+        )
+        .route(
+            "/api/v1/chart/argala",
+            post(chart_argala).layer(middleware::from_fn(ratelimit::limit_chart)),
+        )
+
+        .route(
+            "/api/v1/chart/panchanga",
+            post(chart_panchanga).layer(middleware::from_fn(ratelimit::limit_chart)),
+        )
+        .route(
+            "/api/v1/chart/ashtakavarga",
+            post(chart_ashtakavarga).layer(middleware::from_fn(ratelimit::limit_chart)),
+        )
+        .route(
+            "/api/v1/chart/dasha",
+            post(chart_dasha).layer(middleware::from_fn(ratelimit::limit_chart)),
+        )
+        .route(
+            "/api/v1/chart/dasha/chara",
+            post(chart_chara_dasha).layer(middleware::from_fn(ratelimit::limit_chart)),
+        )
+
+        .route(
+            "/api/v1/chart/drishti",
+            post(chart_drishti).layer(middleware::from_fn(ratelimit::limit_chart)),
         )
         .with_state(state)
         .layer(middleware::from_fn(security_headers))
@@ -322,6 +397,183 @@ async fn calculate_compatibility(
     
     Ok(Json(compatibility_report))
 }
+
+async fn chart_rasi(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(request): Json<ChartCalculationRequest>,
+) -> Result<Json<models::RasiChartResponse>, ApiError> {
+    validate_api_key(&state, &headers)?;
+    let chart = engine::compute_chart_with_profile(request.birth_data, request.profile).await?;
+    Ok(Json(models::RasiChartResponse {
+        ascendant: chart.ascendant,
+        chart_data: chart.chart_data,
+        planetary_table: chart.planetary_table,
+    }))
+}
+
+async fn chart_navamsa(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(request): Json<ChartCalculationRequest>,
+) -> Result<Json<models::NavamsaChartResponse>, ApiError> {
+    validate_api_key(&state, &headers)?;
+    let chart = engine::compute_chart_with_profile(request.birth_data, request.profile).await?;
+    Ok(Json(models::NavamsaChartResponse {
+        navamsa_ascendant_sign: chart.navamsa_chart.get("house_1").map(|h| h.sign.clone()).unwrap_or_default(),
+        navamsa_chart: chart.navamsa_chart,
+    }))
+}
+
+async fn chart_varga(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(request): Json<models::VargaCalculationRequest>,
+) -> Result<Json<models::VargaChartResponse>, ApiError> {
+    validate_api_key(&state, &headers)?;
+    
+    let varga_type = request.varga_type.trim().to_uppercase();
+    let chart = engine::compute_chart_with_profile(request.birth_data, request.profile).await?;
+    
+    let divisional_charts = chart.divisional_charts.clone().unwrap_or_default();
+    let divisional_planets = chart.divisional_planets.clone().unwrap_or_default();
+    
+    let varga_chart = divisional_charts.get(&varga_type).ok_or_else(|| {
+        ApiError::new(StatusCode::BAD_REQUEST, format!("Unsupported varga type: {varga_type}"))
+    })?;
+    
+    let varga_planets = divisional_planets.get(&varga_type).ok_or_else(|| {
+        ApiError::new(StatusCode::BAD_REQUEST, format!("Unsupported varga type: {varga_type}"))
+    })?;
+    
+    let ascendant_sign = varga_chart.get("house_1").map(|h| h.sign.clone()).unwrap_or_default();
+    
+    Ok(Json(models::VargaChartResponse {
+        varga_type,
+        ascendant_sign,
+        chart_data: varga_chart.clone(),
+        planets: varga_planets.clone(),
+    }))
+}
+
+async fn chart_yogas(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(request): Json<ChartCalculationRequest>,
+) -> Result<Json<Vec<models::Yoga>>, ApiError> {
+    validate_api_key(&state, &headers)?;
+    let chart = engine::compute_chart_with_profile(request.birth_data, request.profile).await?;
+    Ok(Json(chart.yogas))
+}
+
+async fn chart_doshas(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(request): Json<ChartCalculationRequest>,
+) -> Result<Json<models::DoshaResponse>, ApiError> {
+    validate_api_key(&state, &headers)?;
+    let chart = engine::compute_chart_with_profile(request.birth_data, request.profile).await?;
+    let doshas = chart.doshas.ok_or_else(|| {
+        ApiError::new(StatusCode::INTERNAL_SERVER_ERROR, "Dosha calculation failed")
+    })?;
+    Ok(Json(doshas))
+}
+
+async fn chart_jaimini(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(request): Json<ChartCalculationRequest>,
+) -> Result<Json<models::JaiminiResponse>, ApiError> {
+    validate_api_key(&state, &headers)?;
+    let chart = engine::compute_chart_with_profile(request.birth_data, request.profile).await?;
+    let jaimini = chart.jaimini.ok_or_else(|| {
+        ApiError::new(StatusCode::INTERNAL_SERVER_ERROR, "Jaimini calculation failed")
+    })?;
+    Ok(Json(jaimini))
+}
+
+async fn chart_argala(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(request): Json<ChartCalculationRequest>,
+) -> Result<Json<models::ArgalaResponse>, ApiError> {
+    validate_api_key(&state, &headers)?;
+    let chart = engine::compute_chart_with_profile(request.birth_data, request.profile).await?;
+    let argala = chart.argala.ok_or_else(|| {
+        ApiError::new(StatusCode::INTERNAL_SERVER_ERROR, "Argala calculation failed")
+    })?;
+    Ok(Json(argala))
+}
+
+
+async fn chart_panchanga(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(request): Json<ChartCalculationRequest>,
+) -> Result<Json<models::Panchanga>, ApiError> {
+    validate_api_key(&state, &headers)?;
+    let chart = engine::compute_chart_with_profile(request.birth_data, request.profile).await?;
+    Ok(Json(chart.panchanga))
+}
+
+async fn chart_ashtakavarga(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(request): Json<ChartCalculationRequest>,
+) -> Result<Json<models::AshtakavargaResponse>, ApiError> {
+    validate_api_key(&state, &headers)?;
+    let chart = engine::compute_chart_with_profile(request.birth_data, request.profile).await?;
+    let ashtakavarga = chart.ashtakavarga.ok_or_else(|| {
+        ApiError::new(StatusCode::INTERNAL_SERVER_ERROR, "Ashtakavarga calculation failed")
+    })?;
+    Ok(Json(ashtakavarga))
+}
+
+async fn chart_dasha(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(request): Json<ChartCalculationRequest>,
+) -> Result<Json<Vec<models::MahaDasha>>, ApiError> {
+    validate_api_key(&state, &headers)?;
+    let chart = engine::compute_chart_with_profile(request.birth_data, request.profile).await?;
+    Ok(Json(chart.vimshottari_timeline))
+}
+
+async fn chart_chara_dasha(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(request): Json<ChartCalculationRequest>,
+) -> Result<Json<models::CharaDashaResponse>, ApiError> {
+    validate_api_key(&state, &headers)?;
+    let chart = engine::compute_chart_with_profile(request.birth_data, request.profile).await?;
+    let chara = chart.chara_dasha.ok_or_else(|| {
+        ApiError::new(StatusCode::INTERNAL_SERVER_ERROR, "Chara Dasha calculation failed")
+    })?;
+    Ok(Json(chara))
+}
+
+
+async fn chart_drishti(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(request): Json<ChartCalculationRequest>,
+) -> Result<Json<models::DrishtiResponse>, ApiError> {
+    validate_api_key(&state, &headers)?;
+    let chart = engine::compute_chart_with_profile(request.birth_data, request.profile).await?;
+    let asc_sign_idx = crate::constants::SIGNS
+        .iter()
+        .position(|&x| x == chart.ascendant.sign)
+        .unwrap_or(0);
+    
+    let mut planets_data = Vec::new();
+    for house_data in chart.chart_data.values() {
+        planets_data.extend(house_data.planets.clone());
+    }
+    
+    let drishti_res = drishti::calculate_drishti(asc_sign_idx, &planets_data);
+    Ok(Json(drishti_res))
+}
+
 
 async fn generate_report(
     State(state): State<Arc<AppState>>,

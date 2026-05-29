@@ -1,4 +1,6 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+const isClient = typeof window !== "undefined";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 
+  (isClient ? `${window.location.protocol}//${window.location.hostname}:7860` : "http://127.0.0.1:7860");
 const API_KEY = process.env.NEXT_PUBLIC_APP_TOKEN || "";
 
 
@@ -141,3 +143,18 @@ export const chatWithAstrologerStream = async (
   if (!res.ok) throw new Error("Chat failed");
   await readSSEStream(res, onChunk, onDone, onError);
 };
+
+export const calculateCompatibility = async (payload: any) => {
+  const res = await fetch(`${API_BASE}/api/v1/match/compatibility`, {
+    method: "POST",
+    headers: getHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err: any = new Error("Compatibility calculation failed");
+    err.response = res;
+    throw err;
+  }
+  return res.json();
+};
+

@@ -1,12 +1,33 @@
 # VedicJyotish Rust Backend
 
-A high-performance Vedic Astrology API built using Rust, Axum, and the Swiss Ephemeris. It serves as a backend service for birth chart calculations, city lookups, transit analysis, and AI astrological readings.
+> [!WARNING]
+> **DISCLAIMER**: This backend engine is currently in its active development and testing phase. Features, API models, and calculation parameters are subject to refinement as we complete thorough validation against classical Vedic texts.
+
+A high-performance, modular Vedic Astrology API built using Rust, Axum, and Swiss Ephemeris. It serves as a backend service for birth chart calculations, city lookups, transit analysis, and AI-driven astrological interpretation.
+
+---
+
+## Core Capabilities
+
+The Rust backend is designed to compute classical Vedic astrology parameters with precision:
+
+* **High-Precision Ephemeris**: Powered by Swiss Ephemeris to compute planetary longitudes, latitudinal speeds, house cusps, and divisional charts (Vargas D1 through D60).
+* **Pancha-Dha Planetary Friendship (Five-Fold Friendship)**: Evaluates natural relations (*Naisargika*) and temporal placements (*Tatkalika*) to determine active functional alignments (Great Friend, Friend, Neutral, Enemy, Great Enemy).
+* **Vaisheshikamsa Dignity Counts**: Analyzes planetary placements across divisional schemes—including Saptavarga (7), Dashavarga (10), and Shodasavarga (16)—to assign classical divisional grades.
+* **Sade Sati Transit tracking**: Monitors transiting Saturn relative to the natal Moon, indicating active phases (12th, 1st, and 2nd houses).
+* **Jaimini Argala & Virodhargala Solver**: Resolves planetary interventions (*Argala*) and obstructions (*Virodhargala*), incorporating special rules for Rahu and Ketu as well as malefic exceptions.
+* **Jaimini Chara Dasha Timeline**: Computes sign-based mahadashas with proper directionality and duration based on classical Jaimini sign modalities.
+* **Vimshottari Dasha Tree**: Tracks planetary mahadashas and sub-dashas over a 120-year lifecycle based on Nakshatra longitudes.
+* **Ashtakavarga**: Generates planetary scoring grids (*Bhinnashtakavarga*) and collective score totals (*Sarvashtakavarga*).
+* **Guna Milan Compatibility**: Employs Nakshatra and Pada matching across standard criteria for relationship compatibility.
 
 ---
 
 ## API Endpoints
 
-### 1. API Status
+All endpoints (except public health checks) support optional calculation profiles (Ayanamsa, Node Type, House System, Dasha Year Length) and require an optional `X-API-KEY` if configured.
+
+### 1. Health Check
 * **Route**: `GET /`
 * **Response**:
 ```json
@@ -20,8 +41,8 @@ A high-performance Vedic Astrology API built using Rust, Axum, and the Swiss Eph
 
 ### 2. City Lookup
 * **Route**: `GET /search_city?query=<city_name>`
-* **Parameters**:
-  * `query`: Name of the city (minimum 3 characters)
+* **Query Parameters**:
+  * `query`: Prefix search string (minimum 3 characters)
 * **Response**: Matches ranking cities from the GeoNames database.
 ```json
 [
@@ -29,7 +50,7 @@ A high-performance Vedic Astrology API built using Rust, Axum, and the Swiss Eph
 ]
 ```
 
-### 3. Chart Calculation
+### 3. Basic Chart Calculation
 * **Route**: `POST /calculate_chart`
 * **Body**:
 ```json
@@ -37,13 +58,15 @@ A high-performance Vedic Astrology API built using Rust, Axum, and the Swiss Eph
   "date": "28/05/1998",
   "time": "12:30",
   "city": "Mumbai",
+  "lat": 19.076,
+  "lon": 72.877,
   "timezone": 5.5
 }
 ```
-* **Response**: Calculates planetary longitudes, house placements (D1 and D9), Vimshottari Dasha intervals, and detected yogas (Gaja Kesari, Adhi, Amala, Guru Mangala, Nabhasa, and others).
+* **Response**: Calculates planetary longitudes, basic house placements, and detected yogas.
 
-### 4. Planetary Transits
-* **Route**: `POST /calculate_transits`
+### 4. Enterprise Chart Calculations (v1)
+* **Route**: `POST /api/v1/chart/full`
 * **Body**:
 ```json
 {
@@ -51,30 +74,39 @@ A high-performance Vedic Astrology API built using Rust, Axum, and the Swiss Eph
     "date": "28/05/1998",
     "time": "12:30",
     "city": "Mumbai",
+    "lat": 19.076,
+    "lon": 72.877,
     "timezone": 5.5
   },
-  "transit_date": "28/05/2026",
-  "transit_time": "12:00"
+  "profile": {
+    "ayanamsa": "Lahiri",
+    "node_type": "Mean",
+    "house_system": "WholeSign",
+    "dasha_year": "Sidereal365.256363004"
+  }
 }
 ```
-* **Response**: Returns current transit planetary positions overlaid against the native's natal Lagna and Moon houses.
+* **Response**: Returns a full suite of Vedic calculations including Pancha-Dha Maitri, Vaisheshikamsa counts, Sade Sati transits, and yogas.
 
-### 5. AI Report Generation
-* **Route**: `POST /generate_report`
-* **Body**: Birth chart data payload
-* **Response**: Streams a markdown astrology report via Server-Sent Events (SSE).
+### 5. Jaimini Argala Solver (v1)
+* **Route**: `POST /api/v1/chart/argala`
+* **Body**: Same as Enterprise Chart (contains `birth_data` and optional `profile`)
+* **Response**: Returns Jaimini Argala and Virodhargala details for all houses and planets.
 
-### 6. AI Astrologer Chat
-* **Route**: `POST /chat_with_astrologer`
-* **Body**:
-```json
-{
-  "chart_data": { ... },
-  "question": "What is the impact of my current dasha?",
-  "history": []
-}
-```
-* **Response**: Streams a conversational response from a virtual astrologer via Server-Sent Events (SSE).
+### 6. Jaimini Chara Dasha (v1)
+* **Route**: `POST /api/v1/chart/dasha/chara`
+* **Body**: Same as Enterprise Chart
+* **Response**: Detailed chronological timeline of sign-based Jaimini Chara Dashas.
+
+### 7. Other Granular v1 Endpoints
+* `POST /api/v1/chart/rasi` - Rasi (D1) chart details.
+* `POST /api/v1/chart/navamsa` - Navamsa (D9) chart details.
+* `POST /api/v1/chart/varga?division=D10` - Targeted divisional chart positions (supports D2, D3, D4, D7, D9, D10, D12, D16, D20, D24, D27, D30, D40, D45, D60).
+* `POST /api/v1/chart/panchanga` - Panchanga calculation (Tithi, Nakshatra, Yoga, Karana, Vara).
+* `POST /api/v1/chart/ashtakavarga` - Sarvashtakavarga & Bhinnashtakavarga points.
+* `POST /api/v1/chart/dasha` - Vimshottari Maha Dasha intervals.
+* `POST /api/v1/chart/drishti` - Planetary aspects and sign aspects (Graha & Rasi Drishti).
+* `POST /api/v1/match/compatibility` - Guna Milan marriage compatibility results.
 
 ---
 
@@ -82,7 +114,7 @@ A high-performance Vedic Astrology API built using Rust, Axum, and the Swiss Eph
 
 ### Prerequisites
 * Rust toolchain (Rust 1.86+)
-* Build essentials (gcc/clang) for compiling C-bindings
+* Build essentials (gcc/clang) for compiling Swiss Ephemeris C-bindings
 
 ### Configuration
 Create a `.env` file in the root of the `backend_rust` directory:
@@ -90,6 +122,7 @@ Create a `.env` file in the root of the `backend_rust` directory:
 PORT=7860
 ENVIRONMENT=development
 GEMINI_API_KEY=your_gemini_api_key
+# Optional: API_SECRET_KEY=your_secured_jwt_token_or_secret
 ```
 
 ### Run Server

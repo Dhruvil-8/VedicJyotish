@@ -136,7 +136,23 @@ pub struct ChartResponse {
     pub divisional_planets: Option<HashMap<String, Vec<VargaPlanetRow>>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub doshas: Option<DoshaResponse>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub jaimini: Option<JaiminiResponse>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub aspects: Option<DrishtiResponse>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub vaisheshikamsa: Option<HashMap<String, VaisheshikamsaResponse>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sade_sati: Option<SadeSatiResponse>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub argala: Option<ArgalaResponse>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub chara_dasha: Option<CharaDashaResponse>,
 }
+
+
+
+
 
 #[derive(Debug, Clone, Serialize)]
 pub struct Panchanga {
@@ -264,6 +280,22 @@ pub struct AntarDasha {
     pub end: String,
 }
 
+// ─── Jaimini Chara Dasha Models ──────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize)]
+pub struct CharaDashaResponse {
+    pub periods: Vec<CharaDashaPeriod>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct CharaDashaPeriod {
+    pub sign: String,
+    pub duration_years: u8,
+    pub start_date: String,
+    pub end_date: String,
+}
+
+
 #[derive(Debug, Clone)]
 pub struct Nakshatra {
     pub name: String,
@@ -336,19 +368,19 @@ impl Default for CapabilityResponse {
                 Capability {
                     key: "birth_chart_core".to_string(),
                     status: "implemented".to_string(),
-                    api: Some("/api/v1/chart/full".to_string()),
-                    notes: "Lahiri sidereal planetary positions, whole-sign houses, D1, D9, nakshatra, dignity, combustion, retrograde, yogas subset.".to_string(),
+                    api: Some("/api/v1/chart/rasi, /api/v1/chart/navamsa, /api/v1/chart/full".to_string()),
+                    notes: "Lahiri sidereal planetary positions, whole-sign houses, D1 (Rasi), D9 (Navamsa), nakshatra, dignity, combustion, retrograde, yogas subset.".to_string(),
                 },
                 Capability {
                     key: "vimshottari_dasha".to_string(),
                     status: "implemented".to_string(),
-                    api: Some("/api/v1/chart/full".to_string()),
+                    api: Some("/api/v1/chart/dasha, /api/v1/chart/full".to_string()),
                     notes: "Mahadasha and antardasha timeline with sidereal year length.".to_string(),
                 },
                 Capability {
                     key: "panchanga_basic".to_string(),
                     status: "implemented".to_string(),
-                    api: Some("/api/v1/chart/full".to_string()),
+                    api: Some("/api/v1/chart/panchanga, /api/v1/chart/full".to_string()),
                     notes: "Vara, tithi, nakshatra, yoga, karana from Sun/Moon longitudes and local birth date.".to_string(),
                 },
                 Capability {
@@ -366,19 +398,19 @@ impl Default for CapabilityResponse {
                 Capability {
                     key: "full_varga_suite".to_string(),
                     status: "implemented".to_string(),
-                    api: Some("/api/v1/chart/full".to_string()),
+                    api: Some("/api/v1/chart/varga, /api/v1/chart/full".to_string()),
                     notes: "All 18 Parashari divisional charts: D2-D60 with sign and planet placement.".to_string(),
                 },
                 Capability {
                     key: "ashtakavarga".to_string(),
                     status: "implemented".to_string(),
-                    api: Some("/api/v1/chart/full".to_string()),
+                    api: Some("/api/v1/chart/ashtakavarga, /api/v1/chart/full".to_string()),
                     notes: "Bhinnashtakavarga (BAV) for 8 contributors and Sarvashtakavarga (SAV) totals.".to_string(),
                 },
                 Capability {
                     key: "doshas".to_string(),
                     status: "implemented".to_string(),
-                    api: Some("/api/v1/chart/full".to_string()),
+                    api: Some("/api/v1/chart/doshas, /api/v1/chart/full".to_string()),
                     notes: "8 major Vedic doshas: Kala Sarpa, Manglik (17 exceptions), Pitru, Guru Chandala, Kalathra, Ganda Moola, Ghata, Shrapit.".to_string(),
                 },
                 Capability {
@@ -390,8 +422,14 @@ impl Default for CapabilityResponse {
                 Capability {
                     key: "chara_karakas".to_string(),
                     status: "implemented".to_string(),
-                    api: Some("/api/v1/chart/full".to_string()),
+                    api: Some("/api/v1/chart/jaimini, /api/v1/chart/full".to_string()),
                     notes: "8-planet Jaimini Chara Karaka assignment (AK through DK).".to_string(),
+                },
+                Capability {
+                    key: "jaimini_astrology".to_string(),
+                    status: "implemented".to_string(),
+                    api: Some("/api/v1/chart/jaimini, /api/v1/chart/full".to_string()),
+                    notes: "Calculates Arudha Lagna (AL), Upapada Lagna (UL), Karakamsha Lagna, and Jaimini Chara Karakas map.".to_string(),
                 },
                 Capability {
                     key: "dig_bala".to_string(),
@@ -403,7 +441,7 @@ impl Default for CapabilityResponse {
                     key: "ai_streaming".to_string(),
                     status: "implemented".to_string(),
                     api: Some("/generate_report and /chat_with_astrologer".to_string()),
-                    notes: "Gemini-powered SSE streaming for report generation and astrologer chat.".to_string(),
+                    notes: "Gemini-powered SSE streaming for report generation and astrologer chat, now featuring dynamic topic-focused context filters.".to_string(),
                 },
             ],
             planned: vec![
@@ -437,7 +475,10 @@ pub struct TransitResponse {
     pub transit_time: String,
     pub natal_ascendant: AscendantInfo,
     pub transit_planets: Vec<TransitPlanetData>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sade_sati: Option<SadeSatiResponse>,
 }
+
 
 #[derive(Debug, Clone, Serialize)]
 pub struct TransitPlanetData {
@@ -498,3 +539,127 @@ pub struct KootaResult {
     pub max_score: f64,
     pub matched: bool,
 }
+
+// ─── Jaimini Astrology Models ────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize)]
+pub struct JaiminiResponse {
+    pub arudha_lagna: JaiminiPoint,
+    pub upapada_lagna: JaiminiPoint,
+    pub karakamsha_lagna: JaiminiPoint,
+    pub chara_karakas: HashMap<String, String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct JaiminiPoint {
+    pub sign: String,
+    pub sign_index: usize,
+    pub house: u8,
+}
+
+// ─── Fine-Grained API Models ──────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize)]
+pub struct RasiChartResponse {
+    pub ascendant: AscendantInfo,
+    pub chart_data: HashMap<String, HouseData>,
+    pub planetary_table: Vec<PlanetaryRow>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct NavamsaChartResponse {
+    pub navamsa_ascendant_sign: String,
+    pub navamsa_chart: HashMap<String, NavamsaHouseData>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct VargaCalculationRequest {
+    pub birth_data: BirthData,
+    #[serde(default)]
+    pub profile: CalculationProfile,
+    pub varga_type: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct VargaChartResponse {
+    pub varga_type: String,
+    pub ascendant_sign: String,
+    pub chart_data: HashMap<String, VargaHouseData>,
+    pub planets: Vec<VargaPlanetRow>,
+}
+
+// ─── Aspects (Drishti) Models ────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize)]
+pub struct DrishtiResponse {
+    pub graha_drishti: HashMap<String, PlanetDrishti>,
+    pub rasi_drishti: HashMap<String, SignDrishti>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PlanetDrishti {
+    pub aspected_signs: Vec<String>,
+    pub aspected_houses: Vec<u8>,
+    pub aspected_planets: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct SignDrishti {
+    pub aspected_signs: Vec<String>,
+    pub aspected_planets: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct VaisheshikamsaResponse {
+    pub saptavarga_count: u8,
+    pub saptavarga_grade: String,
+    pub dashavarga_count: u8,
+    pub dashavarga_grade: String,
+    pub shodasavarga_count: u8,
+    pub shodasavarga_grade: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct SadeSatiResponse {
+    pub is_active: bool,
+    pub phase: Option<String>,
+    pub saturn_sign: String,
+    pub moon_sign: String,
+    pub description: String,
+}
+
+// ─── Jaimini Argala Models ───────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ArgalaResponse {
+    pub house_argalas: HashMap<u8, HouseArgalaDetails>,
+    pub planet_argalas: HashMap<String, PlanetArgalaDetails>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct HouseArgalaDetails {
+    pub argala_contributors: Vec<ArgalaContributor>,
+    pub virodhargala_contributors: Vec<ArgalaContributor>,
+    pub net_argala_status: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PlanetArgalaDetails {
+    pub argala_contributors: Vec<ArgalaContributor>,
+    pub virodhargala_contributors: Vec<ArgalaContributor>,
+    pub net_argala_status: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ArgalaContributor {
+    pub planet_name: String,
+    pub sign: String,
+    pub house: u8,
+    pub argala_house: u8,
+    pub is_malefic: bool,
+}
+
+
+
+
+
