@@ -56,7 +56,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "VedicAstro",
+    title: "VedicJyotish",
   },
   formatDetection: {
     telephone: false,

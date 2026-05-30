@@ -1176,7 +1176,7 @@ export default function Home() {
                         {chatHistory.length > 0 && (
                           <button
                             onClick={() => {
-                              const header = `Vedic Astro AI — Chat History\nGenerated: ${new Date().toLocaleString()}\n${"═".repeat(50)}\n\n`;
+                              const header = `Vedic Jyotish — Chat History\nGenerated: ${new Date().toLocaleString()}\n${"═".repeat(50)}\n\n`;
                               const content = chatHistory.map(m => `[${m.role === "user" ? "You" : "Rishi"}]:\n${m.text}\n`).join("\n---\n\n");
                               const blob = new Blob([header + content], { type: "text/plain" });
                               const url = URL.createObjectURL(blob);
