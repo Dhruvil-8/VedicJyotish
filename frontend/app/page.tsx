@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import {
   Search, Sparkles, MessageSquare, Send, Calendar, Clock, MapPin, ChevronRight,
   Moon, Star, Wand2, AlertTriangle, ExternalLink, CheckCircle, XCircle, Info,
-  Compass, BookOpen, Heart, ChevronDown, ChevronUp, RefreshCw, FileText, User
+  Compass, BookOpen, Heart, ChevronDown, ChevronUp, RefreshCw, FileText, User, Globe
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
@@ -37,6 +37,17 @@ const VARGA_INFO: Record<string, { title: string; description: string }> = {
   D45: { title: "D45 Akshavedamsa (Character)", description: "Moral integrity, purity of character, and ethical nature." },
   D60: { title: "D60 Shastiamsa (Karma)", description: "Deep-seated past-life karma, soul journey, and spiritual samskaras." },
 };
+
+const LANGUAGES = [
+  { code: "English", label: "English" },
+  { code: "Hindi", label: "हिन्दी (Hindi)" },
+  { code: "Gujarati", label: "ગુજરાતી (Gujarati)" },
+  { code: "Marathi", label: "मराठी (Marathi)" },
+  { code: "Tamil", label: "தமிழ் (Tamil)" },
+  { code: "Telugu", label: "తెలుగు (Telugu)" },
+  { code: "Bengali", label: "বাংলা (Bengali)" },
+  { code: "Kannada", label: "ಕನ್ನಡ (Kannada)" },
+];
 
 function parseDate(dateStr: string): Date {
   const parts = dateStr.split("/");
@@ -115,6 +126,7 @@ export default function Home() {
   const [step, setStep] = useState<"form" | "dashboard">("form");
   const [loading, setLoading] = useState(false);
   const [reportLoading, setReportLoading] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] = useState<string>("English");
 
   // Form Data (Single Profile)
   const [date, setDate] = useState("14/12/2023");
@@ -284,7 +296,7 @@ export default function Home() {
     setAiReport("");
     try {
       await generateReportStream(
-        chartData,
+        { ...chartData, language: selectedLanguage },
         (chunk) => setAiReport((prev) => prev + chunk),
         () => setReportLoading(false),
         (err) => {
@@ -315,7 +327,7 @@ export default function Home() {
       let accumulated = "";
       await chatWithAstrologerStream(
         {
-          chart_data: chartData,
+          chart_data: { ...chartData, language: selectedLanguage },
           question: newMsg.text,
           history: updatedHistory,
         },
@@ -610,6 +622,24 @@ export default function Home() {
                     </AnimatePresence>
                   </div>
 
+                  {/* Language Selector */}
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 text-xs font-heading text-secondary tracking-widest uppercase">
+                      <Globe className="w-3.5 h-3.5 text-primary" /> Consultation Language
+                    </label>
+                    <select
+                      value={selectedLanguage}
+                      onChange={(e) => setSelectedLanguage(e.target.value)}
+                      className="w-full bg-muted/30 border border-border/50 rounded-lg p-3 font-serif focus:border-primary focus:ring-1 focus:ring-primary/50 outline-none transition-all cursor-pointer text-foreground"
+                    >
+                      {LANGUAGES.map((lang) => (
+                        <option key={lang.code} value={lang.code} className="bg-background text-foreground">
+                          {lang.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
                   <button
                     onClick={handleCalculate}
                     disabled={loading || !selectedCity}
@@ -641,7 +671,23 @@ export default function Home() {
                   Change Birth Details
                 </button>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-wrap">
+                  {/* Dashboard Language Selector */}
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/5 border border-primary/20 rounded-full">
+                    <Globe className="w-3 h-3 text-primary" />
+                    <select
+                      value={selectedLanguage}
+                      onChange={(e) => setSelectedLanguage(e.target.value)}
+                      className="bg-transparent text-primary font-heading text-[10px] outline-none cursor-pointer pr-1 uppercase tracking-wider font-semibold"
+                    >
+                      {LANGUAGES.map((lang) => (
+                        <option key={lang.code} value={lang.code} className="bg-background text-foreground normal-case">
+                          {lang.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
                   {isInstallable && (
                     <button
                       onClick={handleInstall}

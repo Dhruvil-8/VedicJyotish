@@ -167,7 +167,6 @@ npm run dev
 
 ## Future Roadmap
 
-* Multi‑language support
 * More interactive and educational UI
 
 ---

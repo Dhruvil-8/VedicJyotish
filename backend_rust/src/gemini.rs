@@ -247,8 +247,10 @@ Yogas Detected:
         navamsa_lines = navamsa_lines.join("\n"),
     );
 
+    let language = chart.get("language").and_then(|v| v.as_str()).unwrap_or("English");
+
     format!(
-        r#"You are an AI-powered Vedic Astrology analysis engine. Analyze this birth chart data and create a deeply comprehensive, insightful, and well-structured 3-page report referencing EVERY piece of data provided. The report must provide actionable psychological, professional, and spiritual insights rather than generic textbook explanations.
+        r#"You are an AI-powered Vedic Astrology analysis engine. Analyze this birth chart data and create a deeply comprehensive, insightful, and well-structured 3-page report referencing EVERY piece of data provided. The report must provide actionable psychological, professional, and spiritual insights rather than generic textbook explanations. Write the entire report and all sections strictly in the {language} language.
 
 CRITICAL RULES:
 - Do NOT include any introductory preamble, greetings, or flowery opening paragraphs
@@ -305,7 +307,8 @@ FORMATTING RULES:
 - Target 1500 - 2000 words (exactly 3 pages of highly detailed reading).
 - Be highly specific and reference actual house numbers, signs, and degrees from the provided data.
 - Do NOT suggest any remedies, mantras, gemstones, or rituals — this is a pure analysis report.
-- End the report with this affirmative closing note on its own line: "*This report is crafted using Vedic Jyotish principles and AI-powered. Use these insights as a guiding light on your journey — for deeper personalised guidance, consult a qualified Jyotishi.*""#
+- End the report with this affirmative closing note on its own line: "*This report is crafted using Vedic Jyotish principles and AI-powered. Use these insights as a guiding light on your journey — for deeper personalised guidance, consult a qualified Jyotishi.*""#,
+        language = language
     )
 }
 
@@ -324,10 +327,15 @@ fn build_chat_request(
     let topic = crate::context::detect_topic_from_question(question);
     let chart_context = crate::context::render_topic_prompt_context_json(chart_data, topic);
 
+    let language = chart_data.get("language").and_then(|v| v.as_str()).unwrap_or("English");
+
     let system_instruction = GeminiContent {
         role: None,
         parts: vec![GeminiPart {
-            text: "You are an expert Vedic Astrologer. \nAnalyze the chart.\nFORMATTING RULES:\n1. Use **Bold** for Planet Names and Key Terms.\n2. Use bullet points for lists.\n3. Keep paragraphs short.".to_string(),
+            text: format!(
+                "You are an expert Vedic Astrologer. \nAnalyze the chart.\nRespond entirely and strictly in the {} language.\nFORMATTING RULES:\n1. Use **Bold** for Planet Names and Key Terms.\n2. Use bullet points for lists.\n3. Keep paragraphs short.",
+                language
+            ),
         }],
     };
 
