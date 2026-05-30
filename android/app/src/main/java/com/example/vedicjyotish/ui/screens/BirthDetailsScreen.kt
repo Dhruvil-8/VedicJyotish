@@ -10,6 +10,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -39,6 +42,7 @@ fun BirthDetailsScreen(
 ) {
     val date by viewModel.date.collectAsStateWithLifecycle()
     val time by viewModel.time.collectAsStateWithLifecycle()
+    val selectedLanguage by viewModel.selectedLanguage.collectAsStateWithLifecycle()
     val cityQuery by viewModel.cityQuery.collectAsStateWithLifecycle()
     val selectedCity by viewModel.city.collectAsStateWithLifecycle()
     val searchResults by viewModel.searchResults.collectAsStateWithLifecycle()
@@ -54,6 +58,7 @@ fun BirthDetailsScreen(
 
     // Listen for successful calculation events
     LaunchedEffect(Unit) {
+        viewModel.loadLanguage(context)
         viewModel.chartResult.collect { chart ->
             prefs.edit()
                 .putString("birth_date", date)
@@ -141,6 +146,17 @@ fun BirthDetailsScreen(
                         placeholder = { Text("e.g. 15/08/1947", color = Color.LightGray) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
+                        trailingIcon = {
+                            IconButton(onClick = {
+                                showDatePicker(context, date) { viewModel.updateDate(it) }
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Default.DateRange,
+                                    contentDescription = "Select Date",
+                                    tint = VedicGold
+                                )
+                            }
+                        },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = VedicTerracotta,
                             unfocusedBorderColor = VedicGold,
@@ -158,6 +174,17 @@ fun BirthDetailsScreen(
                         placeholder = { Text("e.g. 14:30", color = Color.LightGray) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
+                        trailingIcon = {
+                            IconButton(onClick = {
+                                showTimePicker(context, time) { viewModel.updateTime(it) }
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Default.Schedule,
+                                    contentDescription = "Select Time",
+                                    tint = VedicGold
+                                )
+                            }
+                        },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = VedicTerracotta,
                             unfocusedBorderColor = VedicGold,
@@ -262,6 +289,56 @@ fun BirthDetailsScreen(
                         }
                     }
 
+                    // 3b. CONSULTATION LANGUAGE SELECTOR
+                    var langExpanded by remember { mutableStateOf(false) }
+                    val languages = listOf(
+                        "English" to "English",
+                        "Hindi" to "हिन्दी (Hindi)",
+                        "Gujarati" to "ગુજરાતી (Gujarati)",
+                        "Marathi" to "मраठी (Marathi)",
+                        "Tamil" to "தமிழ் (Tamil)",
+                        "Telugu" to "తెలుగు (Telugu)",
+                        "Bengali" to "বাংলা (Bengali)",
+                        "Kannada" to "ಕನ್ನಡ (Kannada)"
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        ExposedDropdownMenuBox(
+                            expanded = langExpanded,
+                            onExpandedChange = { langExpanded = !langExpanded }
+                        ) {
+                            OutlinedTextField(
+                                value = languages.firstOrNull { it.first == selectedLanguage }?.second ?: selectedLanguage,
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text("Consultation Language", fontSize = 13.sp) },
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = langExpanded) },
+                                modifier = Modifier.menuAnchor().fillMaxWidth(),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = VedicTerracotta,
+                                    unfocusedBorderColor = VedicGold,
+                                    cursorColor = VedicTerracotta
+                                )
+                            )
+                            ExposedDropdownMenu(
+                                expanded = langExpanded,
+                                onDismissRequest = { langExpanded = false }
+                            ) {
+                                languages.forEach { lang ->
+                                    DropdownMenuItem(
+                                        text = { Text(lang.second) },
+                                        onClick = {
+                                            viewModel.updateSelectedLanguage(lang.first, context)
+                                            langExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
                     // Error Message
                     if (errorMsg != null) {
                         Spacer(modifier = Modifier.height(16.dp))
@@ -307,4 +384,60 @@ fun BirthDetailsScreen(
             }
         }
     }
+}
+
+private fun showDatePicker(
+    context: android.content.Context,
+    currentDate: String,
+    onDateSelected: (String) -> Unit
+) {
+    val calendar = java.util.Calendar.getInstance()
+    val parts = currentDate.split("/")
+    if (parts.size == 3) {
+        val d = parts[0].toIntOrNull()
+        val m = parts[1].toIntOrNull()
+        val y = parts[2].toIntOrNull()
+        if (d != null && m != null && y != null) {
+            calendar.set(java.util.Calendar.YEAR, y)
+            calendar.set(java.util.Calendar.MONTH, m - 1)
+            calendar.set(java.util.Calendar.DAY_OF_MONTH, d)
+        }
+    }
+    android.app.DatePickerDialog(
+        context,
+        { _, year, month, dayOfMonth ->
+            val formatted = String.format("%02d/%02d/%04d", dayOfMonth, month + 1, year)
+            onDateSelected(formatted)
+        },
+        calendar.get(java.util.Calendar.YEAR),
+        calendar.get(java.util.Calendar.MONTH),
+        calendar.get(java.util.Calendar.DAY_OF_MONTH)
+    ).show()
+}
+
+private fun showTimePicker(
+    context: android.content.Context,
+    currentTime: String,
+    onTimeSelected: (String) -> Unit
+) {
+    val calendar = java.util.Calendar.getInstance()
+    val parts = currentTime.split(":")
+    if (parts.size == 2) {
+        val h = parts[0].toIntOrNull()
+        val m = parts[1].toIntOrNull()
+        if (h != null && m != null) {
+            calendar.set(java.util.Calendar.HOUR_OF_DAY, h)
+            calendar.set(java.util.Calendar.MINUTE, m)
+        }
+    }
+    android.app.TimePickerDialog(
+        context,
+        { _, hourOfDay, minute ->
+            val formatted = String.format("%02d:%02d", hourOfDay, minute)
+            onTimeSelected(formatted)
+        },
+        calendar.get(java.util.Calendar.HOUR_OF_DAY),
+        calendar.get(java.util.Calendar.MINUTE),
+        true
+    ).show()
 }

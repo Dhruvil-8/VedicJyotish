@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.platform.LocalContext
 import com.example.vedicjyotish.data.models.ChartResponse
 import com.example.vedicjyotish.data.models.HouseData
 import com.example.vedicjyotish.ui.components.*
@@ -42,9 +43,10 @@ fun DashboardScreen(
     modifier: Modifier = Modifier,
     viewModel: DashboardViewModel = viewModel()
 ) {
+    val context = LocalContext.current
     // Initialize viewmodel with chart data
     LaunchedEffect(chart) {
-        viewModel.init(chart)
+        viewModel.init(chart, context)
     }
 
     val selectedTab by viewModel.selectedTab.collectAsStateWithLifecycle()
@@ -94,6 +96,50 @@ fun DashboardScreen(
                             contentDescription = "Go back to inputs",
                             tint = VedicTerracotta
                         )
+                    }
+                },
+                actions = {
+                    var langDropdownExpanded by remember { mutableStateOf(false) }
+                    val selectedLanguage by viewModel.selectedLanguage.collectAsStateWithLifecycle()
+                    
+                    Box {
+                        IconButton(onClick = { langDropdownExpanded = true }) {
+                            Icon(
+                                imageVector = Icons.Default.Language,
+                                contentDescription = "Change Language",
+                                tint = VedicTerracotta
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = langDropdownExpanded,
+                            onDismissRequest = { langDropdownExpanded = false }
+                        ) {
+                            val languages = listOf(
+                                "English" to "English",
+                                "Hindi" to "हिन्दी (Hindi)",
+                                "Gujarati" to "ગુજરાતી (Gujarati)",
+                                "Marathi" to "मराठी (Marathi)",
+                                "Tamil" to "தமிழ் (Tamil)",
+                                "Telugu" to "తెలుగు (Telugu)",
+                                "Bengali" to "বাংলা (Bengali)",
+                                "Kannada" to "ಕನ್ನಡ (Kannada)"
+                            )
+                            languages.forEach { lang ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            text = lang.second,
+                                            fontWeight = if (lang.first == selectedLanguage) FontWeight.Bold else FontWeight.Normal,
+                                            color = if (lang.first == selectedLanguage) VedicTerracotta else VedicCharcoal
+                                        )
+                                    },
+                                    onClick = {
+                                        viewModel.updateSelectedLanguage(lang.first, context)
+                                        langDropdownExpanded = false
+                                    }
+                                )
+                            }
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(

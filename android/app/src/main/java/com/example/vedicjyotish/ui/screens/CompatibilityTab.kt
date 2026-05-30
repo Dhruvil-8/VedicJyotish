@@ -145,6 +145,17 @@ fun CompatibilityTab(
                     placeholder = { Text("e.g. 26/01/1950", color = Color.LightGray) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
+                    trailingIcon = {
+                        IconButton(onClick = {
+                            showDatePicker(context, matchingDate) { viewModel.updateMatchingDate(it) }
+                        }) {
+                            Icon(
+                                imageVector = Icons.Default.DateRange,
+                                contentDescription = "Select Date",
+                                tint = VedicGold
+                            )
+                        }
+                    },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = VedicTerracotta,
                         unfocusedBorderColor = VedicGold,
@@ -162,6 +173,17 @@ fun CompatibilityTab(
                     placeholder = { Text("e.g. 09:15", color = Color.LightGray) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
+                    trailingIcon = {
+                        IconButton(onClick = {
+                            showTimePicker(context, matchingTime) { viewModel.updateMatchingTime(it) }
+                        }) {
+                            Icon(
+                                imageVector = Icons.Default.Schedule,
+                                contentDescription = "Select Time",
+                                tint = VedicGold
+                            )
+                        }
+                    },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = VedicTerracotta,
                         unfocusedBorderColor = VedicGold,
@@ -739,3 +761,59 @@ data class PoruthamCheck(
     val description: String,
     val matched: Boolean
 )
+
+private fun showDatePicker(
+    context: android.content.Context,
+    currentDate: String,
+    onDateSelected: (String) -> Unit
+) {
+    val calendar = java.util.Calendar.getInstance()
+    val parts = currentDate.split("/")
+    if (parts.size == 3) {
+        val d = parts[0].toIntOrNull()
+        val m = parts[1].toIntOrNull()
+        val y = parts[2].toIntOrNull()
+        if (d != null && m != null && y != null) {
+            calendar.set(java.util.Calendar.YEAR, y)
+            calendar.set(java.util.Calendar.MONTH, m - 1)
+            calendar.set(java.util.Calendar.DAY_OF_MONTH, d)
+        }
+    }
+    android.app.DatePickerDialog(
+        context,
+        { _, year, month, dayOfMonth ->
+            val formatted = String.format("%02d/%02d/%04d", dayOfMonth, month + 1, year)
+            onDateSelected(formatted)
+        },
+        calendar.get(java.util.Calendar.YEAR),
+        calendar.get(java.util.Calendar.MONTH),
+        calendar.get(java.util.Calendar.DAY_OF_MONTH)
+    ).show()
+}
+
+private fun showTimePicker(
+    context: android.content.Context,
+    currentTime: String,
+    onTimeSelected: (String) -> Unit
+) {
+    val calendar = java.util.Calendar.getInstance()
+    val parts = currentTime.split(":")
+    if (parts.size == 2) {
+        val h = parts[0].toIntOrNull()
+        val m = parts[1].toIntOrNull()
+        if (h != null && m != null) {
+            calendar.set(java.util.Calendar.HOUR_OF_DAY, h)
+            calendar.set(java.util.Calendar.MINUTE, m)
+        }
+    }
+    android.app.TimePickerDialog(
+        context,
+        { _, hourOfDay, minute ->
+            val formatted = String.format("%02d:%02d", hourOfDay, minute)
+            onTimeSelected(formatted)
+        },
+        calendar.get(java.util.Calendar.HOUR_OF_DAY),
+        calendar.get(java.util.Calendar.MINUTE),
+        true
+    ).show()
+}

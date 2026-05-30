@@ -97,11 +97,16 @@ class VedicApiService(baseUrl: String, private val apiKey: String? = null) {
     // ──────────────────────────────────────────────────────
     suspend fun generateReportStream(
         chartData: ChartResponse,
+        language: String,
         onChunk: (String) -> Unit,
         onDone: () -> Unit,
         onError: (String) -> Unit
     ) = withContext(Dispatchers.IO) {
-        val json = gson.toJson(sanitizeChartForAi(gson.toJsonTree(chartData)))
+        val rawChartJson = sanitizeChartForAi(gson.toJsonTree(chartData))
+        if (rawChartJson.isJsonObject) {
+            rawChartJson.asJsonObject.addProperty("language", language)
+        }
+        val json = gson.toJson(rawChartJson)
         val request = Request.Builder()
             .url("$baseUrl/generate_report")
             .post(json.toRequestBody(jsonMediaType))
@@ -121,12 +126,16 @@ class VedicApiService(baseUrl: String, private val apiKey: String? = null) {
         chartData: ChartResponse,
         question: String,
         history: List<ChatMessage>,
+        language: String,
         onChunk: (String) -> Unit,
         onDone: () -> Unit,
         onError: (String) -> Unit
     ) = withContext(Dispatchers.IO) {
         // Build the raw JSON map matching the backend's ChatRequest schema
         val rawChartJson = sanitizeChartForAi(gson.toJsonTree(chartData))
+        if (rawChartJson.isJsonObject) {
+            rawChartJson.asJsonObject.addProperty("language", language)
+        }
         val payload = mapOf(
             "chart_data" to rawChartJson,
             "question" to question,

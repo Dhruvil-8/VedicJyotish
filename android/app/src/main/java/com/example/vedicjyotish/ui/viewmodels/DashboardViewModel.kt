@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.vedicjyotish.data.models.ChatMessage
 import com.example.vedicjyotish.data.models.ChartResponse
 import com.example.vedicjyotish.data.network.ApiClient
+import com.example.vedicjyotish.utils.DateTimeUtils.normalizeDate
+import com.example.vedicjyotish.utils.DateTimeUtils.normalizeTime
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -12,6 +14,9 @@ class DashboardViewModel : ViewModel() {
 
     private lateinit var chartData: ChartResponse
     private var isInitialized = false
+
+    private val _selectedLanguage = MutableStateFlow("English")
+    val selectedLanguage = _selectedLanguage.asStateFlow()
 
     // Tabs: 0: Charts, 1: Planets, 2: Dashas & Yogas, 3: Rishi Chat, 4: Deep Report, 5: Compatibility
     private val _selectedTab = MutableStateFlow(0)
@@ -80,7 +85,10 @@ class DashboardViewModel : ViewModel() {
     private val _compatibilityResult = MutableStateFlow<com.example.vedicjyotish.data.models.CompatibilityResponse?>(null)
     val compatibilityResult = _compatibilityResult.asStateFlow()
 
-    fun init(chart: ChartResponse) {
+    fun init(chart: ChartResponse, context: android.content.Context) {
+        val prefs = context.getSharedPreferences("vedic_prefs", android.content.Context.MODE_PRIVATE)
+        _selectedLanguage.value = prefs.getString("selected_language", "English") ?: "English"
+
         if (isInitialized && this::chartData.isInitialized && this.chartData == chart) return
         this.chartData = chart
         isInitialized = true
@@ -127,6 +135,7 @@ class DashboardViewModel : ViewModel() {
             try {
                 ApiClient.service.generateReportStream(
                     chartData = chartData,
+                    language = _selectedLanguage.value,
                     onChunk = { chunk ->
                         _reportText.value += chunk
                     },
@@ -183,6 +192,7 @@ class DashboardViewModel : ViewModel() {
                     chartData = chartData,
                     question = question,
                     history = history,
+                    language = _selectedLanguage.value,
                     onChunk = { chunk ->
                         accumulatedText += chunk
                         val list = _chatMessages.value.toMutableList()
@@ -281,9 +291,23 @@ class DashboardViewModel : ViewModel() {
         _matchingLongitude.value = prefs.getFloat("birth_lon", 0.0f).toDouble()
     }
 
+    fun updateSelectedLanguage(language: String, context: android.content.Context) {
+        _selectedLanguage.value = language
+        val prefs = context.getSharedPreferences("vedic_prefs", android.content.Context.MODE_PRIVATE)
+        prefs.edit().putString("selected_language", language).apply()
+        
+        // Auto-regenerate deep report on language change if currently viewing it
+        if (_selectedTab.value == 4) {
+            generateDeepReport()
+        }
+    }
+
     fun calculateCompatibility(context: android.content.Context) {
-        val d = _matchingDate.value
-        val t = _matchingTime.value
+        val d = normalizeDate(_matchingDate.value)
+        val t = normalizeTime(_matchingTime.value)
+        _matchingDate.value = d
+        _matchingTime.value = t
+
         val c = _matchingCity.value
         val lat = _matchingLatitude.value
         val lon = _matchingLongitude.value

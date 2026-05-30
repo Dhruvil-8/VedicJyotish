@@ -6,6 +6,8 @@ import com.example.vedicjyotish.data.models.BirthDataRequest
 import com.example.vedicjyotish.data.models.ChartResponse
 import com.example.vedicjyotish.data.models.CityResult
 import com.example.vedicjyotish.data.network.ApiClient
+import com.example.vedicjyotish.utils.DateTimeUtils.normalizeDate
+import com.example.vedicjyotish.utils.DateTimeUtils.normalizeTime
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -18,6 +20,9 @@ class BirthDetailsViewModel : ViewModel() {
 
     private val _time = MutableStateFlow("") // HH:MM
     val time = _time.asStateFlow()
+
+    private val _selectedLanguage = MutableStateFlow("English")
+    val selectedLanguage = _selectedLanguage.asStateFlow()
 
     private val _city = MutableStateFlow("")
     val city = _city.asStateFlow()
@@ -105,9 +110,23 @@ class BirthDetailsViewModel : ViewModel() {
         }
     }
 
+    fun updateSelectedLanguage(language: String, context: android.content.Context) {
+        _selectedLanguage.value = language
+        val prefs = context.getSharedPreferences("vedic_prefs", android.content.Context.MODE_PRIVATE)
+        prefs.edit().putString("selected_language", language).apply()
+    }
+
+    fun loadLanguage(context: android.content.Context) {
+        val prefs = context.getSharedPreferences("vedic_prefs", android.content.Context.MODE_PRIVATE)
+        _selectedLanguage.value = prefs.getString("selected_language", "English") ?: "English"
+    }
+
     fun calculateChart() {
-        val d = _date.value
-        val t = _time.value
+        val d = normalizeDate(_date.value)
+        val t = normalizeTime(_time.value)
+        _date.value = d
+        _time.value = t
+
         val c = _city.value
         val lat = _latitude.value
         val lon = _longitude.value
