@@ -92,9 +92,10 @@ async function readSSEStream(
     buffer = lines.pop() || "";
 
     for (const line of lines) {
-      if (!line.startsWith("data: ")) continue;
+      const cleanLine = line.trim();
+      if (!cleanLine.startsWith("data: ")) continue;
       try {
-        const payload = JSON.parse(line.slice(6));
+        const payload = JSON.parse(cleanLine.slice(6));
         if (payload.text) {
           onChunk(payload.text);
         } else if (payload.done) {
@@ -102,8 +103,8 @@ async function readSSEStream(
         } else if (payload.error) {
           onError?.(payload.error);
         }
-      } catch {
-        // skip malformed SSE lines
+      } catch (err) {
+        console.error("Malformed SSE line parsing failed:", cleanLine, err);
       }
     }
   }

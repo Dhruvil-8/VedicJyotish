@@ -583,7 +583,12 @@ async fn generate_report(
 ) -> Result<Response, ApiError> {
     validate_api_key(&state, &headers)?;
     let sse = gemini::stream_report(payload).await?;
-    Ok(sse.into_response())
+    let mut response = sse.into_response();
+    response.headers_mut().insert(
+        axum::http::header::HeaderName::from_static("x-accel-buffering"),
+        axum::http::HeaderValue::from_static("no"),
+    );
+    Ok(response)
 }
 
 async fn chat_with_astrologer(
@@ -614,7 +619,12 @@ async fn chat_with_astrologer(
     }
 
     let sse = gemini::stream_chat(payload.chart_data, question, payload.history).await?;
-    Ok(sse.into_response())
+    let mut response = sse.into_response();
+    response.headers_mut().insert(
+        axum::http::header::HeaderName::from_static("x-accel-buffering"),
+        axum::http::HeaderValue::from_static("no"),
+    );
+    Ok(response)
 }
 
 // ─── Security ───────────────────────────────────────────────────────────────
