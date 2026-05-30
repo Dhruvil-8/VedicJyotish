@@ -571,10 +571,25 @@ export default function Home() {
                       <label className="flex items-center gap-2 text-xs font-heading text-secondary tracking-widest uppercase">
                         <Calendar className="w-3.5 h-3.5" /> Date (DD/MM/YYYY)
                       </label>
-                      <input
-                        type="text" value={date} onChange={(e) => setDate(e.target.value)}
-                        className="w-full bg-muted/30 border border-border/50 rounded-lg p-3 font-serif focus:border-primary focus:ring-1 focus:ring-primary/50 outline-none transition-all"
-                      />
+                      <div className="relative">
+                        <input
+                          type="text" value={date} onChange={(e) => setDate(e.target.value)}
+                          placeholder="DD/MM/YYYY"
+                          className="w-full bg-muted/30 border border-border/50 rounded-lg p-3 pr-10 font-serif focus:border-primary focus:ring-1 focus:ring-primary/50 outline-none transition-all"
+                        />
+                        <input
+                          type="date"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 opacity-0 cursor-pointer z-10"
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val) {
+                              const [y, m, d] = val.split("-");
+                              if (y && m && d) setDate(`${d}/${m}/${y}`);
+                            }
+                          }}
+                        />
+                        <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary pointer-events-none" />
+                      </div>
                     </div>
                     <div className="space-y-2">
                       <label className="flex items-center gap-2 text-xs font-heading text-secondary tracking-widest uppercase">
@@ -1301,10 +1316,25 @@ export default function Home() {
                                 <label className="flex items-center gap-1.5 text-[10px] font-heading text-secondary tracking-wider uppercase">
                                   <Calendar className="w-3 h-3" /> Date (DD/MM/YYYY)
                                 </label>
-                                <input
-                                  type="text" value={matchingBoyDate} onChange={(e) => setMatchingBoyDate(e.target.value)}
-                                  className="w-full bg-muted/20 border border-border/50 rounded-lg p-2.5 font-serif text-sm focus:border-primary outline-none transition-all"
-                                />
+                                <div className="relative">
+                                  <input
+                                    type="text" value={matchingBoyDate} onChange={(e) => setMatchingBoyDate(e.target.value)}
+                                    placeholder="DD/MM/YYYY"
+                                    className="w-full bg-muted/20 border border-border/50 rounded-lg p-2.5 pr-8 font-serif text-sm focus:border-primary outline-none transition-all"
+                                  />
+                                  <input
+                                    type="date"
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 opacity-0 cursor-pointer z-10"
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      if (val) {
+                                        const [y, m, d] = val.split("-");
+                                        if (y && m && d) setMatchingBoyDate(`${d}/${m}/${y}`);
+                                      }
+                                    }}
+                                  />
+                                  <Calendar className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-primary pointer-events-none" />
+                                </div>
                               </div>
                               <div className="space-y-2">
                                 <label className="flex items-center gap-1.5 text-[10px] font-heading text-secondary tracking-wider uppercase">
@@ -1368,10 +1398,25 @@ export default function Home() {
                                 <label className="flex items-center gap-1.5 text-[10px] font-heading text-secondary tracking-wider uppercase">
                                   <Calendar className="w-3 h-3" /> Date (DD/MM/YYYY)
                                 </label>
-                                <input
-                                  type="text" value={matchingGirlDate} onChange={(e) => setMatchingGirlDate(e.target.value)}
-                                  className="w-full bg-muted/20 border border-border/50 rounded-lg p-2.5 font-serif text-sm focus:border-primary outline-none transition-all"
-                                />
+                                <div className="relative">
+                                  <input
+                                    type="text" value={matchingGirlDate} onChange={(e) => setMatchingGirlDate(e.target.value)}
+                                    placeholder="DD/MM/YYYY"
+                                    className="w-full bg-muted/20 border border-border/50 rounded-lg p-2.5 pr-8 font-serif text-sm focus:border-primary outline-none transition-all"
+                                  />
+                                  <input
+                                    type="date"
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 opacity-0 cursor-pointer z-10"
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      if (val) {
+                                        const [y, m, d] = val.split("-");
+                                        if (y && m && d) setMatchingGirlDate(`${d}/${m}/${y}`);
+                                      }
+                                    }}
+                                  />
+                                  <Calendar className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-primary pointer-events-none" />
+                                </div>
                               </div>
                               <div className="space-y-2">
                                 <label className="flex items-center gap-1.5 text-[10px] font-heading text-secondary tracking-wider uppercase">
