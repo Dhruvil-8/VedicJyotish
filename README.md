@@ -31,7 +31,7 @@ This project should be viewed as:
 ## Features
 
 * **Chart Calculation**
-  Uses **Swiss Ephemeris ** with **Lahiri Ayanamsa**, 
+  Uses **Swiss Ephemeris** with **Lahiri Ayanamsa**, 
 
 * **North Indian Chart Rendering**
   Custom React‑based SVG logic to display a **North Indian (Diamond‑style) Kundli**.
