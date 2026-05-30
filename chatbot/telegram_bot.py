@@ -213,6 +213,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         f"✨ *Welcome to Vedic Astrology Bot, {user.first_name}!* ✨\n\n"
         "I can compute your Vedic birth chart (Kundli), outline your Nakshatras and planetary yogas, "
         "and connect you directly to AI RISHI.\n\n"
+        "🛡️ _By consulting, you agree to our [Privacy Policy](https://vedic-jyotish.vercel.app/privacy)._\n\n"
         "To get started, please tell me your **Date of Birth** in **DD/MM/YYYY** format:",
         parse_mode="Markdown"
     )
@@ -382,7 +383,7 @@ async def button_click(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         return ConversationHandler.END
 
     if action == "btn_report":
-        await query.edit_message_text("⌛ *Generating your detailed 1-2 page Vedic report...*\n_(This can take up to 30 seconds. Please hold on!)_", parse_mode="Markdown")
+        await query.edit_message_text("⌛ *Generating your detailed 3-page Vedic report...*\n_(This can take up to 30 seconds. Please hold on!)_", parse_mode="Markdown")
         report = await generate_full_report(chart_data)
         
         if len(report) > 4000:

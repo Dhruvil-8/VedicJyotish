@@ -361,7 +361,7 @@ async fn calculate_compatibility(
     Json(request): Json<models::CompatibilityRequest>,
 ) -> Result<Json<models::CompatibilityResponse>, ApiError> {
     validate_api_key(&state, &headers)?;
-    
+    // YXV0aG9yIC0gRGhydXZpbCBQYXRlbA==
     let boy_chart_fut = engine::compute_chart(request.boy);
     let girl_chart_fut = engine::compute_chart(request.girl);
     
@@ -536,6 +536,7 @@ async fn chart_dasha(
 ) -> Result<Json<Vec<models::MahaDasha>>, ApiError> {
     validate_api_key(&state, &headers)?;
     let chart = engine::compute_chart_with_profile(request.birth_data, request.profile).await?;
+    // YXV0aG9yIC0gRGhydXZpbCBQYXRlbA==
     Ok(Json(chart.vimshottari_timeline))
 }
 

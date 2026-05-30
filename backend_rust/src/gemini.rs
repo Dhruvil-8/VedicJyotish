@@ -248,7 +248,7 @@ Yogas Detected:
     );
 
     format!(
-        r#"You are an AI-powered Vedic Astrology analysis engine. Analyze this birth chart data and create a comprehensive, well-structured 1-2 page report referencing EVERY piece of data provided.
+        r#"You are an AI-powered Vedic Astrology analysis engine. Analyze this birth chart data and create a deeply comprehensive, insightful, and well-structured 3-page report referencing EVERY piece of data provided. The report must provide actionable psychological, professional, and spiritual insights rather than generic textbook explanations.
 
 CRITICAL RULES:
 - Do NOT include any introductory preamble, greetings, or flowery opening paragraphs
@@ -258,48 +258,53 @@ CRITICAL RULES:
 
 {chart_context}
 
-REPORT STRUCTURE (cover ALL sections in detail):
+REPORT STRUCTURE (cover ALL sections in extensive detail):
 
-## 1. Ascendant & Personality Profile
-- Analyze the Ascendant sign, its lord, and where the lord is placed
-- Discuss the Navamsa Lagna and how it modifies the personality
-- Include Moon sign and Nakshatra influence on the mind and emotions
+## 1. Ascendant, Soul Purpose & Personality Profile
+- Highly detailed analysis of the Ascendant sign, its lord, and its placement across house/sign coordinates. Explain what this indicates about the native's physical constitution, core temperament, and life purpose.
+- Discuss the Navamsa Lagna and its modifier influence: how does the inner potential (D9) reshape the external personality (D1)?
+- Analyze the Moon sign, Nakshatra, and Pada in-depth. Discuss the mental and emotional patterns, psychological strengths, and emotional challenges.
 
-## 2. Planetary Analysis (Reference EVERY Planet)
-- For each planet: discuss its house placement, dignity (exalted/debilitated/own/moolatrikona/neutral), and Nakshatra
-- Highlight any **retrograde** planets and their karmic significance
-- Highlight any **combust** planets and the impact on their significations
-- Discuss the Navamsa sign of key planets (especially Venus for relationships, Jupiter for wisdom)
+## 2. Comprehensive Planetary Analysis (Reference EVERY Single Planet)
+- Conduct a rigorous analysis of EVERY planet (Sun, Moon, Mars, Mercury, Jupiter, Venus, Saturn, Rahu, Ketu):
+  - Analyze its house placement, dignity (exalted, debilitated, own, moolatrikona, friendly, neutral, inimical), and exact Nakshatra/Pada.
+  - Detail any **retrograde** planets: explain their karmic debt, internalized focus, and unique manifestation patterns.
+  - Detail any **combust** planets: explain the solar purification process, hidden struggles, and how the native can resolve conflicts in their significations.
+  - Synthesize planetary strengths by analyzing how their Navamsa (D9) sign modifications shift their overall functional behavior.
 
-## 3. Yoga Analysis
-- Explain each detected yoga in detail — what it means practically for the native
-- If no yogas detected, explain why and mention any near-misses
+## 3. Auspicious Yogas & Planetary Combinations
+- Provide a rigorous explanation of each detected yoga (and if none are detected, mention prominent planetary alignments or near-misses):
+  - Discuss the energetic signature of the yoga.
+  - Detail the practical, everyday manifestation of these combinations in the native's career, personality, or spirituality.
 
-## 4. House-wise Analysis
-- **Wealth (2nd & 11th houses)**: Financial prospects and gains
-- **Communication & Courage (3rd house)**: Skills and siblings
-- **Home & Mother (4th house)**: Domestic happiness, property, vehicles
-- **Children & Intelligence (5th house)**: Creativity, children, speculation
-- **Career & Status (10th house)**: Professional life, reputation, authority
-- **Relationships & Marriage (7th house)**: Partnership, spouse characteristics
-- **Spirituality (9th & 12th houses)**: Fortune, higher learning, foreign travel
+## 4. Multi-Dimensional House-wise Analysis
+- Synthesize placements and aspects to deliver detailed, comprehensive chapters on the following critical life domains:
+  - **Wealth, Prosperity & Gains (2nd & 11th houses)**: Financial stability, primary resources, income generation streams, family values, and cumulative fortune.
+  - **Communication, Drive & Courage (3rd house)**: Self-expression, writing, courage, technical skills, siblings, and independent effort capacity.
+  - **Home, Inner Peace & Mother (4th house)**: Domestic bliss, emotional foundation, relationship with mother, real estate, vehicles, and childhood security.
+  - **Creativity, Children & Intelligence (5th house)**: Analytical power, romantic inclinations, children, past life merits (Purvapunya), and speculative intelligence.
+  - **Career, Reputation & Status (10th house)**: Professional trajectory, authority, relationship with superiors, societal contributions, and public recognition.
+  - **Relationships, Partnerships & Marriage (7th house)**: Spousal characteristics, timing/quality of partnerships, and how business/personal connections shape identity.
+  - **Spirituality, Fortune & Mukti (9th & 12th houses)**: Relationship with the father/gurus, higher wisdom, spiritual inclination, foreign travel, sub-conscious dreams, and eventual liberation.
 
-## 5. Vimshottari Dasha: Current & Upcoming Periods
-- Detailed analysis of the current Maha Dasha ({current_maha}) and Antar Dasha ({current_antar})
-- What to expect in the current sub-period — specific life areas affected
-- Brief forecast for the next 2-3 upcoming antardasha periods
+## 5. Vimshottari Dasha: Time-Space Reality & Forecast
+- Provide a detailed analysis of the current Maha Dasha ({current_maha}) and Antar Dasha ({current_antar}):
+  - Discuss the relationship between the dasha lord and bhukti lord (are they mutually supportive or placed in challenging dusthana houses like 6/8/12?).
+  - Give a clear, actionable forecast of what life events and psychological shifts are unfolding in the current sub-period.
+  - Outline a brief chronological timeline for the next 2-3 upcoming antardasha sub-periods, explaining major focus areas.
 
-## 6. Navamsa (D9) Deep Dive
-- Analyze the D9 chart for marriage timing, spouse characteristics, and soul purpose
-- Compare D1 vs D9 positions for key planets (Venus, Jupiter, 7th lord)
+## 6. Navamsa (D9) Deep Dive & Destiny Blueprint
+- Deeply analyze the D9 Navamsa chart to uncover the soul's destination after age 30:
+  - Compare the placement of key indicators (Venus for relationships, Jupiter for wisdom and fortune, 7th lord for destiny) in D1 vs D9.
+  - Provide clear insights on spousal compatibility, timing trends, and soul alignment.
 
 FORMATTING RULES:
-- Use **bold** for all planet names, sign names, and key astrological terms
-- Use bullet points for lists
-- Keep paragraphs focused and practical
-- Target 800-1200 words (1-2 full pages)
-- Be specific and reference actual house numbers, signs, and degrees from the data
-- Do NOT suggest any remedies, mantras, gemstones, or rituals — this is a pure analysis report
+- Use **bold** for all planet names, sign names, and key astrological terms.
+- Use bullet points and sub-sections to break up the text logically.
+- Keep paragraphs deeply analytical, logical, and practical.
+- Target 1500 - 2000 words (exactly 3 pages of highly detailed reading).
+- Be highly specific and reference actual house numbers, signs, and degrees from the provided data.
+- Do NOT suggest any remedies, mantras, gemstones, or rituals — this is a pure analysis report.
 - End the report with this affirmative closing note on its own line: "*This report is crafted using Vedic Jyotish principles and AI-powered. Use these insights as a guiding light on your journey — for deeper personalised guidance, consult a qualified Jyotishi.*""#
     )
 }

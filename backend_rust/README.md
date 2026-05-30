@@ -1,7 +1,7 @@
 # VedicJyotish Rust Backend
 
 > [!WARNING]
-> **DISCLAIMER**: This backend engine is currently in its active development and testing phase. Features, API models, and calculation parameters are subject to refinement as we complete thorough validation against classical Vedic texts.
+> **DISCLAIMER**: This backend engine is currently in its active development and testing phase. Features, API models, and calculation parameters are subject to refinement as we complete thorough validation
 
 A high-performance, modular Vedic Astrology API built using Rust, Axum, and Swiss Ephemeris. It serves as a backend service for birth chart calculations, city lookups, transit analysis, and AI-driven astrological interpretation.
 

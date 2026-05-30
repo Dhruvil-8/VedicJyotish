@@ -6,7 +6,7 @@
 }
 
 # Keep our API data models from being obfuscated or removed
--keep class com.example.vedicastroai.data.models.** { *; }
+-keep class com.example.vedicjyotish.data.models.** { *; }
 
 # OkHttp rules
 -keepattributes Signature, InnerClasses, AnnotationDefault

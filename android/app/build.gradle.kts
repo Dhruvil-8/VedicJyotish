@@ -5,10 +5,10 @@ plugins {
 }
 
 android {
-    namespace = "com.example.vedicastroai"
+    namespace = "com.example.vedicjyotish"
     compileSdk = 36
     defaultConfig {
-        applicationId = "com.example.vedicastroai"
+        applicationId = "com.example.vedicjyotish"
         minSdk = 24
         targetSdk = 36
         versionCode = 1

@@ -531,7 +531,7 @@ export default function Home() {
             </h1>
             <div className="flex items-center justify-center gap-4 text-secondary/80 font-serif tracking-[0.2em] uppercase text-xs md:text-sm">
               <span className="h-px w-8 bg-secondary/30" />
-              Ancient Wisdom • Modern Insight
+              ॥ ॐ गं गणपतये नमः ॥
               <span className="h-px w-8 bg-secondary/30" />
             </div>
           </motion.div>
