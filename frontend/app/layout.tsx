@@ -24,7 +24,6 @@ export const metadata: Metadata = {
     "Kundli",
     "Jyotish",
     "birth chart analysis",
-    "Sanatan Dharma astrology",
     "Hindu astrology",
     "online Kundali",
     "AI astrologer",
