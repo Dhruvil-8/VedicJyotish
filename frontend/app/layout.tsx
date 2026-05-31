@@ -18,7 +18,7 @@ const libreBaskerville = Libre_Baskerville({
 export const metadata: Metadata = {
   metadataBase: new URL("https://vedic-jyotish.vercel.app"),
   title: "Vedic Jyotish | Ancient Wisdom, Modern Insight",
-  description: "Personalized Vedic Jyotish analysis powered by AI and precise astronomical calculations. Rooted in the deep traditions of Sanatan Dharma.",
+  description: "Personalized Vedic Jyotish analysis powered by AI and precise astronomical calculations.",
   keywords: [
     "Vedic astrology",
     "Kundli",
@@ -31,7 +31,19 @@ export const metadata: Metadata = {
     "Navagraha",
     "karmic map",
     "free astrology report",
-    "free jyotish"
+    "free jyotish",
+    "Vedic Astrologer",
+    "Online Jyotish",
+    "वैदिक ज्योतिष",
+    "Vimshottari Dasha",
+    "Free Astro Chat",
+    "Astrology",
+    "free astrology Chat with AI",
+    "Vedic astrology chart",
+    "Online Jyotish free Kundali matching",
+    "Auspicious & Significant Yogas",
+    "16 divisional charts",
+    "Rishi AI"
   ],
   alternates: {
     canonical: "/",
