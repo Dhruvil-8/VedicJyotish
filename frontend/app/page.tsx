@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import {
   Search, Sparkles, MessageSquare, Send, Calendar, Clock, MapPin, ChevronRight,
   Moon, Star, Wand2, AlertTriangle, ExternalLink, CheckCircle, XCircle, Info,
-  Compass, BookOpen, Heart, ChevronDown, ChevronUp, RefreshCw, FileText, User, Globe
+  Compass, BookOpen, Heart, ChevronDown, ChevronUp, RefreshCw, FileText, User, Globe, Menu
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
@@ -141,6 +141,79 @@ const Accordion = ({ id, title, explanation, icon: Icon, isOpen, onToggle, child
 };
 
 export default function Home() {
+  // Global Navigation & Sidebar
+  const [appView, setAppView] = useState<"kundli" | "panchanga">("kundli");
+  const [isNavOpen, setIsNavOpen] = useState(false);
+
+  // Panchang Page Form Data
+  const [panchangDate, setPanchangDate] = useState("");
+  const [panchangTime, setPanchangTime] = useState("12:00");
+  const [panchangCityInput, setPanchangCityInput] = useState("");
+  const [panchangCityResults, setPanchangCityResults] = useState<any[]>([]);
+  const [selectedPanchangCity, setSelectedPanchangCity] = useState<any>(null);
+  const [panchangData, setPanchangData] = useState<any>(null);
+  const [panchangLoading, setPanchangLoading] = useState(false);
+
+  // Auto-initialize Today's Panchanga details on mount
+  useEffect(() => {
+    const now = new Date();
+    const d = String(now.getDate()).padStart(2, '0');
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const y = now.getFullYear();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+
+    const formattedDate = `${d}/${m}/${y}`;
+    const formattedTime = `${hh}:${mm}`;
+
+    setPanchangDate(formattedDate);
+    setPanchangTime(formattedTime);
+
+    // Default reference city (New Delhi)
+    const defaultCity = {
+      name: "New Delhi, Delhi, India",
+      lat: 28.6139,
+      lon: 77.209,
+      timezone: 5.5
+    };
+    setSelectedPanchangCity(defaultCity);
+    setPanchangCityInput(defaultCity.name);
+
+    const fetchInitialPanchang = async () => {
+      try {
+        const payload = {
+          date: formattedDate,
+          time: formattedTime,
+          city: defaultCity.name,
+          lat: defaultCity.lat,
+          lon: defaultCity.lon,
+          timezone: defaultCity.timezone
+        };
+        const res = await calculateChart(payload);
+        if (res && res.panchanga) {
+          setPanchangData(res.panchanga);
+        }
+      } catch (err) {
+        console.error("Failed to load initial Panchang:", err);
+      }
+    };
+
+    fetchInitialPanchang();
+  }, []);
+
+  // Debounced City Search for Panchanga page
+  useEffect(() => {
+    const delay = setTimeout(async () => {
+      if (panchangCityInput.length >= 3 && (!selectedPanchangCity || panchangCityInput !== selectedPanchangCity.name)) {
+        const results = await searchCity(panchangCityInput);
+        setPanchangCityResults(results);
+      } else {
+        setPanchangCityResults([]);
+      }
+    }, 300);
+    return () => clearTimeout(delay);
+  }, [panchangCityInput, selectedPanchangCity]);
+
   // --- States ---
   const [step, setStep] = useState<"form" | "dashboard">("form");
   const [loading, setLoading] = useState(false);
@@ -425,6 +498,39 @@ export default function Home() {
     }
   };
 
+  const handleCalculatePanchang = async () => {
+    if (!panchangDate) return showToast("Please enter a valid date (DD/MM/YYYY).", "info");
+    if (!panchangTime) return showToast("Please enter a valid time (HH:MM).", "info");
+    if (!selectedPanchangCity) return showToast("Please select a location from the search suggestions.", "info");
+
+    setPanchangLoading(true);
+    try {
+      const payload = {
+        date: panchangDate,
+        time: panchangTime,
+        city: selectedPanchangCity.name,
+        lat: selectedPanchangCity.lat,
+        lon: selectedPanchangCity.lon,
+        timezone: selectedPanchangCity.timezone
+      };
+
+      const res = await calculateChart(payload);
+      if (res && res.panchanga) {
+        setPanchangData(res.panchanga);
+        showToast("Daily Panchang calculated successfully!", "success");
+      }
+    } catch (e: any) {
+      let msg = "Error calculating Panchang. Please check inputs and try again.";
+      try {
+        const body = await e?.response?.json?.();
+        if (body?.detail) msg = body.detail;
+      } catch { }
+      showToast(msg);
+    } finally {
+      setPanchangLoading(false);
+    }
+  };
+
   // Extract Planetary Strengths (Dig Bala) from house planets
   const digBalaPlanets: any[] = [];
   if (chartData && chartData.chart_data) {
@@ -440,6 +546,94 @@ export default function Home() {
 
   return (
     <main className="min-h-screen selection:bg-primary/30 selection:text-primary pb-20">
+
+      {/* Sidebar Drawer Hamburger Trigger */}
+      <div className="fixed top-4 left-4 z-40">
+        <button
+          onClick={() => setIsNavOpen(true)}
+          className="p-3 rounded-full bg-background/80 backdrop-blur-md border border-primary/20 shadow-md text-primary hover:bg-primary/10 transition-all flex items-center justify-center cursor-pointer"
+          title="Open Navigation"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+      </div>
+
+      {/* Sidebar Navigation Drawer */}
+      <AnimatePresence>
+        {isNavOpen && (
+          <>
+            {/* Drawer Backdrop Overlay */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.5 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsNavOpen(false)}
+              className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+            />
+
+            {/* Sliding Sidebar Panel */}
+            <motion.div
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="fixed top-0 left-0 bottom-0 w-72 z-50 glass-parchment shadow-2xl border-r border-primary/20 p-6 flex flex-col justify-between"
+            >
+              <div className="space-y-8">
+                {/* Header */}
+                <div className="flex items-center justify-between border-b border-primary/10 pb-4">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-primary gold-glow" />
+                    <span className="font-heading text-base font-bold text-primary">Vedic Jyotish Portal</span>
+                  </div>
+                  <button
+                    onClick={() => setIsNavOpen(false)}
+                    className="text-muted-foreground hover:text-foreground text-xl leading-none cursor-pointer p-1"
+                  >
+                    &times;
+                  </button>
+                </div>
+
+                {/* Navigation Items */}
+                <nav className="flex flex-col gap-3">
+                  <button
+                    onClick={() => {
+                      setAppView("kundli");
+                      setIsNavOpen(false);
+                    }}
+                    className={`flex items-center gap-3 p-3 rounded-xl border text-left font-heading text-sm transition-all cursor-pointer ${
+                      appView === "kundli"
+                        ? "bg-primary/15 border-primary/30 text-primary font-bold shadow-sm"
+                        : "bg-transparent border-transparent text-muted-foreground hover:bg-primary/5 hover:text-foreground"
+                    }`}
+                  >
+                    <User className="w-4 h-4" /> Birth Chart & Kundali
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setAppView("panchanga");
+                      setIsNavOpen(false);
+                    }}
+                    className={`flex items-center gap-3 p-3 rounded-xl border text-left font-heading text-sm transition-all cursor-pointer ${
+                      appView === "panchanga"
+                        ? "bg-primary/15 border-primary/30 text-primary font-bold shadow-sm"
+                        : "bg-transparent border-transparent text-muted-foreground hover:bg-primary/5 hover:text-foreground"
+                    }`}
+                  >
+                    <Clock className="w-4 h-4" /> Daily Vedic Panchang
+                  </button>
+                </nav>
+              </div>
+
+              {/* Footer details */}
+              <div className="text-[10px] text-muted-foreground font-serif border-t border-primary/10 pt-4 text-center">
+                Vedic Astrology Portal v1.1 • Offline Astro Calculations
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Toast Notification */}
       <AnimatePresence>
@@ -569,7 +763,174 @@ export default function Home() {
         </header>
 
         <AnimatePresence mode="wait">
-          {step === "form" ? (
+          {appView === "panchanga" ? (
+            <motion.div
+              key="panchanga"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.05 }}
+              className="space-y-8"
+            >
+              {/* Custom Panchanga page selector form */}
+              <div className="glass-parchment p-8 rounded-2xl vedic-border shadow-2xl relative max-w-xl mx-auto group">
+                <div className="space-y-6">
+                  <div className="text-center">
+                    <h2 className="text-2xl font-heading text-primary">Daily Vedic Panchang</h2>
+                    <p className="text-[11px] text-muted-foreground font-serif mt-1">Calculate the five vital cosmic limbs of time for any date and location.</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Date */}
+                    <div className="space-y-2">
+                      <label className="flex items-center gap-2 text-xs font-heading text-secondary tracking-widest uppercase">
+                        <Calendar className="w-3.5 h-3.5" /> Date (DD/MM/YYYY)
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text" value={panchangDate} onChange={(e) => setPanchangDate(e.target.value)}
+                          placeholder="DD/MM/YYYY"
+                          className="w-full bg-muted/30 border border-border/50 rounded-lg p-3 pr-10 font-serif focus:border-primary focus:ring-1 focus:ring-primary/50 outline-none transition-all text-sm text-foreground"
+                        />
+                        <input
+                          type="date"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 opacity-0 cursor-pointer z-10"
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val) {
+                              const [y, m, d] = val.split("-");
+                              if (y && m && d) setPanchangDate(`${d}/${m}/${y}`);
+                            }
+                          }}
+                        />
+                        <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary pointer-events-none" />
+                      </div>
+                    </div>
+
+                    {/* Time */}
+                    <div className="space-y-2">
+                      <label className="flex items-center gap-2 text-xs font-heading text-secondary tracking-widest uppercase">
+                        <Clock className="w-3.5 h-3.5" /> Time (HH:MM)
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text" value={panchangTime} onChange={(e) => setPanchangTime(e.target.value)}
+                          placeholder="HH:MM"
+                          className="w-full bg-muted/30 border border-border/50 rounded-lg p-3 pr-10 font-serif focus:border-primary focus:ring-1 focus:ring-primary/50 outline-none transition-all text-sm text-foreground"
+                        />
+                        <input
+                          type="time"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 opacity-0 cursor-pointer z-10"
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val) setPanchangTime(val);
+                          }}
+                        />
+                        <Clock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary pointer-events-none" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Location Selector */}
+                  <div className="space-y-2 relative">
+                    <label className="flex items-center gap-2 text-xs font-heading text-secondary tracking-widest uppercase">
+                      <MapPin className="w-3.5 h-3.5" /> Location
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text" value={panchangCityInput}
+                        onChange={(e) => { setPanchangCityInput(e.target.value); setSelectedPanchangCity(null); }}
+                        placeholder="e.g. New Delhi, Delhi, India"
+                        className="w-full bg-muted/30 border border-border/50 rounded-lg p-3 pl-10 font-serif focus:border-primary focus:ring-1 focus:ring-primary/50 outline-none transition-all text-sm text-foreground"
+                      />
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    </div>
+
+                    <AnimatePresence>
+                      {panchangCityResults.length > 0 && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          className="absolute z-20 w-full mt-1 bg-background/95 backdrop-blur-md border border-border/60 rounded-xl shadow-xl max-h-48 overflow-y-auto scroll-thin"
+                        >
+                          {panchangCityResults.map((city, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => {
+                                setSelectedPanchangCity(city);
+                                setPanchangCityInput(city.name);
+                                setPanchangCityResults([]);
+                              }}
+                              className="w-full text-left p-3 hover:bg-primary/5 transition-colors border-b border-border/10 last:border-0 font-serif text-xs text-foreground cursor-pointer"
+                            >
+                              {city.name} (TZ: {city.timezone >= 0 ? `+${city.timezone}` : city.timezone})
+                            </button>
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  <button
+                    onClick={handleCalculatePanchang}
+                    disabled={panchangLoading}
+                    className="w-full py-3 bg-primary text-primary-foreground font-heading rounded-full shadow-lg hover:shadow-primary/30 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2 text-sm"
+                  >
+                    {panchangLoading ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" /> Calculating Celestial Alignment...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4" /> Calculate Daily Panchang
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Panchanga calculations outputs */}
+              {panchangData && (
+                <div className="glass-parchment p-8 rounded-2xl vedic-border shadow-xl space-y-6 max-w-4xl mx-auto">
+                  <div className="text-center border-b border-primary/10 pb-4">
+                    <h3 className="text-xl font-heading text-secondary gold-glow">Daily Panchang Elements</h3>
+                    <p className="text-xs text-muted-foreground font-serif mt-1">
+                      Computed for {selectedPanchangCity?.name || "Selected Location"} on {panchangDate} at {panchangTime}
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+                    {[
+                      { label: "Vara (Day Lord)", val: panchangData.vara, icon: "✦", desc: "The solar weekday lord indicating natural planetary vitality of the day." },
+                      { label: "Tithi (Lunar Day)", val: panchangData.tithi.name, pct: panchangData.tithi.progress, desc: `Lunar day segment indicating emotional harmony. Fortnight: ${panchangData.paksha} Paksha.` },
+                      { label: "Nakshatra (Moon Star)", val: panchangData.nakshatra.name, pct: panchangData.nakshatra.progress, desc: "Lunar mansion governing the mind, emotional patterns, and active daily star energy." },
+                      { label: "Yoga (Combined Angle)", val: panchangData.yoga.name, pct: panchangData.yoga.progress, desc: "Combined solar-lunar angular alignment governing relationship and action currents." },
+                      { label: "Karana (Half-Tithi)", val: panchangData.karana.name, pct: panchangData.karana.progress, desc: "Half-tithi interval governing career, daily execution capacity, and physical work." },
+                    ].map((item, idx) => (
+                      <div key={idx} className="bg-card/40 p-4 rounded-xl border border-border/20 flex flex-col justify-between hover:border-primary/20 transition-all text-left">
+                        <div>
+                          <div className="text-[9px] text-muted-foreground font-heading uppercase tracking-widest">{item.label}</div>
+                          <div className="font-heading text-sm text-primary mt-1 font-bold">{item.val}</div>
+                          <p className="text-[9px] text-muted-foreground font-serif leading-normal mt-2">{item.desc}</p>
+                        </div>
+                        {item.pct !== undefined && (
+                          <div className="mt-4">
+                            <div className="w-full h-1 bg-border/40 rounded-full overflow-hidden">
+                              <div className="h-full bg-primary" style={{ width: `${item.pct * 100}%` }} />
+                            </div>
+                            <div className="flex justify-between text-[7px] text-muted-foreground mt-1">
+                              <span>Segment Completion</span>
+                              <span>{Math.round(item.pct * 100)}%</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          ) : step === "form" ? (
             <motion.div
               key="form"
               initial={{ opacity: 0, scale: 0.95 }}
@@ -905,26 +1266,131 @@ export default function Home() {
                         </div>
                       </Accordion>
 
-                      {digBalaPlanets.length > 0 && (
-                        <Accordion id="digbala" title="Planetary Strengths (Dig Bala)" explanation="Directional strength coordinates determining a planet's capability to manifest outcomes." icon={Star} isOpen={expandedAccordions.digbala || false} onToggle={() => toggleAccordion("digbala")}>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                            {digBalaPlanets.map((p, i) => (
-                              <div key={i} className="bg-card/40 p-4 rounded-xl border border-border/20 flex flex-col justify-between">
-                                <div className="flex items-center justify-between">
-                                  <span className="font-heading text-xs font-bold text-foreground">{p.name}</span>
-                                  <span className="text-[10px] font-heading text-primary font-bold">{p.dig_bala_points} Pts</span>
-                                </div>
-                                <div className="mt-3">
-                                  <div className="w-full h-1.5 bg-border/40 rounded-full overflow-hidden">
-                                    <div className="h-full bg-primary" style={{ width: `${p.dig_bala_percentage || 0}%` }} />
+                      {chartData.shadbala ? (
+                        <Accordion id="shadbala" title="Planetary Strengths (Shadbala)" explanation="Six-fold planetary strength (Shadbala) representing each planet's capability to deliver results across life." icon={Star} isOpen={expandedAccordions.shadbala || false} onToggle={() => toggleAccordion("shadbala")}>
+                          {chartData.graha_yuddha && chartData.graha_yuddha.length > 0 && (
+                            <div className="mb-6 p-4 rounded-xl border border-red-500/30 bg-red-950/20 text-red-100">
+                              <h4 className="font-heading text-xs font-bold text-red-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                                <AlertTriangle size={14} className="animate-pulse" /> Graha Yuddha (Planetary War) Active
+                              </h4>
+                              <div className="space-y-2">
+                                {chartData.graha_yuddha.map((war: any, i: number) => (
+                                  <div key={i} className="text-xs font-serif leading-relaxed">
+                                    A celestial battle is active between <span className="font-bold text-foreground">{war.planet_1}</span> and <span className="font-bold text-foreground">{war.planet_2}</span> (Distance: <span className="text-primary font-bold">{war.degree_diff}°</span>). The victor is declared as <span className="font-bold text-yellow-400 gold-glow">{war.winner}</span>.
                                   </div>
-                                  <div className="flex justify-between text-[8px] text-muted-foreground mt-1">
-                                    <span>Lagna Power</span>
-                                    <span>{Math.round(p.dig_bala_percentage || 0)}%</span>
-                                  </div>
-                                </div>
+                                ))}
                               </div>
-                            ))}
+                            </div>
+                          )}
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                            {Object.entries(chartData.shadbala.planet_balas || {}).map(([name, bala]: [string, any], i: number) => {
+                              const pct = Math.min(100, Math.round(bala.strength_ratio * 100));
+                              const statusColor = bala.strength_ratio >= 1.0 ? "text-emerald-500" : "text-amber-500";
+                              return (
+                                <div key={i} className="bg-card/40 p-4 rounded-xl border border-border/20 flex flex-col justify-between hover:border-primary/30 transition-all">
+                                  <div>
+                                    <div className="flex items-center justify-between border-b border-border/10 pb-2 mb-3">
+                                      <span className="font-heading text-xs font-bold text-foreground">{name}</span>
+                                      <span className={`text-[10px] font-heading font-bold ${statusColor}`}>{bala.strength_ratio}x req</span>
+                                    </div>
+                                    <div className="text-[10px] space-y-1.5 font-serif text-muted-foreground">
+                                      <div className="flex justify-between"><span>Total Rupas:</span> <span className="text-foreground font-semibold">{bala.total_rupas}</span></div>
+                                      <div className="flex justify-between"><span>Shashtiamsa:</span> <span className="text-foreground font-semibold">{bala.total_shashtiamsa}</span></div>
+                                      
+                                      <div className="grid grid-cols-2 gap-x-3 gap-y-1 mt-2 border-t border-border/10 pt-2 text-[9px]">
+                                        <div className="flex justify-between"><span>Sthana:</span> <span className="text-foreground font-medium">{Math.round(bala.sthana_bala)}</span></div>
+                                        <div className="flex justify-between"><span>Dig:</span> <span className="text-foreground font-medium">{Math.round(bala.dig_bala)}</span></div>
+                                        <div className="flex justify-between"><span>Kaala:</span> <span className="text-foreground font-medium">{Math.round(bala.kaala_bala)}</span></div>
+                                        <div className="flex justify-between"><span>Cheshta:</span> <span className="text-foreground font-medium">{Math.round(bala.cheshta_bala)}</span></div>
+                                        <div className="flex justify-between"><span>Naisargika:</span> <span className="text-foreground font-medium">{Math.round(bala.naisargika_bala)}</span></div>
+                                        <div className="flex justify-between"><span>Drik:</span> <span className="text-foreground font-medium">{Math.round(bala.drik_bala)}</span></div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="mt-4">
+                                    <div className="w-full h-1.5 bg-border/40 rounded-full overflow-hidden">
+                                      <div className={`h-full ${bala.strength_ratio >= 1.0 ? "bg-emerald-500" : "bg-amber-500"}`} style={{ width: `${pct}%` }} />
+                                    </div>
+                                    <div className="flex justify-between text-[8px] text-muted-foreground mt-1">
+                                      <span>Ratio</span>
+                                      <span>{Math.round(bala.strength_ratio * 100)}%</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </Accordion>
+                      ) : (
+                        digBalaPlanets.length > 0 && (
+                          <Accordion id="digbala" title="Planetary Strengths (Dig Bala)" explanation="Directional strength coordinates determining a planet's capability to manifest outcomes." icon={Star} isOpen={expandedAccordions.digbala || false} onToggle={() => toggleAccordion("digbala")}>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                              {digBalaPlanets.map((p: any, i: number) => (
+                                <div key={i} className="bg-card/40 p-4 rounded-xl border border-border/20 flex flex-col justify-between">
+                                  <div className="flex items-center justify-between">
+                                    <span className="font-heading text-xs font-bold text-foreground">{p.name}</span>
+                                    <span className="text-[10px] font-heading text-primary font-bold">{p.dig_bala_points} Pts</span>
+                                  </div>
+                                  <div className="mt-3">
+                                    <div className="w-full h-1.5 bg-border/40 rounded-full overflow-hidden">
+                                      <div className="h-full bg-primary" style={{ width: `${p.dig_bala_percentage || 0}%` }} />
+                                    </div>
+                                    <div className="flex justify-between text-[8px] text-muted-foreground mt-1">
+                                      <span>Lagna Power</span>
+                                      <span>{Math.round(p.dig_bala_percentage || 0)}%</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </Accordion>
+                        )
+                      )}
+
+                      {chartData.bhava_bala && (
+                        <Accordion id="bhavabala" title="House Strengths (Bhava Bala)" explanation="The computed strength of the 12 houses (Bhavas), determining which domains of life naturally flow with ease and which require greater conscious effort." icon={Compass} isOpen={expandedAccordions.bhavabala || false} onToggle={() => toggleAccordion("bhavabala")}>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                            {chartData.bhava_bala.map((score: number, i: number) => {
+                              const signLord = (signIdx: number) => {
+                                switch (signIdx) {
+                                  case 0: case 7: return "Mars"; // Aries, Scorpio
+                                  case 1: case 6: return "Venus"; // Taurus, Libra
+                                  case 2: case 5: return "Mercury"; // Gemini, Virgo
+                                  case 3: return "Moon"; // Cancer
+                                  case 4: return "Sun"; // Leo
+                                  case 8: case 11: return "Jupiter"; // Sagittarius, Pisces
+                                  case 9: case 10: return "Saturn"; // Capricorn, Aquarius
+                                  default: return "Unknown";
+                                }
+                              };
+                              const SIGNS = ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"];
+                              const ascSignIdx = SIGNS.indexOf(chartData.ascendant.sign);
+                              const houseSignIdx = (ascSignIdx + i) % 12;
+                              const sign = SIGNS[houseSignIdx];
+                              const lord = signLord(houseSignIdx);
+
+                              const minBala = 250;
+                              const maxBala = 550;
+                              const displayPct = Math.min(100, Math.max(10, Math.round(((score - minBala) / (maxBala - minBala)) * 100)));
+
+                              return (
+                                <div key={i} className="bg-card/40 p-4 rounded-xl border border-border/20 flex flex-col justify-between hover:border-primary/30 transition-all">
+                                  <div>
+                                    <div className="text-[9px] text-muted-foreground font-heading uppercase tracking-widest">House {i + 1}</div>
+                                    <div className="font-heading text-sm text-primary font-bold mt-1">{score} Pts</div>
+                                    <div className="text-[9px] text-muted-foreground font-serif leading-normal mt-1 italic text-center sm:text-left">
+                                      {sign} • {lord}
+                                    </div>
+                                  </div>
+                                  <div className="mt-3">
+                                    <div className="w-full h-1 bg-border/40 rounded-full overflow-hidden">
+                                      <div className="h-full bg-primary" style={{ width: `${displayPct}%` }} />
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
                         </Accordion>
                       )}

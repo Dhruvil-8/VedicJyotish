@@ -148,6 +148,38 @@ pub struct ChartResponse {
     pub argala: Option<ArgalaResponse>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub chara_dasha: Option<CharaDashaResponse>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shadbala: Option<ShadbalaResponse>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bhava_bala: Option<Vec<f64>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub graha_yuddha: Option<Vec<GrahaYuddha>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShadbalaResponse {
+    pub planet_balas: HashMap<String, PlanetShadbala>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PlanetShadbala {
+    pub sthana_bala: f64,
+    pub kaala_bala: f64,
+    pub dig_bala: f64,
+    pub cheshta_bala: f64,
+    pub naisargika_bala: f64,
+    pub drik_bala: f64,
+    pub total_shashtiamsa: f64,
+    pub total_rupas: f64,
+    pub strength_ratio: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GrahaYuddha {
+    pub planet_1: String,
+    pub planet_2: String,
+    pub degree_diff: f64,
+    pub winner: String,
 }
 
 

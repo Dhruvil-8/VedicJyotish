@@ -221,11 +221,67 @@ fn build_report_prompt(chart: &serde_json::Value) -> String {
         .and_then(|v| v.as_str())
         .unwrap_or("?");
 
-    let analysis_date = chrono::Local::now().format("%d-%B-%Y").to_string();
+    // Shadbala lines
+    let mut shadbala_lines = Vec::new();
+    if let Some(shadbala) = sanitized.get("shadbala").and_then(|v| v.get("planet_balas")).and_then(|v| v.as_object()) {
+        for (planet, bala) in shadbala {
+            let total_shashtiamsa = bala.get("total_shashtiamsa").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            let total_rupas = bala.get("total_rupas").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            let ratio = bala.get("strength_ratio").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            let sthana = bala.get("sthana_bala").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            let dig = bala.get("dig_bala").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            let kaala = bala.get("kaala_bala").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            let cheshta = bala.get("cheshta_bala").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            let naisargika = bala.get("naisargika_bala").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            let drik = bala.get("drik_bala").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            shadbala_lines.push(format!(
+                "  {planet}: {total_shashtiamsa:.1} Shashtiamsa ({total_rupas:.2} Rupas) | Ratio: {ratio:.2}x | Sthana: {sthana:.1}, Dig: {dig:.1}, Kaala: {kaala:.1}, Cheshta: {cheshta:.1}, Naisargika: {naisargika:.1}, Drik: {drik:.1}"
+            ));
+        }
+    }
+    let shadbala_str = if shadbala_lines.is_empty() {
+        "  Not calculated".to_string()
+    } else {
+        shadbala_lines.sort();
+        shadbala_lines.join("\n")
+    };
+
+    // Bhava Bala lines
+    let mut bhava_lines = Vec::new();
+    if let Some(bhava) = sanitized.get("bhava_bala").and_then(|v| v.as_array()) {
+        for (i, val) in bhava.iter().enumerate() {
+            let score = val.as_f64().unwrap_or(0.0);
+            bhava_lines.push(format!("  House {}: {score:.1}", i + 1));
+        }
+    }
+    let bhava_str = if bhava_lines.is_empty() {
+        "  Not calculated".to_string()
+    } else {
+        bhava_lines.join("\n")
+    };
+
+    // Graha Yuddha lines
+    let mut yuddha_lines = Vec::new();
+    if let Some(yuddhas) = sanitized.get("graha_yuddha").and_then(|v| v.as_array()) {
+        for y in yuddhas {
+            let p1 = y.get("planet_1").and_then(|v| v.as_str()).unwrap_or("?");
+            let p2 = y.get("planet_2").and_then(|v| v.as_str()).unwrap_or("?");
+            let diff = y.get("degree_diff").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            let winner = y.get("winner").and_then(|v| v.as_str()).unwrap_or("?");
+            yuddha_lines.push(format!("  - {p1} vs {p2} (Difference: {diff:.2}°). Winner: {winner}"));
+        }
+    }
+    let yuddha_str = if yuddha_lines.is_empty() {
+        "  No planetary wars active".to_string()
+    } else {
+        yuddha_lines.join("\n")
+    };
+
+    let analysis_date = chrono::Local::now().format("%d-%B-%Y %H:%M:%S").to_string();
 
     let chart_context = format!(
         r#"COMPLETE BIRTH CHART ANALYSIS DATA:
-Analysis Date (Current Date of Analysis): {analysis_date}
+Analysis Date/Time (Current Transit Reference): {analysis_date}
 
 Ascendant: {asc_sign} ({asc_deg:.2}°)
 Moon: {moon_sign} in {moon_nak} Pada {moon_pada} ({moon_strength})
@@ -242,9 +298,22 @@ Navamsa Chart (D9):
 {navamsa_lines}
 
 Yogas Detected:
-{yoga_str}"#,
+{yoga_str}
+
+Shadbala (Six-fold Planetary Strength):
+{shadbala_str}
+
+Bhava Bala (House Strength):
+{bhava_str}
+
+Graha Yuddha (Planetary Wars):
+{yuddha_str}"#,
         planet_lines = planet_lines.join("\n"),
         navamsa_lines = navamsa_lines.join("\n"),
+        yoga_str = yoga_str,
+        shadbala_str = shadbala_str,
+        bhava_str = bhava_str,
+        yuddha_str = yuddha_str,
     );
 
     let language = chart.get("language").and_then(|v| v.as_str()).unwrap_or("English");
@@ -267,9 +336,11 @@ REPORT STRUCTURE (cover ALL sections in extensive detail):
 - Discuss the Navamsa Lagna and its modifier influence: how does the inner potential (D9) reshape the external personality (D1)?
 - Analyze the Moon sign, Nakshatra, and Pada in-depth. Discuss the mental and emotional patterns, psychological strengths, and emotional challenges.
 
-## 2. Comprehensive Planetary Analysis (Reference EVERY Single Planet)
+## 2. Comprehensive Planetary Analysis & Strength (Reference EVERY Single Planet)
 - Conduct a rigorous analysis of EVERY planet (Sun, Moon, Mars, Mercury, Jupiter, Venus, Saturn, Rahu, Ketu):
   - Analyze its house placement, dignity (exalted, debilitated, own, moolatrikona, friendly, neutral, inimical), and exact Nakshatra/Pada.
+  - Detail its **Shadbala** strength (six-fold strength in Rupas/Shashtiamsas and strength_ratio). Explain if it meets the required Parashari threshold (ratio >= 1.0) and how this shapes its functional power. Detail the role of sub-components like Sthana (positional), Dig (directional), Kaala (temporal), Cheshta (motional), Naisargika (natural), and Drik (aspectual) strengths.
+  - Highlight any **Graha Yuddha** (planetary war) active in the chart (Mars, Mercury, Jupiter, Venus, Saturn within 1° in the same sign). Describe the dramatic cosmic battle, declare the winner, and explain how the vanquished planet's significations are suppressed while the victor's dominate.
   - Detail any **retrograde** planets: explain their karmic debt, internalized focus, and unique manifestation patterns.
   - Detail any **combust** planets: explain the solar purification process, hidden struggles, and how the native can resolve conflicts in their significations.
   - Synthesize planetary strengths by analyzing how their Navamsa (D9) sign modifications shift their overall functional behavior.
@@ -280,13 +351,13 @@ REPORT STRUCTURE (cover ALL sections in extensive detail):
   - Detail the practical, everyday manifestation of these combinations in the native's career, personality, or spirituality.
 
 ## 4. Multi-Dimensional House-wise Analysis
-- Synthesize placements and aspects to deliver detailed, comprehensive chapters on the following critical life domains:
-  - **Wealth, Prosperity & Gains (2nd & 11th houses)**: Financial stability, primary resources, income generation streams, family values, and cumulative fortune.
+- Synthesize placements and aspects, incorporating **Bhava Bala** (house strength) to deliver detailed, comprehensive chapters on the following critical life domains:
+  - **Wealth, Prosperity & Gains (2nd & 11th houses)**: Financial stability, primary resources, income generation streams, family values, and cumulative fortune. Analyze how Bhava Bala affects resource accumulation.
   - **Communication, Drive & Courage (3rd house)**: Self-expression, writing, courage, technical skills, siblings, and independent effort capacity.
   - **Home, Inner Peace & Mother (4th house)**: Domestic bliss, emotional foundation, relationship with mother, real estate, vehicles, and childhood security.
   - **Creativity, Children & Intelligence (5th house)**: Analytical power, romantic inclinations, children, past life merits (Purvapunya), and speculative intelligence.
-  - **Career, Reputation & Status (10th house)**: Professional trajectory, authority, relationship with superiors, societal contributions, and public recognition.
-  - **Relationships, Partnerships & Marriage (7th house)**: Spousal characteristics, timing/quality of partnerships, and how business/personal connections shape identity.
+  - **Career, Reputation & Status (10th house)**: Professional trajectory, authority, relationship with superiors, societal contributions, and public recognition. Map how 10th house Bhava Bala dictates career peaks.
+  - **Relationships, Partnerships & Marriage (7th house)**: Spousal characteristics, quality of partnerships, and how connections shape identity. Compare D1 and D9 placements.
   - **Spirituality, Fortune & Mukti (9th & 12th houses)**: Relationship with the father/gurus, higher wisdom, spiritual inclination, foreign travel, sub-conscious dreams, and eventual liberation.
 
 ## 5. Vimshottari Dasha: Time-Space Reality & Forecast
@@ -329,11 +400,13 @@ fn build_chat_request(
 
     let language = chart_data.get("language").and_then(|v| v.as_str()).unwrap_or("English");
 
+    let today_str = chrono::Local::now().format("%d-%B-%Y %H:%M:%S").to_string();
     let system_instruction = GeminiContent {
         role: None,
         parts: vec![GeminiPart {
             text: format!(
-                "You are an expert Vedic Astrologer. \nAnalyze the chart.\nRespond entirely and strictly in the {} language.\nFORMATTING RULES:\n1. Use **Bold** for Planet Names and Key Terms.\n2. Use bullet points for lists.\n3. Keep paragraphs short.",
+                "You are an expert Vedic Astrologer.\nToday's Current Date/Time (Transit Reference): {}\nAnalyze the chart.\nRespond entirely and strictly in the {} language.\nFORMATTING RULES:\n1. Use **Bold** for Planet Names and Key Terms.\n2. Use bullet points for lists.\n3. Keep paragraphs short.",
+                today_str,
                 language
             ),
         }],

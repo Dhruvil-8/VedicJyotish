@@ -258,9 +258,11 @@ pub async fn compute_chart_with_profile(
         None
     };
 
+    let shadbala_res = crate::shadbala::calculate_shadbala(&planets, snapshot.ascendant_degree, &data.date);
+    let bhava_res = crate::shadbala::calculate_bhava_bala(snapshot.ascendant_degree, &planets, &shadbala_res);
+    let war_res = crate::shadbala::detect_graha_yuddha(&planets);
+
     Ok(ChartResponse {
-
-
         profile,
         location: LocationInfo {
             city: data.city,
@@ -295,6 +297,9 @@ pub async fn compute_chart_with_profile(
         sade_sati: ss_res,
         argala: Some(argala),
         chara_dasha: Some(chara_dasha),
+        shadbala: Some(shadbala_res),
+        bhava_bala: Some(bhava_res),
+        graha_yuddha: Some(war_res),
     })
 }
 

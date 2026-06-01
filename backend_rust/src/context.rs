@@ -269,6 +269,12 @@ pub fn render_topic_prompt_context_json(chart: &serde_json::Value, topic: &str) 
         topic.to_uppercase()
     ));
 
+    let today_str = chrono::Local::now().format("%d-%B-%Y %H:%M:%S").to_string();
+    lines.push(format!(
+        "Current Analysis Date/Time (Transit Reference): {}",
+        today_str
+    ));
+
     let asc_sign = chart.pointer("/ascendant/sign").and_then(|v| v.as_str()).unwrap_or("?");
     let moon_sign = chart.pointer("/moon_intelligence/sign").and_then(|v| v.as_str()).unwrap_or("?");
     let moon_nak = chart.pointer("/moon_intelligence/nakshatra").and_then(|v| v.as_str()).unwrap_or("?");
