@@ -118,6 +118,8 @@ pub struct GandaMoolaResult {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct ChartResponse {
+    pub birth_date: String,
+    pub birth_time: String,
     pub profile: CalculationProfile,
     pub location: LocationInfo,
     pub ascendant: AscendantInfo,
@@ -194,6 +196,22 @@ pub struct Panchanga {
     pub yoga: PanchangaElement,
     pub karana: PanchangaElement,
     pub paksha: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sun_sign: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub moon_sign: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub nakshatra_lord: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tithi_lord: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub yoga_lord: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub karana_lord: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub vara_lord: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ayanamsha: Option<f64>,
 }
 
 #[derive(Debug, Clone, Serialize)]

@@ -150,7 +150,7 @@ pub async fn compute_chart_with_profile(
 
     let chart_data = chart::build_rasi_chart(asc_idx, &planets);
     let navamsa_chart = chart::build_navamsa_chart(snapshot.ascendant_degree, &planets);
-    let panchanga = panchanga::calculate(&planets, resolved_time.local_naive)?;
+    let panchanga = panchanga::calculate(&planets, resolved_time.local_naive, resolved_time.jd_ut)?;
     let yogas = yoga::detect_yogas(&planets, asc_idx);
     let planetary_table = planets
         .iter()
@@ -263,6 +263,8 @@ pub async fn compute_chart_with_profile(
     let war_res = crate::shadbala::detect_graha_yuddha(&planets);
 
     Ok(ChartResponse {
+        birth_date: data.date.clone(),
+        birth_time: data.time.clone(),
         profile,
         location: LocationInfo {
             city: data.city,

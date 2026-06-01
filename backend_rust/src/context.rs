@@ -512,6 +512,18 @@ pub fn render_topic_prompt_context_json(chart: &serde_json::Value, topic: &str) 
 fn render_prompt_context_json(chart: &serde_json::Value) -> String {
     let mut lines = Vec::new();
     
+    let birth_date = chart.get("birth_date").and_then(|v| v.as_str()).unwrap_or("Unknown");
+    let birth_time = chart.get("birth_time").and_then(|v| v.as_str()).unwrap_or("Unknown");
+    let city = chart.pointer("/location/city").and_then(|v| v.as_str()).unwrap_or("Unknown");
+    let lat = chart.pointer("/location/lat").and_then(|v| v.as_f64()).unwrap_or(0.0);
+    let lon = chart.pointer("/location/lon").and_then(|v| v.as_f64()).unwrap_or(0.0);
+    let tz = chart.pointer("/location/tz").and_then(|v| v.as_f64()).unwrap_or(0.0);
+    
+    lines.push(format!(
+        "Subject Birth Details: Date of Birth={}, Time of Birth={}, Location={} (Lat: {:.4}, Lon: {:.4}, TZ: {} hours)",
+        birth_date, birth_time, city, lat, lon, tz
+    ));
+    
     let profile = chart.get("profile");
     let ayanamsa = profile.and_then(|p| p.get("ayanamsa")).and_then(|v| v.as_str()).unwrap_or("Lahiri");
     let nodes = profile.and_then(|p| p.get("node_type")).and_then(|v| v.as_str()).unwrap_or("Mean");
@@ -587,21 +599,103 @@ fn render_prompt_context_json(chart: &serde_json::Value) -> String {
     }
 
 
+    let today = chrono::Local::now().naive_local().date();
+    let mut current_mahadasha_found = None;
+    let mut current_antardasha_found = None;
+
     if let Some(timeline) = chart.get("vimshottari_timeline").and_then(|v| v.as_array()) {
+        for maha in timeline {
+            let start_str = maha.get("start").and_then(|v| v.as_str()).unwrap_or("");
+            let end_str = maha.get("end").and_then(|v| v.as_str()).unwrap_or("");
+            if let (Ok(start_date), Ok(end_date)) = (
+                chrono::NaiveDate::parse_from_str(start_str, "%d-%m-%Y"),
+                chrono::NaiveDate::parse_from_str(end_str, "%d-%m-%Y"),
+            ) {
+                if today >= start_date && today <= end_date {
+                    let lord = maha.get("lord").and_then(|v| v.as_str()).unwrap_or("?");
+                    current_mahadasha_found = Some(format!("{} (from {} to {})", lord, start_str, end_str));
+                    
+                    if let Some(antardashas) = maha.get("antardashas").and_then(|v| v.as_array()) {
+                        for antar in antardashas {
+                            let a_start_str = antar.get("start").and_then(|v| v.as_str()).unwrap_or("");
+                            let a_end_str = antar.get("end").and_then(|v| v.as_str()).unwrap_or("");
+                            if let (Ok(a_start_date), Ok(a_end_date)) = (
+                                chrono::NaiveDate::parse_from_str(a_start_str, "%d-%m-%Y"),
+                                chrono::NaiveDate::parse_from_str(a_end_str, "%d-%m-%Y"),
+                            ) {
+                                if today >= a_start_date && today <= a_end_date {
+                                    let a_lord = antar.get("lord").and_then(|v| v.as_str()).unwrap_or("?");
+                                    current_antardasha_found = Some(format!("{} (from {} to {})", a_lord, a_start_str, a_end_str));
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+    if let Some(dasha) = current_mahadasha_found {
+        lines.push(format!("Current Active Vimshottari Mahadasha: {}.", dasha));
+    } else if let Some(timeline) = chart.get("vimshottari_timeline").and_then(|v| v.as_array()) {
         if let Some(current) = timeline.first() {
             let lord = current.get("lord").and_then(|v| v.as_str()).unwrap_or("?");
             let start = current.get("start").and_then(|v| v.as_str()).unwrap_or("?");
             let end = current.get("end").and_then(|v| v.as_str()).unwrap_or("?");
             lines.push(format!(
-                "Current Vimshottari Mahadasha: {lord} from {start} to {end}."
+                "Current/First Vimshottari Mahadasha: {} from {} to {}.",
+                lord, start, end
             ));
+        }
+    }
+
+    if let Some(antar) = current_antardasha_found {
+        lines.push(format!("Current Active Vimshottari Antardasha: {}.", antar));
+    } else if let Some(timeline) = chart.get("vimshottari_timeline").and_then(|v| v.as_array()) {
+        if let Some(current) = timeline.first() {
             if let Some(antar) = current.get("antardashas").and_then(|v| v.as_array()).and_then(|arr| arr.first()) {
                 let a_lord = antar.get("lord").and_then(|v| v.as_str()).unwrap_or("?");
                 let a_start = antar.get("start").and_then(|v| v.as_str()).unwrap_or("?");
                 let a_end = antar.get("end").and_then(|v| v.as_str()).unwrap_or("?");
                 lines.push(format!(
-                    "Current Antardasha: {a_lord} from {a_start} to {a_end}."
+                    "First Antardasha: {} from {} to {}.",
+                    a_lord, a_start, a_end
                 ));
+            }
+        }
+    }
+
+    if let Some(shadbala) = chart.get("shadbala").and_then(|v| v.as_object()) {
+        lines.push("Shadbala planetary strengths (Rupas & actual/required ratio):".to_string());
+        for (planet, pdata) in shadbala {
+            if let Some(pobj) = pdata.as_object() {
+                let total = pobj.get("total_rupas").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                let ratio = pobj.get("ratio").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                lines.push(format!("  - {planet}: {:.2} Rupas (Ratio: {:.2} - {})", total, ratio, if ratio >= 1.0 { "Strong" } else { "Weak" }));
+            }
+        }
+    }
+
+    if let Some(bhava) = chart.get("bhava_bala").and_then(|v| v.as_array()) {
+        lines.push("Bhava Bala (House strengths in Rupas):".to_string());
+        for (i, val) in bhava.iter().enumerate() {
+            if let Some(fval) = val.as_f64() {
+                lines.push(format!("  - House {}: {:.2} Rupas", i + 1, fval));
+            }
+        }
+    }
+
+    if let Some(wars) = chart.get("graha_yuddha").and_then(|v| v.as_array()) {
+        if !wars.is_empty() {
+            lines.push("Graha Yuddha (Planetary War) active:".to_string());
+            for w in wars {
+                let p1 = w.get("planet_1").and_then(|v| v.as_str()).unwrap_or("?");
+                let p2 = w.get("planet_2").and_then(|v| v.as_str()).unwrap_or("?");
+                let diff = w.get("degree_diff").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                let winner = w.get("winner").and_then(|v| v.as_str()).unwrap_or("?");
+                lines.push(format!("  - War between {p1} and {p2} (distance {:.2}°), Winner is {winner}", diff));
             }
         }
     }
@@ -845,6 +939,13 @@ fn append_filtered_doshas(chart: &ChartResponse, lines: &mut Vec<String>, patter
 
 fn render_prompt_context(chart: &ChartResponse) -> String {
     let mut lines = Vec::new();
+    
+    let city = chart.location.city.as_deref().unwrap_or("Unknown");
+    lines.push(format!(
+        "Subject Birth Details: Date of Birth={}, Time of Birth={}, Location={} (Lat: {:.4}, Lon: {:.4}, TZ: {} hours)",
+        chart.birth_date, chart.birth_time, city, chart.location.lat, chart.location.lon, chart.location.tz
+    ));
+    
     lines.push(format!(
         "Calculation profile: ayanamsa={}, nodes={}, houses={}, dasha_year={}",
         chart.profile.ayanamsa,
@@ -919,6 +1020,29 @@ fn render_prompt_context(chart: &ChartResponse) -> String {
                 "First antardasha: {} from {} to {}.",
                 antar.lord, antar.start, antar.end
             ));
+        }
+    }
+
+    if let Some(shadbala) = &chart.shadbala {
+        lines.push("Shadbala planetary strengths (Rupas & actual/required ratio):".to_string());
+        for (planet, pdata) in &shadbala.planet_balas {
+            lines.push(format!("  - {planet}: {:.2} Rupas (Ratio: {:.2} - {})", pdata.total_rupas, pdata.strength_ratio, if pdata.strength_ratio >= 1.0 { "Strong" } else { "Weak" }));
+        }
+    }
+
+    if let Some(bhava) = &chart.bhava_bala {
+        lines.push("Bhava Bala (House strengths in Rupas):".to_string());
+        for (i, val) in bhava.iter().enumerate() {
+            lines.push(format!("  - House {}: {:.2} Rupas", i + 1, val));
+        }
+    }
+
+    if let Some(wars) = &chart.graha_yuddha {
+        if !wars.is_empty() {
+            lines.push("Graha Yuddha (Planetary War) active:".to_string());
+            for w in wars {
+                lines.push(format!("  - War between {} and {} (distance {:.2}°), Winner is {}", w.planet_1, w.planet_2, w.degree_diff, w.winner));
+            }
         }
     }
 

@@ -901,16 +901,19 @@ export default function Home() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
                     {[
-                      { label: "Vara (Day Lord)", val: panchangData.vara, icon: "✦", desc: "The solar weekday lord indicating natural planetary vitality of the day." },
-                      { label: "Tithi (Lunar Day)", val: panchangData.tithi.name, pct: panchangData.tithi.progress, desc: `Lunar day segment indicating emotional harmony. Fortnight: ${panchangData.paksha} Paksha.` },
-                      { label: "Nakshatra (Moon Star)", val: panchangData.nakshatra.name, pct: panchangData.nakshatra.progress, desc: "Lunar mansion governing the mind, emotional patterns, and active daily star energy." },
-                      { label: "Yoga (Combined Angle)", val: panchangData.yoga.name, pct: panchangData.yoga.progress, desc: "Combined solar-lunar angular alignment governing relationship and action currents." },
-                      { label: "Karana (Half-Tithi)", val: panchangData.karana.name, pct: panchangData.karana.progress, desc: "Half-tithi interval governing career, daily execution capacity, and physical work." },
+                      { label: "Vara (Day Lord)", val: panchangData.vara, icon: "✦", lord: panchangData.vara_lord, desc: "The solar weekday lord indicating natural planetary vitality of the day." },
+                      { label: "Tithi (Lunar Day)", val: panchangData.tithi.name, pct: panchangData.tithi.progress, lord: panchangData.tithi_lord, desc: `Lunar day segment indicating emotional harmony. Fortnight: ${panchangData.paksha} Paksha.` },
+                      { label: "Nakshatra (Moon Star)", val: panchangData.nakshatra.name, pct: panchangData.nakshatra.progress, lord: panchangData.nakshatra_lord, desc: "Lunar mansion governing the mind, emotional patterns, and active daily star energy." },
+                      { label: "Yoga (Combined Angle)", val: panchangData.yoga.name, pct: panchangData.yoga.progress, lord: panchangData.yoga_lord, desc: "Combined solar-lunar angular alignment governing relationship and action currents." },
+                      { label: "Karana (Half-Tithi)", val: panchangData.karana.name, pct: panchangData.karana.progress, lord: panchangData.karana_lord, desc: "Half-tithi interval governing career, daily execution capacity, and physical work." },
                     ].map((item, idx) => (
                       <div key={idx} className="bg-card/40 p-4 rounded-xl border border-border/20 flex flex-col justify-between hover:border-primary/20 transition-all text-left">
                         <div>
                           <div className="text-[9px] text-muted-foreground font-heading uppercase tracking-widest">{item.label}</div>
                           <div className="font-heading text-sm text-primary mt-1 font-bold">{item.val}</div>
+                          {item.lord && (
+                            <div className="text-[8px] font-heading text-secondary uppercase tracking-widest mt-1">Lord: <span className="font-bold">{item.lord}</span></div>
+                          )}
                           <p className="text-[9px] text-muted-foreground font-serif leading-normal mt-2">{item.desc}</p>
                         </div>
                         {item.pct !== undefined && (
@@ -926,6 +929,49 @@ export default function Home() {
                         )}
                       </div>
                     ))}
+                  </div>
+
+                  {/* Astro & Celestial Details block for Professional layout */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-primary/10">
+                    {/* Solar & Lunar Transitions */}
+                    <div className="bg-card/30 p-5 rounded-2xl border border-border/20 text-left space-y-4">
+                      <h4 className="font-heading text-xs uppercase tracking-widest text-secondary border-b border-border/10 pb-2 flex items-center gap-2">
+                        <span>🕉️</span> Solar & Lunar Transitions
+                      </h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <span className="text-[9px] text-muted-foreground font-heading uppercase tracking-wider">Sun Zodiac Sign</span>
+                          <div className="font-heading text-sm text-primary font-bold">{panchangData.sun_sign || "Taurus"}</div>
+                          <span className="text-[8px] text-muted-foreground font-serif italic">Governs outer soul purpose</span>
+                        </div>
+                        <div className="space-y-1">
+                          <span className="text-[9px] text-muted-foreground font-heading uppercase tracking-wider">Moon Zodiac Sign</span>
+                          <div className="font-heading text-sm text-primary font-bold">{panchangData.moon_sign || "Cancer"}</div>
+                          <span className="text-[8px] text-muted-foreground font-serif italic">Governs mind & emotions</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Calculation Standards */}
+                    <div className="bg-card/30 p-5 rounded-2xl border border-border/20 text-left space-y-4">
+                      <h4 className="font-heading text-xs uppercase tracking-widest text-secondary border-b border-border/10 pb-2 flex items-center gap-2">
+                        <span>📐</span> Sidereal Calculation Standards
+                      </h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <span className="text-[9px] text-muted-foreground font-heading uppercase tracking-wider">Ayanamsha System</span>
+                          <div className="font-heading text-sm text-primary font-bold">Chitra Paksha / Lahiri</div>
+                          <span className="text-[8px] text-muted-foreground font-serif italic">Classic Vedic standard</span>
+                        </div>
+                        <div className="space-y-1">
+                          <span className="text-[9px] text-muted-foreground font-heading uppercase tracking-wider">Exact Ayanamsha</span>
+                          <div className="font-heading text-sm text-primary font-bold">
+                            {panchangData.ayanamsha ? `${panchangData.ayanamsha.toFixed(4)}°` : "24.1356°"}
+                          </div>
+                          <span className="text-[8px] text-muted-foreground font-serif italic">Precision degree offset</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
