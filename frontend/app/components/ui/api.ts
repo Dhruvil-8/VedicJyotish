@@ -12,7 +12,23 @@ const getHeaders = (extraHeaders: Record<string, string> = {}) => {
   return headers;
 };
 
-const SENSITIVE_CHART_KEYS = new Set<string>([]);
+const SENSITIVE_CHART_KEYS = new Set<string>([
+  "date",
+  "time",
+  "birth_date",
+  "birth_time",
+  "date_of_birth",
+  "time_of_birth",
+  "dob",
+  "location",
+  "city",
+  "lat",
+  "lon",
+  "latitude",
+  "longitude",
+  "timezone",
+  "tz",
+]);
 
 export const sanitizeChartForAi = (value: any): any => {
   if (Array.isArray(value)) {
