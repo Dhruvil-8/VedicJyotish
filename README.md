@@ -24,7 +24,7 @@ This project should be viewed as:
 
 > **An AI‑assisted Vedic astrology software experiment**
 
-> 💡 **Deep-Analysis Note**: Current live mode uses Gemini Flash Lite. You can use [this method](https://github.com/Dhruvil-8/VedicJyotish/blob/main/ADDITIONAL_ASTROLOGY_RESOURCES.md.md) with a Pro-tier Gemini model to get significantly more detailed and comprehensive insights.
+> 💡 **Deep-Analysis Note**: Current live mode uses Gemini Flash Lite. You can use [Detailed-Analysis method](https://github.com/Dhruvil-8/VedicJyotish/blob/main/ADDITIONAL_ASTROLOGY_RESOURCES.md.md) with a Pro-tier Gemini model to get significantly more detailed and comprehensive insights.
 
 ---
 

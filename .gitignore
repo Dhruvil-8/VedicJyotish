@@ -73,4 +73,7 @@ hf-deploy/
 backend_rust/target/
 backend_rust/data/locations.db
 backend_rust/data/raw/
-backend_rust/.env
+backend_rust/.env
+backend_rust/test_venv/
+backend_rust/validation/
+

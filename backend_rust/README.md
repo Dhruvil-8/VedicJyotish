@@ -20,6 +20,10 @@ The Rust backend is designed to compute classical Vedic astrology parameters wit
 * **Vimshottari Dasha Tree**: Tracks planetary mahadashas and sub-dashas over a 120-year lifecycle based on Nakshatra longitudes.
 * **Ashtakavarga**: Generates planetary scoring grids (*Bhinnashtakavarga*) and collective score totals (*Sarvashtakavarga*).
 * **Guna Milan Compatibility**: Employs Nakshatra and Pada matching across standard criteria for relationship compatibility.
+* **Shadbala (Six-Fold Planetary Strength)**: Computes *Sthana* (positional), *Dig* (directional), *Kaala* (temporal), *Cheshta* (motional), *Naisargika* (natural), and *Drik* (aspectual) strengths against Parashari thresholds.
+* **Bhava Bala (House Strength)**: Evaluates active strengths of the 12 houses combining house lord's Shadbala, directional factor, and aspects.
+* **Graha Yuddha (Planetary War)**: Detects degree clashes under 1° between the five non-luminous planets (Mars, Mercury, Jupiter, Venus, Saturn) and identifies the war victor.
+* **Panchanga**: Computes weekday/element lords (*Vara*, *Tithi*, *Nakshatra*, *Yoga*, and *Karana* lords), Lahiri Ayanamsha degrees, and tracks live Sun/Moon transitions.
 
 ---
 
@@ -86,7 +90,7 @@ All endpoints (except public health checks) support optional calculation profile
   }
 }
 ```
-* **Response**: Returns a full suite of Vedic calculations including Pancha-Dha Maitri, Vaisheshikamsa counts, Sade Sati transits, and yogas.
+* **Response**: Returns a full suite of Vedic calculations including Pancha-Dha Maitri, Vaisheshikamsa counts, Sade Sati transits, Shadbala, Bhava Bala, Graha Yuddha, and yogas.
 
 ### 5. Jaimini Argala Solver (v1)
 * **Route**: `POST /api/v1/chart/argala`
@@ -131,3 +135,13 @@ cargo build --release
 cargo run --release
 ```
 The server will start on port `7860`.
+
+---
+
+## Credits & References
+
+* Swiss Ephemeris: Astronomical calculations are powered by the professional-grade Swiss Ephemeris library.
+* Jagannatha Hora (JHora) & PyJHora: [JHora](https://www.vedicastrologer.org/jh/) and the open-source [PyJHora](https://github.com/naturalstupid/PyJHora) project were used as references during development and manual verification of selected chart calculations.
+
+**Project Status: VedicJyotish project in active development. Comprehensive validation across all implemented calculations is still ongoing.**
+

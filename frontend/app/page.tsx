@@ -944,7 +944,7 @@ export default function Home() {
                       {/* Solar & Lunar Transitions */}
                       <div className="bg-card/30 p-5 rounded-2xl border border-border/20 text-left space-y-4">
                         <h4 className="font-heading text-xs uppercase tracking-widest text-secondary border-b border-border/10 pb-2 flex items-center gap-2">
-                          <span>🕉️</span> Solar & Lunar Transitions
+                          Solar & Lunar Transitions
                         </h4>
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-1">
@@ -963,7 +963,7 @@ export default function Home() {
                       {/* Sunrise & Sunset transitions */}
                       <div className="bg-card/30 p-5 rounded-2xl border border-border/20 text-left space-y-4">
                         <h4 className="font-heading text-xs uppercase tracking-widest text-secondary border-b border-border/10 pb-2 flex items-center gap-2">
-                          <span>☀️</span> Surya Udaya & Asta
+                          Surya Udaya & Asta
                         </h4>
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-1">
@@ -982,7 +982,7 @@ export default function Home() {
                       {/* Calculation Standards */}
                       <div className="bg-card/30 p-5 rounded-2xl border border-border/20 text-left space-y-4">
                         <h4 className="font-heading text-xs uppercase tracking-widest text-secondary border-b border-border/10 pb-2 flex items-center gap-2">
-                          <span>📐</span> Sidereal Calculation Standards
+                          Sidereal Calculation Standards
                         </h4>
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-1">
@@ -1005,7 +1005,7 @@ export default function Home() {
                       {/* Rahu Kalam */}
                       <div className="bg-rose-500/5 p-5 rounded-2xl border border-rose-500/10 text-left space-y-4 relative group hover:border-rose-500/20 transition-all">
                         <h4 className="font-heading text-xs uppercase tracking-widest text-rose-600 border-b border-rose-500/10 pb-2 flex items-center gap-2">
-                          <span>⚠️</span> Rahu Kaal (Inauspicious)
+                          Rahu Kaal (Inauspicious)
                         </h4>
                         <div className="space-y-1">
                           <span className="text-[9px] text-muted-foreground font-heading uppercase tracking-wider">Avoid starting new work</span>
@@ -1017,7 +1017,7 @@ export default function Home() {
                       {/* Abhijit Muhurat */}
                       <div className="bg-emerald-500/5 p-5 rounded-2xl border border-emerald-500/10 text-left space-y-4 relative group hover:border-emerald-500/20 transition-all">
                         <h4 className="font-heading text-xs uppercase tracking-widest text-emerald-600 border-b border-emerald-500/10 pb-2 flex items-center gap-2">
-                          <span>✨</span> Abhijit Muhurat (Auspicious)
+                          Abhijit Muhurat (Auspicious)
                         </h4>
                         <div className="space-y-1">
                           <span className="text-[9px] text-muted-foreground font-heading uppercase tracking-wider">Highly auspicious midday slot</span>
@@ -1029,7 +1029,7 @@ export default function Home() {
                       {/* Gulika & Yamaganda */}
                       <div className="bg-amber-500/5 p-5 rounded-2xl border border-amber-500/10 text-left space-y-4 relative group hover:border-amber-500/20 transition-all">
                         <h4 className="font-heading text-xs uppercase tracking-widest text-amber-600 border-b border-amber-500/10 pb-2 flex items-center gap-2">
-                          <span>⏳</span> Gulika & Yamaganda
+                          Gulika & Yamaganda
                         </h4>
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-1">
@@ -1051,7 +1051,7 @@ export default function Home() {
                       {/* Brahma Muhurta */}
                       <div className="bg-violet-500/5 p-5 rounded-2xl border border-violet-500/10 text-left space-y-4 relative group hover:border-violet-500/20 transition-all">
                         <h4 className="font-heading text-xs uppercase tracking-widest text-violet-600 border-b border-violet-500/10 pb-2 flex items-center gap-2">
-                          <span>🙏</span> Brahma Muhurta
+                          Brahma Muhurta
                         </h4>
                         <div className="space-y-1">
                           <span className="text-[9px] text-muted-foreground font-heading uppercase tracking-wider">Sacred pre-dawn meditation hour</span>
@@ -1063,7 +1063,7 @@ export default function Home() {
                       {/* Vijaya Muhurta */}
                       <div className="bg-sky-500/5 p-5 rounded-2xl border border-sky-500/10 text-left space-y-4 relative group hover:border-sky-500/20 transition-all">
                         <h4 className="font-heading text-xs uppercase tracking-widest text-sky-600 border-b border-sky-500/10 pb-2 flex items-center gap-2">
-                          <span>🏆</span> Vijaya Muhurta (Victory)
+                          Vijaya Muhurta (Victory)
                         </h4>
                         <div className="space-y-1">
                           <span className="text-[9px] text-muted-foreground font-heading uppercase tracking-wider">11th Muhurta — ensures success</span>
@@ -1075,7 +1075,7 @@ export default function Home() {
                       {/* Pradosh Kaal */}
                       <div className="bg-indigo-500/5 p-5 rounded-2xl border border-indigo-500/10 text-left space-y-4 relative group hover:border-indigo-500/20 transition-all">
                         <h4 className="font-heading text-xs uppercase tracking-widest text-indigo-600 border-b border-indigo-500/10 pb-2 flex items-center gap-2">
-                          <span>🌙</span> Pradosh Kaal
+                          Pradosh Kaal
                         </h4>
                         <div className="space-y-1">
                           <span className="text-[9px] text-muted-foreground font-heading uppercase tracking-wider">Twilight period after sunset</span>
@@ -1089,7 +1089,7 @@ export default function Home() {
                     {panchangData.dur_muhurtham && panchangData.dur_muhurtham.length > 0 && (
                       <div className="bg-red-500/5 p-5 rounded-2xl border border-red-500/10 text-left space-y-4 relative group hover:border-red-500/20 transition-all mt-6">
                         <h4 className="font-heading text-xs uppercase tracking-widest text-red-600 border-b border-red-500/10 pb-2 flex items-center gap-2">
-                          <span>🚫</span> Dur Muhurtham (Inauspicious Periods)
+                          Dur Muhurtham (Inauspicious Periods)
                         </h4>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           {panchangData.dur_muhurtham.map((slot: string, i: number) => (
@@ -1108,7 +1108,7 @@ export default function Home() {
                       <div className="bg-card/25 p-6 rounded-2xl border border-border/20 text-left space-y-4 pt-4 mt-6">
                         <div className="border-b border-primary/10 pb-2 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                           <h4 className="font-heading text-xs uppercase tracking-widest text-secondary flex items-center gap-2">
-                            <span>☀️</span> Choghadiya Muhurats (Daytime)
+                            Choghadiya Muhurats (Daytime)
                           </h4>
                           <span className="text-[8px] text-muted-foreground font-serif italic">Sunrise to Sunset — 8 slots</span>
                         </div>
@@ -1155,7 +1155,7 @@ export default function Home() {
                       <div className="bg-card/25 p-6 rounded-2xl border border-border/20 text-left space-y-4 pt-4 mt-4">
                         <div className="border-b border-primary/10 pb-2 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                           <h4 className="font-heading text-xs uppercase tracking-widest text-secondary flex items-center gap-2">
-                            <span>🌙</span> Choghadiya Muhurats (Nighttime)
+                            Choghadiya Muhurats (Nighttime)
                           </h4>
                           <span className="text-[8px] text-muted-foreground font-serif italic">Sunset to next Sunrise — 8 slots</span>
                         </div>
@@ -1202,13 +1202,11 @@ export default function Home() {
                       <div className="bg-card/25 p-6 rounded-2xl border border-border/20 text-left space-y-4 pt-4 mt-6">
                         <div className="border-b border-primary/10 pb-2 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                           <h4 className="font-heading text-xs uppercase tracking-widest text-secondary flex items-center gap-2">
-                            <span>☀️</span> Planetary Horas (Daytime)
+                            Planetary Horas (Daytime)
                           </h4>
-                          <span className="text-[8px] text-muted-foreground font-serif italic">12 planetary hours from sunrise</span>
                         </div>
                         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
                           {panchangData.horas_day.map((hora: any, i: number) => {
-                            const planetEmoji: Record<string, string> = { Sun: "☀️", Moon: "🌙", Mars: "♂️", Mercury: "☿️", Jupiter: "♃", Venus: "♀️", Saturn: "♄" };
                             const colorMap: Record<string, string> = {
                               "Highly Auspicious": "bg-emerald-500/8 border-emerald-500/15 text-emerald-700",
                               "Auspicious": "bg-teal-500/8 border-teal-500/15 text-teal-700",
@@ -1219,14 +1217,13 @@ export default function Home() {
                             return (
                               <div key={i} className={`p-3 rounded-xl border transition-all text-center ${cls}`}>
                                 <div className="text-[8px] text-muted-foreground font-heading uppercase tracking-wider">Hora {hora.hora_num}</div>
-                                <div className="text-xl my-1">{planetEmoji[hora.planet] || "🪐"}</div>
-                                <div className="font-heading text-xs font-bold">{hora.planet}</div>
+                                <div className="font-heading text-xs font-bold mt-2">{hora.planet}</div>
                                 <div className="text-[7px] text-muted-foreground font-serif mt-1">{hora.start} – {hora.end}</div>
-                                <span className={`text-[6px] font-heading uppercase tracking-widest px-1.5 py-0.5 rounded-full font-bold mt-1 inline-block ${hora.nature === "Highly Auspicious" ? "bg-emerald-500/10 text-emerald-600" :
+                                <div className={`text-[6px] font-heading uppercase tracking-widest px-1.5 py-0.5 rounded-full font-bold mt-1 inline-block ${hora.nature === "Highly Auspicious" ? "bg-emerald-500/10 text-emerald-600" :
                                   hora.nature === "Auspicious" ? "bg-teal-500/10 text-teal-600" :
                                     hora.nature === "Neutral" ? "bg-amber-500/10 text-amber-600" :
                                       "bg-rose-500/10 text-rose-600"
-                                  }`}>{hora.nature}</span>
+                                  }`}>{hora.nature}</div>
                               </div>
                             );
                           })}
@@ -1239,13 +1236,11 @@ export default function Home() {
                       <div className="bg-card/25 p-6 rounded-2xl border border-border/20 text-left space-y-4 pt-4 mt-4">
                         <div className="border-b border-primary/10 pb-2 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                           <h4 className="font-heading text-xs uppercase tracking-widest text-secondary flex items-center gap-2">
-                            <span>🌙</span> Planetary Horas (Nighttime)
+                            Planetary Horas (Nighttime)
                           </h4>
-                          <span className="text-[8px] text-muted-foreground font-serif italic">12 planetary hours from sunset</span>
                         </div>
                         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
                           {panchangData.horas_night.map((hora: any, i: number) => {
-                            const planetEmoji: Record<string, string> = { Sun: "☀️", Moon: "🌙", Mars: "♂️", Mercury: "☿️", Jupiter: "♃", Venus: "♀️", Saturn: "♄" };
                             const colorMap: Record<string, string> = {
                               "Highly Auspicious": "bg-emerald-500/8 border-emerald-500/15 text-emerald-700",
                               "Auspicious": "bg-teal-500/8 border-teal-500/15 text-teal-700",
@@ -1256,8 +1251,7 @@ export default function Home() {
                             return (
                               <div key={i} className={`p-3 rounded-xl border transition-all text-center ${cls}`}>
                                 <div className="text-[8px] text-muted-foreground font-heading uppercase tracking-wider">Hora {hora.hora_num}</div>
-                                <div className="text-xl my-1">{planetEmoji[hora.planet] || "🪐"}</div>
-                                <div className="font-heading text-xs font-bold">{hora.planet}</div>
+                                <div className="font-heading text-xs font-bold mt-2">{hora.planet}</div>
                                 <div className="text-[7px] text-muted-foreground font-serif mt-1">{hora.start} – {hora.end}</div>
                                 <span className={`text-[6px] font-heading uppercase tracking-widest px-1.5 py-0.5 rounded-full font-bold mt-1 inline-block ${hora.nature === "Highly Auspicious" ? "bg-emerald-500/10 text-emerald-600" :
                                   hora.nature === "Auspicious" ? "bg-teal-500/10 text-teal-600" :

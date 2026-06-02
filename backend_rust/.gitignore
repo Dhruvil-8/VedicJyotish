@@ -3,3 +3,5 @@ data/raw/
 data/*.db
 data/*.db-*,
 .env
+test_venv
+validation
