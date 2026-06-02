@@ -212,6 +212,51 @@ pub struct Panchanga {
     pub vara_lord: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ayanamsha: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sunrise: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sunset: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rahu_kaal: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub yama_ganda: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub gulika_kaal: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub abhijit_muhurat: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub choghadiya: Option<Vec<ChoghadiyaSlot>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub vijaya_muhurta: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub brahma_muhurta: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pradosh_kaal: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dur_muhurtham: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub choghadiya_night: Option<Vec<ChoghadiyaSlot>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub horas_day: Option<Vec<HoraSlot>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub horas_night: Option<Vec<HoraSlot>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChoghadiyaSlot {
+    pub name: String,
+    pub start: String,
+    pub end: String,
+    pub nature: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HoraSlot {
+    pub hora_num: u8,
+    pub planet: String,
+    pub start: String,
+    pub end: String,
+    pub nature: String,
 }
 
 #[derive(Debug, Clone, Serialize)]

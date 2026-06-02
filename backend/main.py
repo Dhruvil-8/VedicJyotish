@@ -226,10 +226,8 @@ class BirthData(BaseModel):
         v = v.strip().replace('-', '/').replace('.', '/')
         try:
             dt = datetime.strptime(v, "%d/%m/%Y")
-            if not (1900 <= dt.year <= datetime.now().year):
-                raise ValueError(f"Birth year must be between 1900 and {datetime.now().year}")
-            if dt > datetime.now():
-                raise ValueError("Birth date cannot be in the future")
+            if not (1900 <= dt.year <= 2100):
+                raise ValueError("Year must be between 1900 and 2100")
             return v
         except ValueError as e:
             if "does not match" in str(e) or "unconverted" in str(e):

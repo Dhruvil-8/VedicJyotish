@@ -96,3 +96,54 @@ pub fn calculate_snapshot(jd_ut: f64, lat: f64, lon: f64) -> Result<SwissSnapsho
 pub fn normalize_degree(degree: f64) -> f64 {
     degree.rem_euclid(360.0)
 }
+
+pub fn calculate_sunrise_sunset(jd_ut: f64, lat: f64, lon: f64) -> Result<(f64, f64), ApiError> {
+    let _guard = SWISS_LOCK.lock().expect("Swiss Ephemeris lock poisoned");
+    let mut tret_rise = 0.0;
+    let mut tret_set = 0.0;
+    let mut serr = [0_i8; 256];
+    let mut geopos = [lon, lat, 0.0];
+
+    unsafe {
+        let res_rise = swiss_eph::swe_rise_trans(
+            jd_ut,
+            swiss_eph::SE_SUN,
+            std::ptr::null_mut(),
+            swiss_eph::SEFLG_SWIEPH,
+            1, // rise
+            geopos.as_mut_ptr(),
+            0.0,
+            0.0,
+            &mut tret_rise,
+            serr.as_mut_ptr(),
+        );
+        if res_rise < 0 {
+            return Err(ApiError::new(
+                StatusCode::BAD_REQUEST,
+                "Sunrise calculation failed.",
+            ));
+        }
+
+        let res_set = swiss_eph::swe_rise_trans(
+            jd_ut,
+            swiss_eph::SE_SUN,
+            std::ptr::null_mut(),
+            swiss_eph::SEFLG_SWIEPH,
+            2, // set
+            geopos.as_mut_ptr(),
+            0.0,
+            0.0,
+            &mut tret_set,
+            serr.as_mut_ptr(),
+        );
+        if res_set < 0 {
+            return Err(ApiError::new(
+                StatusCode::BAD_REQUEST,
+                "Sunset calculation failed.",
+            ));
+        }
+    }
+
+    Ok((tret_rise, tret_set))
+}
+

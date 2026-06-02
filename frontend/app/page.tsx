@@ -601,11 +601,10 @@ export default function Home() {
                       setAppView("kundli");
                       setIsNavOpen(false);
                     }}
-                    className={`flex items-center gap-3 p-3 rounded-xl border text-left font-heading text-sm transition-all cursor-pointer ${
-                      appView === "kundli"
+                    className={`flex items-center gap-3 p-3 rounded-xl border text-left font-heading text-sm transition-all cursor-pointer ${appView === "kundli"
                         ? "bg-primary/15 border-primary/30 text-primary font-bold shadow-sm"
                         : "bg-transparent border-transparent text-muted-foreground hover:bg-primary/5 hover:text-foreground"
-                    }`}
+                      }`}
                   >
                     <User className="w-4 h-4" /> Birth Chart & Kundali
                   </button>
@@ -615,11 +614,10 @@ export default function Home() {
                       setAppView("panchanga");
                       setIsNavOpen(false);
                     }}
-                    className={`flex items-center gap-3 p-3 rounded-xl border text-left font-heading text-sm transition-all cursor-pointer ${
-                      appView === "panchanga"
+                    className={`flex items-center gap-3 p-3 rounded-xl border text-left font-heading text-sm transition-all cursor-pointer ${appView === "panchanga"
                         ? "bg-primary/15 border-primary/30 text-primary font-bold shadow-sm"
                         : "bg-transparent border-transparent text-muted-foreground hover:bg-primary/5 hover:text-foreground"
-                    }`}
+                      }`}
                   >
                     <Clock className="w-4 h-4" /> Daily Vedic Panchang
                   </button>
@@ -627,9 +625,6 @@ export default function Home() {
               </div>
 
               {/* Footer details */}
-              <div className="text-[10px] text-muted-foreground font-serif border-t border-primary/10 pt-4 text-center">
-                Vedic Astrology Portal v1.1 • Offline Astro Calculations
-              </div>
             </motion.div>
           </>
         )}
@@ -932,49 +927,384 @@ export default function Home() {
                   </div>
 
                   {/* Astro & Celestial Details block for Professional layout */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-primary/10">
-                    {/* Solar & Lunar Transitions */}
-                    <div className="bg-card/30 p-5 rounded-2xl border border-border/20 text-left space-y-4">
-                      <h4 className="font-heading text-xs uppercase tracking-widest text-secondary border-b border-border/10 pb-2 flex items-center gap-2">
-                        <span>🕉️</span> Solar & Lunar Transitions
-                      </h4>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                          <span className="text-[9px] text-muted-foreground font-heading uppercase tracking-wider">Sun Zodiac Sign</span>
-                          <div className="font-heading text-sm text-primary font-bold">{panchangData.sun_sign || "Taurus"}</div>
-                          <span className="text-[8px] text-muted-foreground font-serif italic">Governs outer soul purpose</span>
+                  <div className="space-y-6 pt-4 border-t border-primary/10">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      {/* Solar & Lunar Transitions */}
+                      <div className="bg-card/30 p-5 rounded-2xl border border-border/20 text-left space-y-4">
+                        <h4 className="font-heading text-xs uppercase tracking-widest text-secondary border-b border-border/10 pb-2 flex items-center gap-2">
+                          <span></span> Solar & Lunar Transitions
+                        </h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <span className="text-[9px] text-muted-foreground font-heading uppercase tracking-wider">Sun Zodiac Sign</span>
+                            <div className="font-heading text-sm text-primary font-bold">{panchangData.sun_sign || "Taurus"}</div>
+                            <span className="text-[8px] text-muted-foreground font-serif italic">Governs outer soul purpose</span>
+                          </div>
+                          <div className="space-y-1">
+                            <span className="text-[9px] text-muted-foreground font-heading uppercase tracking-wider">Moon Zodiac Sign</span>
+                            <div className="font-heading text-sm text-primary font-bold">{panchangData.moon_sign || "Cancer"}</div>
+                            <span className="text-[8px] text-muted-foreground font-serif italic">Governs mind & emotions</span>
+                          </div>
                         </div>
-                        <div className="space-y-1">
-                          <span className="text-[9px] text-muted-foreground font-heading uppercase tracking-wider">Moon Zodiac Sign</span>
-                          <div className="font-heading text-sm text-primary font-bold">{panchangData.moon_sign || "Cancer"}</div>
-                          <span className="text-[8px] text-muted-foreground font-serif italic">Governs mind & emotions</span>
+                      </div>
+
+                      {/* Sunrise & Sunset transitions */}
+                      <div className="bg-card/30 p-5 rounded-2xl border border-border/20 text-left space-y-4">
+                        <h4 className="font-heading text-xs uppercase tracking-widest text-secondary border-b border-border/10 pb-2 flex items-center gap-2">
+                          Surya Udaya & Asta
+                        </h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <span className="text-[9px] text-muted-foreground font-heading uppercase tracking-wider">Sunrise (Udaya)</span>
+                            <div className="font-heading text-sm text-primary font-bold">{panchangData.sunrise || "05:45"}</div>
+                            <span className="text-[8px] text-muted-foreground font-serif italic">Sun rises on horizon</span>
+                          </div>
+                          <div className="space-y-1">
+                            <span className="text-[9px] text-muted-foreground font-heading uppercase tracking-wider">Sunset (Asta)</span>
+                            <div className="font-heading text-sm text-primary font-bold">{panchangData.sunset || "18:42"}</div>
+                            <span className="text-[8px] text-muted-foreground font-serif italic">Sun sets below horizon</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Calculation Standards */}
+                      <div className="bg-card/30 p-5 rounded-2xl border border-border/20 text-left space-y-4">
+                        <h4 className="font-heading text-xs uppercase tracking-widest text-secondary border-b border-border/10 pb-2 flex items-center gap-2">
+                          <span></span> Sidereal Calculation Standards
+                        </h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <span className="text-[9px] text-muted-foreground font-heading uppercase tracking-wider">Ayanamsha System</span>
+                            <div className="font-heading text-sm text-primary font-bold">Chitra Paksha / Lahiri</div>
+                            <span className="text-[8px] text-muted-foreground font-serif italic">Classic Vedic standard</span>
+                          </div>
+                          <div className="space-y-1">
+                            <span className="text-[9px] text-muted-foreground font-heading uppercase tracking-wider">Exact Ayanamsha</span>
+                            <div className="font-heading text-sm text-primary font-bold">
+                              {panchangData.ayanamsha ? `${panchangData.ayanamsha.toFixed(4)}°` : "24.1356°"}
+                            </div>
+                            <span className="text-[8px] text-muted-foreground font-serif italic">Precision degree offset</span>
+                          </div>
                         </div>
                       </div>
                     </div>
 
-                    {/* Calculation Standards */}
-                    <div className="bg-card/30 p-5 rounded-2xl border border-border/20 text-left space-y-4">
-                      <h4 className="font-heading text-xs uppercase tracking-widest text-secondary border-b border-border/10 pb-2 flex items-center gap-2">
-                        <span>📐</span> Sidereal Calculation Standards
-                      </h4>
-                      <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      {/* Rahu Kalam */}
+                      <div className="bg-rose-500/5 p-5 rounded-2xl border border-rose-500/10 text-left space-y-4 relative group hover:border-rose-500/20 transition-all">
+                        <h4 className="font-heading text-xs uppercase tracking-widest text-rose-600 border-b border-rose-500/10 pb-2 flex items-center gap-2">
+                          Rahu Kaal (Inauspicious)
+                        </h4>
                         <div className="space-y-1">
-                          <span className="text-[9px] text-muted-foreground font-heading uppercase tracking-wider">Ayanamsha System</span>
-                          <div className="font-heading text-sm text-primary font-bold">Chitra Paksha / Lahiri</div>
-                          <span className="text-[8px] text-muted-foreground font-serif italic">Classic Vedic standard</span>
+                          <span className="text-[9px] text-muted-foreground font-heading uppercase tracking-wider">Avoid starting new work</span>
+                          <div className="font-heading text-lg text-rose-700 font-bold">{panchangData.rahu_kaal || "15:00 - 16:30"}</div>
+                          <span className="text-[8px] text-rose-500/80 font-serif italic">Avoid major decisions/ventures</span>
                         </div>
+                      </div>
+
+                      {/* Abhijit Muhurat */}
+                      <div className="bg-emerald-500/5 p-5 rounded-2xl border border-emerald-500/10 text-left space-y-4 relative group hover:border-emerald-500/20 transition-all">
+                        <h4 className="font-heading text-xs uppercase tracking-widest text-emerald-600 border-b border-emerald-500/10 pb-2 flex items-center gap-2">
+                          Abhijit Muhurat (Auspicious)
+                        </h4>
                         <div className="space-y-1">
-                          <span className="text-[9px] text-muted-foreground font-heading uppercase tracking-wider">Exact Ayanamsha</span>
-                          <div className="font-heading text-sm text-primary font-bold">
-                            {panchangData.ayanamsha ? `${panchangData.ayanamsha.toFixed(4)}°` : "24.1356°"}
+                          <span className="text-[9px] text-muted-foreground font-heading uppercase tracking-wider">Highly auspicious midday slot</span>
+                          <div className="font-heading text-lg text-emerald-700 font-bold">{panchangData.abhijit_muhurat || "11:45 - 12:33"}</div>
+                          <span className="text-[8px] text-emerald-500/80 font-serif italic">Highly recommended for all actions</span>
+                        </div>
+                      </div>
+
+                      {/* Gulika & Yamaganda */}
+                      <div className="bg-amber-500/5 p-5 rounded-2xl border border-amber-500/10 text-left space-y-4 relative group hover:border-amber-500/20 transition-all">
+                        <h4 className="font-heading text-xs uppercase tracking-widest text-amber-600 border-b border-amber-500/10 pb-2 flex items-center gap-2">
+                          Gulika & Yamaganda
+                        </h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <span className="text-[9px] text-muted-foreground font-heading uppercase tracking-wider">Gulika Kalam</span>
+                            <div className="font-heading text-xs text-amber-700 font-bold">{panchangData.gulika_kaal || "12:00 - 13:30"}</div>
+                            <span className="text-[7px] text-muted-foreground font-serif italic">Good for long-term</span>
                           </div>
-                          <span className="text-[8px] text-muted-foreground font-serif italic">Precision degree offset</span>
+                          <div className="space-y-1">
+                            <span className="text-[9px] text-muted-foreground font-heading uppercase tracking-wider">Yamaganda</span>
+                            <div className="font-heading text-xs text-amber-700 font-bold">{panchangData.yama_ganda || "07:30 - 09:00"}</div>
+                            <span className="text-[7px] text-muted-foreground font-serif italic">Avoid starting new</span>
+                          </div>
                         </div>
                       </div>
                     </div>
+
+                    {/* New Advanced Muhurtas Row */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+                      {/* Brahma Muhurta */}
+                      <div className="bg-violet-500/5 p-5 rounded-2xl border border-violet-500/10 text-left space-y-4 relative group hover:border-violet-500/20 transition-all">
+                        <h4 className="font-heading text-xs uppercase tracking-widest text-violet-600 border-b border-violet-500/10 pb-2 flex items-center gap-2">
+                          Brahma Muhurta
+                        </h4>
+                        <div className="space-y-1">
+                          <span className="text-[9px] text-muted-foreground font-heading uppercase tracking-wider">Sacred pre-dawn meditation hour</span>
+                          <div className="font-heading text-lg text-violet-700 font-bold">{panchangData.brahma_muhurta || "04:30 - 05:18"}</div>
+                          <span className="text-[8px] text-violet-500/80 font-serif italic">Best for prayers, meditation & study</span>
+                        </div>
+                      </div>
+
+                      {/* Vijaya Muhurta */}
+                      <div className="bg-sky-500/5 p-5 rounded-2xl border border-sky-500/10 text-left space-y-4 relative group hover:border-sky-500/20 transition-all">
+                        <h4 className="font-heading text-xs uppercase tracking-widest text-sky-600 border-b border-sky-500/10 pb-2 flex items-center gap-2">
+                          Vijaya Muhurta (Victory)
+                        </h4>
+                        <div className="space-y-1">
+                          <span className="text-[9px] text-muted-foreground font-heading uppercase tracking-wider">11th Muhurta — ensures success</span>
+                          <div className="font-heading text-lg text-sky-700 font-bold">{panchangData.vijaya_muhurta || "14:24 - 15:12"}</div>
+                          <span className="text-[8px] text-sky-500/80 font-serif italic">Ideal for legal, court & conquest matters</span>
+                        </div>
+                      </div>
+
+                      {/* Pradosh Kaal */}
+                      <div className="bg-indigo-500/5 p-5 rounded-2xl border border-indigo-500/10 text-left space-y-4 relative group hover:border-indigo-500/20 transition-all">
+                        <h4 className="font-heading text-xs uppercase tracking-widest text-indigo-600 border-b border-indigo-500/10 pb-2 flex items-center gap-2">
+                          Pradosh Kaal
+                        </h4>
+                        <div className="space-y-1">
+                          <span className="text-[9px] text-muted-foreground font-heading uppercase tracking-wider">Twilight period after sunset</span>
+                          <div className="font-heading text-lg text-indigo-700 font-bold">{panchangData.pradosh_kaal || "18:42 - 20:18"}</div>
+                          <span className="text-[8px] text-indigo-500/80 font-serif italic">Sacred Shiva Puja window on Trayodashi</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Dur Muhurtham */}
+                    {panchangData.dur_muhurtham && panchangData.dur_muhurtham.length > 0 && (
+                      <div className="bg-red-500/5 p-5 rounded-2xl border border-red-500/10 text-left space-y-4 relative group hover:border-red-500/20 transition-all mt-6">
+                        <h4 className="font-heading text-xs uppercase tracking-widest text-red-600 border-b border-red-500/10 pb-2 flex items-center gap-2">
+                          Dur Muhurtham (Inauspicious Periods)
+                        </h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          {panchangData.dur_muhurtham.map((slot: string, i: number) => (
+                            <div key={i} className="space-y-1">
+                              <span className="text-[9px] text-muted-foreground font-heading uppercase tracking-wider">Dur Muhurtham {i + 1}</span>
+                              <div className="font-heading text-sm text-red-700 font-bold">{slot}</div>
+                              <span className="text-[7px] text-red-500/80 font-serif italic">Avoid auspicious ceremonies</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Choghadiya Muhurat Table block — Daytime */}
+                    {panchangData.choghadiya && (
+                      <div className="bg-card/25 p-6 rounded-2xl border border-border/20 text-left space-y-4 pt-4 mt-6">
+                        <div className="border-b border-primary/10 pb-2 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                          <h4 className="font-heading text-xs uppercase tracking-widest text-secondary flex items-center gap-2">
+                            Choghadiya Muhurats (Daytime)
+                          </h4>
+                          <span className="text-[8px] text-muted-foreground font-serif italic">Sunrise to Sunset — 8 slots</span>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+                          {panchangData.choghadiya.map((slot: any, i: number) => {
+                            const isAuspicious = slot.nature === "Auspicious";
+                            return (
+                              <div
+                                key={i}
+                                className={`p-3 rounded-xl border transition-all flex flex-col justify-between text-center ${isAuspicious
+                                    ? "bg-emerald-500/5 border-emerald-500/10 hover:border-emerald-500/20"
+                                    : "bg-rose-500/5 border-rose-500/10 hover:border-rose-500/20"
+                                  }`}
+                              >
+                                <div className="flex flex-col items-center gap-1">
+                                  <span className="text-[8px] text-muted-foreground font-heading uppercase tracking-wider">Slot {i + 1}</span>
+                                  <span
+                                    className={`text-[6px] font-heading uppercase tracking-widest px-1.5 py-0.5 rounded-full font-bold ${isAuspicious
+                                        ? "bg-emerald-500/10 text-emerald-600"
+                                        : "bg-rose-500/10 text-rose-600"
+                                      }`}
+                                  >
+                                    {slot.nature}
+                                  </span>
+                                </div>
+                                <div className="my-2">
+                                  <div
+                                    className={`font-heading text-sm font-bold ${isAuspicious ? "text-emerald-700" : "text-rose-700"
+                                      }`}
+                                  >
+                                    {slot.name}
+                                  </div>
+                                </div>
+                                <div className="text-[8px] text-muted-foreground font-serif leading-none mt-1">{slot.start}<br />to<br />{slot.end}</div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Choghadiya Muhurat Table block — Nighttime */}
+                    {panchangData.choghadiya_night && (
+                      <div className="bg-card/25 p-6 rounded-2xl border border-border/20 text-left space-y-4 pt-4 mt-4">
+                        <div className="border-b border-primary/10 pb-2 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                          <h4 className="font-heading text-xs uppercase tracking-widest text-secondary flex items-center gap-2">
+                            Choghadiya Muhurats (Nighttime)
+                          </h4>
+                          <span className="text-[8px] text-muted-foreground font-serif italic">Sunset to next Sunrise — 8 slots</span>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+                          {panchangData.choghadiya_night.map((slot: any, i: number) => {
+                            const isAuspicious = slot.nature === "Auspicious";
+                            return (
+                              <div
+                                key={i}
+                                className={`p-3 rounded-xl border transition-all flex flex-col justify-between text-center ${isAuspicious
+                                    ? "bg-teal-500/5 border-teal-500/10 hover:border-teal-500/20"
+                                    : "bg-purple-500/5 border-purple-500/10 hover:border-purple-500/20"
+                                  }`}
+                              >
+                                <div className="flex flex-col items-center gap-1">
+                                  <span className="text-[8px] text-muted-foreground font-heading uppercase tracking-wider">Slot {i + 1}</span>
+                                  <span
+                                    className={`text-[6px] font-heading uppercase tracking-widest px-1.5 py-0.5 rounded-full font-bold ${isAuspicious
+                                        ? "bg-teal-500/10 text-teal-600"
+                                        : "bg-purple-500/10 text-purple-600"
+                                      }`}
+                                  >
+                                    {slot.nature}
+                                  </span>
+                                </div>
+                                <div className="my-2">
+                                  <div
+                                    className={`font-heading text-sm font-bold ${isAuspicious ? "text-teal-700" : "text-purple-700"
+                                      }`}
+                                  >
+                                    {slot.name}
+                                  </div>
+                                </div>
+                                <div className="text-[8px] text-muted-foreground font-serif leading-none mt-1">{slot.start}<br />to<br />{slot.end}</div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Planetary Horas — Daytime */}
+                    {panchangData.horas_day && (
+                      <div className="bg-card/25 p-6 rounded-2xl border border-border/20 text-left space-y-4 pt-4 mt-6">
+                        <div className="border-b border-primary/10 pb-2 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                          <h4 className="font-heading text-xs uppercase tracking-widest text-secondary flex items-center gap-2">
+                            Planetary Horas (Daytime)
+                          </h4>
+                          <span className="text-[8px] text-muted-foreground font-serif italic">12 planetary hours from sunrise</span>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+                          {panchangData.horas_day.map((hora: any, i: number) => {
+                            const colorMap: Record<string, string> = {
+                              "Highly Auspicious": "bg-emerald-500/8 border-emerald-500/15 text-emerald-700",
+                              "Auspicious": "bg-teal-500/8 border-teal-500/15 text-teal-700",
+                              "Neutral": "bg-amber-500/8 border-amber-500/15 text-amber-700",
+                              "Inauspicious": "bg-rose-500/8 border-rose-500/15 text-rose-700",
+                            };
+                            const cls = colorMap[hora.nature] || colorMap["Neutral"];
+                            return (
+                              <div key={i} className={`p-3 rounded-xl border transition-all text-center ${cls}`}>
+                                <div className="text-[8px] text-muted-foreground font-heading uppercase tracking-wider">Hora {hora.hora_num}</div>
+                                <div className="font-heading text-sm font-bold mt-2">{hora.planet}</div>
+                                <div className="text-[7px] text-muted-foreground font-serif mt-1">{hora.start} – {hora.end}</div>
+                                <span className={`text-[6px] font-heading uppercase tracking-widest px-1.5 py-0.5 rounded-full font-bold mt-1 inline-block ${hora.nature === "Highly Auspicious" ? "bg-emerald-500/10 text-emerald-600" :
+                                    hora.nature === "Auspicious" ? "bg-teal-500/10 text-teal-600" :
+                                      hora.nature === "Neutral" ? "bg-amber-500/10 text-amber-600" :
+                                        "bg-rose-500/10 text-rose-600"
+                                  }`}>{hora.nature}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Planetary Horas — Nighttime */}
+                    {panchangData.horas_night && (
+                      <div className="bg-card/25 p-6 rounded-2xl border border-border/20 text-left space-y-4 pt-4 mt-4">
+                        <div className="border-b border-primary/10 pb-2 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                          <h4 className="font-heading text-xs uppercase tracking-widest text-secondary flex items-center gap-2">
+                            Planetary Horas (Nighttime)
+                          </h4>
+                          <span className="text-[8px] text-muted-foreground font-serif italic">12 planetary hours from sunset</span>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+                          {panchangData.horas_night.map((hora: any, i: number) => {
+                            const colorMap: Record<string, string> = {
+                              "Highly Auspicious": "bg-emerald-500/8 border-emerald-500/15 text-emerald-700",
+                              "Auspicious": "bg-teal-500/8 border-teal-500/15 text-teal-700",
+                              "Neutral": "bg-amber-500/8 border-amber-500/15 text-amber-700",
+                              "Inauspicious": "bg-purple-500/8 border-purple-500/15 text-purple-700",
+                            };
+                            const cls = colorMap[hora.nature] || colorMap["Neutral"];
+                            return (
+                              <div key={i} className={`p-3 rounded-xl border transition-all text-center ${cls}`}>
+                                <div className="text-[8px] text-muted-foreground font-heading uppercase tracking-wider">Hora {hora.hora_num}</div>
+                                <div className="font-heading text-sm font-bold mt-2">{hora.planet}</div>
+                                <div className="text-[7px] text-muted-foreground font-serif mt-1">{hora.start} – {hora.end}</div>
+                                <span className={`text-[6px] font-heading uppercase tracking-widest px-1.5 py-0.5 rounded-full font-bold mt-1 inline-block ${hora.nature === "Highly Auspicious" ? "bg-emerald-500/10 text-emerald-600" :
+                                    hora.nature === "Auspicious" ? "bg-teal-500/10 text-teal-600" :
+                                      hora.nature === "Neutral" ? "bg-amber-500/10 text-amber-600" :
+                                        "bg-purple-500/10 text-purple-600"
+                                  }`}>{hora.nature}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
+
+              {/* Related Sites Section */}
+              <div className="max-w-4xl mx-auto mt-12 pt-8 border-t border-primary/10 text-center space-y-6">
+                <div className="flex items-center justify-center gap-2">
+                  <BookOpen className="w-5 h-5 text-primary gold-glow" />
+                  <h3 className="font-heading text-lg font-bold text-primary tracking-wider">Our Related Sites</h3>
+                </div>
+                <p className="text-xs text-muted-foreground font-serif max-w-md mx-auto">
+                  Explore our other platforms dedicated to Sanatan Dharma scriptures, wisdom, and directory services.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto">
+                  <a
+                    href="https://srimad-bhgavad-gita.vercel.app/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between p-4 rounded-xl border border-primary/10 bg-primary/5 hover:bg-primary/10 hover:border-primary/20 transition-all group cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3 text-left">
+                      <div className="p-2 bg-primary/10 rounded-lg text-primary group-hover:scale-110 transition-transform">
+                        <BookOpen className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h4 className="font-heading text-sm font-bold text-foreground">Srimad Bhagavad Gita</h4>
+                        <p className="text-[10px] text-muted-foreground font-serif mt-0.5">Read and contemplate the divine dialogue</p>
+                      </div>
+                    </div>
+                    <ExternalLink className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                  </a>
+
+                  <a
+                    href="https://dhruvil-8.github.io/SanatanDharmaDirectory/site/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between p-4 rounded-xl border border-primary/10 bg-primary/5 hover:bg-primary/10 hover:border-primary/20 transition-all group cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3 text-left">
+                      <div className="p-2 bg-primary/10 rounded-lg text-primary group-hover:scale-110 transition-transform">
+                        <Compass className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h4 className="font-heading text-sm font-bold text-foreground">Sanatan Dharma Directory</h4>
+                        <p className="text-[10px] text-muted-foreground font-serif mt-0.5">Comprehensive spiritual resource directory</p>
+                      </div>
+                    </div>
+                    <ExternalLink className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                  </a>
+                </div>
+              </div>
             </motion.div>
           ) : step === "form" ? (
             <motion.div
@@ -1156,41 +1486,37 @@ export default function Home() {
               <div className="flex border-b border-primary/20 overflow-x-auto scroll-thin select-none">
                 <button
                   onClick={() => setActiveTab("chart")}
-                  className={`flex items-center gap-2 px-6 py-4 font-heading text-xs md:text-sm tracking-widest uppercase border-b-2 transition-all flex-shrink-0 cursor-pointer ${
-                    activeTab === "chart"
+                  className={`flex items-center gap-2 px-6 py-4 font-heading text-xs md:text-sm tracking-widest uppercase border-b-2 transition-all flex-shrink-0 cursor-pointer ${activeTab === "chart"
                       ? "border-primary text-primary font-bold"
                       : "border-transparent text-muted-foreground hover:text-foreground"
-                  }`}
+                    }`}
                 >
                   <Compass className="w-4 h-4 flex-shrink-0" /> Vedic Calculations
                 </button>
                 <button
                   onClick={() => setActiveTab("chat")}
-                  className={`flex items-center gap-2 px-6 py-4 font-heading text-xs md:text-sm tracking-widest uppercase border-b-2 transition-all flex-shrink-0 cursor-pointer ${
-                    activeTab === "chat"
+                  className={`flex items-center gap-2 px-6 py-4 font-heading text-xs md:text-sm tracking-widest uppercase border-b-2 transition-all flex-shrink-0 cursor-pointer ${activeTab === "chat"
                       ? "border-primary text-primary font-bold"
                       : "border-transparent text-muted-foreground hover:text-foreground"
-                  }`}
+                    }`}
                 >
                   <MessageSquare className="w-4 h-4 flex-shrink-0" /> Ask AI Rishi
                 </button>
                 <button
                   onClick={() => setActiveTab("report")}
-                  className={`flex items-center gap-2 px-6 py-4 font-heading text-xs md:text-sm tracking-widest uppercase border-b-2 transition-all flex-shrink-0 cursor-pointer ${
-                    activeTab === "report"
+                  className={`flex items-center gap-2 px-6 py-4 font-heading text-xs md:text-sm tracking-widest uppercase border-b-2 transition-all flex-shrink-0 cursor-pointer ${activeTab === "report"
                       ? "border-primary text-primary font-bold"
                       : "border-transparent text-muted-foreground hover:text-foreground"
-                  }`}
+                    }`}
                 >
                   <BookOpen className="w-4 h-4 flex-shrink-0" /> Celestial Report
                 </button>
                 <button
                   onClick={() => setActiveTab("matching")}
-                  className={`flex items-center gap-2 px-6 py-4 font-heading text-xs md:text-sm tracking-widest uppercase border-b-2 transition-all flex-shrink-0 cursor-pointer ${
-                    activeTab === "matching"
+                  className={`flex items-center gap-2 px-6 py-4 font-heading text-xs md:text-sm tracking-widest uppercase border-b-2 transition-all flex-shrink-0 cursor-pointer ${activeTab === "matching"
                       ? "border-primary text-primary font-bold"
                       : "border-transparent text-muted-foreground hover:text-foreground"
-                  }`}
+                    }`}
                 >
                   <Heart className="w-4 h-4 flex-shrink-0" /> Kundali Matching
                 </button>
@@ -1343,7 +1669,7 @@ export default function Home() {
                                     <div className="text-[10px] space-y-1.5 font-serif text-muted-foreground">
                                       <div className="flex justify-between"><span>Total Rupas:</span> <span className="text-foreground font-semibold">{bala.total_rupas}</span></div>
                                       <div className="flex justify-between"><span>Shashtiamsa:</span> <span className="text-foreground font-semibold">{bala.total_shashtiamsa}</span></div>
-                                      
+
                                       <div className="grid grid-cols-2 gap-x-3 gap-y-1 mt-2 border-t border-border/10 pt-2 text-[9px]">
                                         <div className="flex justify-between"><span>Sthana:</span> <span className="text-foreground font-medium">{Math.round(bala.sthana_bala)}</span></div>
                                         <div className="flex justify-between"><span>Dig:</span> <span className="text-foreground font-medium">{Math.round(bala.dig_bala)}</span></div>
@@ -1655,13 +1981,12 @@ export default function Home() {
                                         : "None"}
                                     </td>
                                     <td className="px-3 py-2 text-center">
-                                      <span className={`px-2 py-0.5 rounded text-[9px] font-heading font-bold border ${
-                                        details.net_argala_status === "Active"
+                                      <span className={`px-2 py-0.5 rounded text-[9px] font-heading font-bold border ${details.net_argala_status === "Active"
                                           ? "bg-emerald-950/20 border-emerald-500/20 text-emerald-400"
                                           : details.net_argala_status === "Obstructed"
                                             ? "bg-amber-950/20 border-amber-500/20 text-amber-400"
                                             : "bg-card border-border/20 text-muted-foreground"
-                                      }`}>
+                                        }`}>
                                         {details.net_argala_status}
                                       </span>
                                     </td>
@@ -1676,11 +2001,10 @@ export default function Home() {
                       {chartData.sade_sati && (
                         <Accordion id="sadesati" title="Sade Sati & Transits" explanation="Current transit status of Saturn relative to natal Moon sign." icon={Star} isOpen={expandedAccordions.sadesati || false} onToggle={() => toggleAccordion("sadesati")}>
                           <div className="space-y-4">
-                            <div className={`p-5 rounded-2xl border ${
-                              chartData.sade_sati.is_active
+                            <div className={`p-5 rounded-2xl border ${chartData.sade_sati.is_active
                                 ? "bg-amber-950/20 border-amber-500/30 text-amber-100"
                                 : "bg-emerald-950/10 border-emerald-500/20 text-emerald-100"
-                            }`}>
+                              }`}>
                               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                 <div>
                                   <h5 className="font-heading text-sm font-bold flex items-center gap-2">
@@ -2071,13 +2395,12 @@ export default function Home() {
                                 <div className="text-[9px] text-muted-foreground font-serif">Out of {matchingResult.max_score} Gunas</div>
                               </div>
                             </div>
-                            <div className={`mt-5 px-5 py-1.5 rounded-full border font-heading text-[10px] uppercase tracking-wider ${
-                              matchingResult.total_score >= 28
+                            <div className={`mt-5 px-5 py-1.5 rounded-full border font-heading text-[10px] uppercase tracking-wider ${matchingResult.total_score >= 28
                                 ? "bg-emerald-950/20 border-emerald-500/30 text-emerald-400"
                                 : matchingResult.total_score >= 18
                                   ? "bg-amber-950/20 border-amber-500/30 text-amber-400"
                                   : "bg-red-950/20 border-red-500/30 text-red-400"
-                            }`}>
+                              }`}>
                               {matchingResult.total_score >= 28
                                 ? "Auspicious Match"
                                 : matchingResult.total_score >= 18
@@ -2160,11 +2483,10 @@ export default function Home() {
                                       <td className="px-3 py-3 font-serif text-muted-foreground text-[10px] leading-relaxed max-w-[320px]">{k.desc}</td>
                                       <td className="px-3 py-3 text-center font-serif font-bold text-primary">{data.score} / {data.max_score}</td>
                                       <td className="px-3 py-3 text-center">
-                                        <span className={`px-2.5 py-0.5 rounded text-[9px] font-heading font-bold border ${
-                                          data.matched
+                                        <span className={`px-2.5 py-0.5 rounded text-[9px] font-heading font-bold border ${data.matched
                                             ? "bg-emerald-950/20 border-emerald-500/20 text-emerald-400"
                                             : "bg-red-950/20 border-red-500/20 text-red-400"
-                                        }`}>
+                                          }`}>
                                           {data.matched ? "MATCHED" : "CONFLICT"}
                                         </span>
                                       </td>
@@ -2188,11 +2510,10 @@ export default function Home() {
                               { name: "Vedha", val: !matchingResult.vedha, activeDesc: "No stellar conflicts (Vedha is absent - Highly Auspicious).", inactiveDesc: "Stellar conflicts detected (Vedha active)." },
                               { name: "Rajju", val: !matchingResult.rajju, activeDesc: "No body-longevity conflicts (Rajju is absent - Highly Auspicious).", inactiveDesc: "Longevity conflicts detected (Rajju active)." }
                             ].map((test, i) => (
-                              <div key={i} className={`p-4 rounded-xl border flex flex-col justify-between ${
-                                test.val
+                              <div key={i} className={`p-4 rounded-xl border flex flex-col justify-between ${test.val
                                   ? "bg-emerald-950/10 border-emerald-500/20"
                                   : "bg-red-950/10 border-red-500/20"
-                              }`}>
+                                }`}>
                                 <div>
                                   <div className="flex items-center justify-between font-heading font-bold text-[10px]">
                                     <span>{test.name}</span>

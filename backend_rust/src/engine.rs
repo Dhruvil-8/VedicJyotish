@@ -150,7 +150,14 @@ pub async fn compute_chart_with_profile(
 
     let chart_data = chart::build_rasi_chart(asc_idx, &planets);
     let navamsa_chart = chart::build_navamsa_chart(snapshot.ascendant_degree, &planets);
-    let panchanga = panchanga::calculate(&planets, resolved_time.local_naive, resolved_time.jd_ut)?;
+    let panchanga = panchanga::calculate(
+        &planets,
+        resolved_time.local_naive,
+        resolved_time.jd_ut,
+        resolved_time.offset_hours,
+        lat,
+        lon,
+    )?;
     let yogas = yoga::detect_yogas(&planets, asc_idx);
     let planetary_table = planets
         .iter()
@@ -331,22 +338,12 @@ fn normalize_birth_data(data: &mut BirthData) -> Result<(), ApiError> {
     data.time = normalize_time(&data.time)?;
     data.city = data.city.as_ref().map(|city| title_case(city.trim()));
 
-    // Validate date range (1900 to current year, not in future)
+    // Validate date range (1900 to 2100)
     if let Ok(parsed) = chrono::NaiveDate::parse_from_str(&data.date, "%d/%m/%Y") {
-        let now = chrono::Local::now().date_naive();
-        if parsed.year() < 1900 || parsed.year() > now.year() {
+        if parsed.year() < 1900 || parsed.year() > 2100 {
             return Err(ApiError::new(
                 StatusCode::BAD_REQUEST,
-                format!(
-                    "Birth year must be between 1900 and {}.",
-                    now.year()
-                ),
-            ));
-        }
-        if parsed > now {
-            return Err(ApiError::new(
-                StatusCode::BAD_REQUEST,
-                "Birth date cannot be in the future.",
+                "Year must be between 1900 and 2100.",
             ));
         }
     }

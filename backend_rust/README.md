@@ -65,7 +65,7 @@ All endpoints (except public health checks) support optional calculation profile
 ```
 * **Response**: Calculates planetary longitudes, basic house placements, and detected yogas.
 
-### 4. Enterprise Chart Calculations (v1)
+### 4. Chart Calculations (v1)
 * **Route**: `POST /api/v1/chart/full`
 * **Body**:
 ```json
@@ -90,12 +90,12 @@ All endpoints (except public health checks) support optional calculation profile
 
 ### 5. Jaimini Argala Solver (v1)
 * **Route**: `POST /api/v1/chart/argala`
-* **Body**: Same as Enterprise Chart (contains `birth_data` and optional `profile`)
+* **Body**: Same as Chart (contains `birth_data` and optional `profile`)
 * **Response**: Returns Jaimini Argala and Virodhargala details for all houses and planets.
 
 ### 6. Jaimini Chara Dasha (v1)
 * **Route**: `POST /api/v1/chart/dasha/chara`
-* **Body**: Same as Enterprise Chart
+* **Body**: Same as Chart
 * **Response**: Detailed chronological timeline of sign-based Jaimini Chara Dashas.
 
 ### 7. Other Granular v1 Endpoints
