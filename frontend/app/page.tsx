@@ -142,7 +142,7 @@ const Accordion = ({ id, title, explanation, icon: Icon, isOpen, onToggle, child
 
 export default function Home() {
   // Global Navigation & Sidebar
-  const [appView, setAppView] = useState<"kundli" | "panchanga">("kundli");
+  const [appView, setAppView] = useState<"kundli" | "panchanga" | "related-sites">("kundli");
   const [isNavOpen, setIsNavOpen] = useState(false);
 
   // Panchang Page Form Data
@@ -583,8 +583,7 @@ export default function Home() {
                 {/* Header */}
                 <div className="flex items-center justify-between border-b border-primary/10 pb-4">
                   <div className="flex items-center gap-2">
-                    <Sparkles className="w-5 h-5 text-primary gold-glow" />
-                    <span className="font-heading text-base font-bold text-primary">Vedic Jyotish Portal</span>
+                    <span className="font-heading text-base font-bold text-primary">Vedic Jyotish</span>
                   </div>
                   <button
                     onClick={() => setIsNavOpen(false)}
@@ -602,8 +601,8 @@ export default function Home() {
                       setIsNavOpen(false);
                     }}
                     className={`flex items-center gap-3 p-3 rounded-xl border text-left font-heading text-sm transition-all cursor-pointer ${appView === "kundli"
-                        ? "bg-primary/15 border-primary/30 text-primary font-bold shadow-sm"
-                        : "bg-transparent border-transparent text-muted-foreground hover:bg-primary/5 hover:text-foreground"
+                      ? "bg-primary/15 border-primary/30 text-primary font-bold shadow-sm"
+                      : "bg-transparent border-transparent text-muted-foreground hover:bg-primary/5 hover:text-foreground"
                       }`}
                   >
                     <User className="w-4 h-4" /> Birth Chart & Kundali
@@ -615,11 +614,24 @@ export default function Home() {
                       setIsNavOpen(false);
                     }}
                     className={`flex items-center gap-3 p-3 rounded-xl border text-left font-heading text-sm transition-all cursor-pointer ${appView === "panchanga"
-                        ? "bg-primary/15 border-primary/30 text-primary font-bold shadow-sm"
-                        : "bg-transparent border-transparent text-muted-foreground hover:bg-primary/5 hover:text-foreground"
+                      ? "bg-primary/15 border-primary/30 text-primary font-bold shadow-sm"
+                      : "bg-transparent border-transparent text-muted-foreground hover:bg-primary/5 hover:text-foreground"
                       }`}
                   >
                     <Clock className="w-4 h-4" /> Daily Vedic Panchang
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setAppView("related-sites");
+                      setIsNavOpen(false);
+                    }}
+                    className={`flex items-center gap-3 p-3 rounded-xl border text-left font-heading text-sm transition-all cursor-pointer ${appView === "related-sites"
+                      ? "bg-primary/15 border-primary/30 text-primary font-bold shadow-sm"
+                      : "bg-transparent border-transparent text-muted-foreground hover:bg-primary/5 hover:text-foreground"
+                      }`}
+                  >
+                    <BookOpen className="w-4 h-4" /> Our Related Sites
                   </button>
                 </nav>
               </div>
@@ -737,7 +749,7 @@ export default function Home() {
         )}
       </AnimatePresence>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 md:pt-12 pb-8 md:pb-12">
 
         {/* Header */}
         <header className="mb-12 text-center">
@@ -746,7 +758,7 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             className="inline-block"
           >
-            <h1 className="text-4xl md:text-6xl font-heading gold-glow mb-2">
+            <h1 className="text-2xl sm:text-4xl md:text-6xl font-heading gold-glow mb-2">
               Vedic Jyotish
             </h1>
             <div className="flex items-center justify-center gap-4 text-secondary/80 font-serif tracking-[0.2em] uppercase text-xs md:text-sm">
@@ -877,7 +889,7 @@ export default function Home() {
                       </>
                     ) : (
                       <>
-                        <Sparkles className="w-4 h-4" /> Calculate Daily Panchang
+                        Calculate Daily Panchang
                       </>
                     )}
                   </button>
@@ -932,7 +944,7 @@ export default function Home() {
                       {/* Solar & Lunar Transitions */}
                       <div className="bg-card/30 p-5 rounded-2xl border border-border/20 text-left space-y-4">
                         <h4 className="font-heading text-xs uppercase tracking-widest text-secondary border-b border-border/10 pb-2 flex items-center gap-2">
-                          <span></span> Solar & Lunar Transitions
+                          <span>🕉️</span> Solar & Lunar Transitions
                         </h4>
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-1">
@@ -951,7 +963,7 @@ export default function Home() {
                       {/* Sunrise & Sunset transitions */}
                       <div className="bg-card/30 p-5 rounded-2xl border border-border/20 text-left space-y-4">
                         <h4 className="font-heading text-xs uppercase tracking-widest text-secondary border-b border-border/10 pb-2 flex items-center gap-2">
-                          Surya Udaya & Asta
+                          <span>☀️</span> Surya Udaya & Asta
                         </h4>
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-1">
@@ -970,7 +982,7 @@ export default function Home() {
                       {/* Calculation Standards */}
                       <div className="bg-card/30 p-5 rounded-2xl border border-border/20 text-left space-y-4">
                         <h4 className="font-heading text-xs uppercase tracking-widest text-secondary border-b border-border/10 pb-2 flex items-center gap-2">
-                          <span></span> Sidereal Calculation Standards
+                          <span>📐</span> Sidereal Calculation Standards
                         </h4>
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-1">
@@ -993,7 +1005,7 @@ export default function Home() {
                       {/* Rahu Kalam */}
                       <div className="bg-rose-500/5 p-5 rounded-2xl border border-rose-500/10 text-left space-y-4 relative group hover:border-rose-500/20 transition-all">
                         <h4 className="font-heading text-xs uppercase tracking-widest text-rose-600 border-b border-rose-500/10 pb-2 flex items-center gap-2">
-                          Rahu Kaal (Inauspicious)
+                          <span>⚠️</span> Rahu Kaal (Inauspicious)
                         </h4>
                         <div className="space-y-1">
                           <span className="text-[9px] text-muted-foreground font-heading uppercase tracking-wider">Avoid starting new work</span>
@@ -1005,7 +1017,7 @@ export default function Home() {
                       {/* Abhijit Muhurat */}
                       <div className="bg-emerald-500/5 p-5 rounded-2xl border border-emerald-500/10 text-left space-y-4 relative group hover:border-emerald-500/20 transition-all">
                         <h4 className="font-heading text-xs uppercase tracking-widest text-emerald-600 border-b border-emerald-500/10 pb-2 flex items-center gap-2">
-                          Abhijit Muhurat (Auspicious)
+                          <span>✨</span> Abhijit Muhurat (Auspicious)
                         </h4>
                         <div className="space-y-1">
                           <span className="text-[9px] text-muted-foreground font-heading uppercase tracking-wider">Highly auspicious midday slot</span>
@@ -1017,7 +1029,7 @@ export default function Home() {
                       {/* Gulika & Yamaganda */}
                       <div className="bg-amber-500/5 p-5 rounded-2xl border border-amber-500/10 text-left space-y-4 relative group hover:border-amber-500/20 transition-all">
                         <h4 className="font-heading text-xs uppercase tracking-widest text-amber-600 border-b border-amber-500/10 pb-2 flex items-center gap-2">
-                          Gulika & Yamaganda
+                          <span>⏳</span> Gulika & Yamaganda
                         </h4>
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-1">
@@ -1039,7 +1051,7 @@ export default function Home() {
                       {/* Brahma Muhurta */}
                       <div className="bg-violet-500/5 p-5 rounded-2xl border border-violet-500/10 text-left space-y-4 relative group hover:border-violet-500/20 transition-all">
                         <h4 className="font-heading text-xs uppercase tracking-widest text-violet-600 border-b border-violet-500/10 pb-2 flex items-center gap-2">
-                          Brahma Muhurta
+                          <span>🙏</span> Brahma Muhurta
                         </h4>
                         <div className="space-y-1">
                           <span className="text-[9px] text-muted-foreground font-heading uppercase tracking-wider">Sacred pre-dawn meditation hour</span>
@@ -1051,7 +1063,7 @@ export default function Home() {
                       {/* Vijaya Muhurta */}
                       <div className="bg-sky-500/5 p-5 rounded-2xl border border-sky-500/10 text-left space-y-4 relative group hover:border-sky-500/20 transition-all">
                         <h4 className="font-heading text-xs uppercase tracking-widest text-sky-600 border-b border-sky-500/10 pb-2 flex items-center gap-2">
-                          Vijaya Muhurta (Victory)
+                          <span>🏆</span> Vijaya Muhurta (Victory)
                         </h4>
                         <div className="space-y-1">
                           <span className="text-[9px] text-muted-foreground font-heading uppercase tracking-wider">11th Muhurta — ensures success</span>
@@ -1063,7 +1075,7 @@ export default function Home() {
                       {/* Pradosh Kaal */}
                       <div className="bg-indigo-500/5 p-5 rounded-2xl border border-indigo-500/10 text-left space-y-4 relative group hover:border-indigo-500/20 transition-all">
                         <h4 className="font-heading text-xs uppercase tracking-widest text-indigo-600 border-b border-indigo-500/10 pb-2 flex items-center gap-2">
-                          Pradosh Kaal
+                          <span>🌙</span> Pradosh Kaal
                         </h4>
                         <div className="space-y-1">
                           <span className="text-[9px] text-muted-foreground font-heading uppercase tracking-wider">Twilight period after sunset</span>
@@ -1077,7 +1089,7 @@ export default function Home() {
                     {panchangData.dur_muhurtham && panchangData.dur_muhurtham.length > 0 && (
                       <div className="bg-red-500/5 p-5 rounded-2xl border border-red-500/10 text-left space-y-4 relative group hover:border-red-500/20 transition-all mt-6">
                         <h4 className="font-heading text-xs uppercase tracking-widest text-red-600 border-b border-red-500/10 pb-2 flex items-center gap-2">
-                          Dur Muhurtham (Inauspicious Periods)
+                          <span>🚫</span> Dur Muhurtham (Inauspicious Periods)
                         </h4>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           {panchangData.dur_muhurtham.map((slot: string, i: number) => (
@@ -1096,7 +1108,7 @@ export default function Home() {
                       <div className="bg-card/25 p-6 rounded-2xl border border-border/20 text-left space-y-4 pt-4 mt-6">
                         <div className="border-b border-primary/10 pb-2 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                           <h4 className="font-heading text-xs uppercase tracking-widest text-secondary flex items-center gap-2">
-                            Choghadiya Muhurats (Daytime)
+                            <span>☀️</span> Choghadiya Muhurats (Daytime)
                           </h4>
                           <span className="text-[8px] text-muted-foreground font-serif italic">Sunrise to Sunset — 8 slots</span>
                         </div>
@@ -1107,16 +1119,16 @@ export default function Home() {
                               <div
                                 key={i}
                                 className={`p-3 rounded-xl border transition-all flex flex-col justify-between text-center ${isAuspicious
-                                    ? "bg-emerald-500/5 border-emerald-500/10 hover:border-emerald-500/20"
-                                    : "bg-rose-500/5 border-rose-500/10 hover:border-rose-500/20"
+                                  ? "bg-emerald-500/5 border-emerald-500/10 hover:border-emerald-500/20"
+                                  : "bg-rose-500/5 border-rose-500/10 hover:border-rose-500/20"
                                   }`}
                               >
                                 <div className="flex flex-col items-center gap-1">
                                   <span className="text-[8px] text-muted-foreground font-heading uppercase tracking-wider">Slot {i + 1}</span>
                                   <span
                                     className={`text-[6px] font-heading uppercase tracking-widest px-1.5 py-0.5 rounded-full font-bold ${isAuspicious
-                                        ? "bg-emerald-500/10 text-emerald-600"
-                                        : "bg-rose-500/10 text-rose-600"
+                                      ? "bg-emerald-500/10 text-emerald-600"
+                                      : "bg-rose-500/10 text-rose-600"
                                       }`}
                                   >
                                     {slot.nature}
@@ -1143,7 +1155,7 @@ export default function Home() {
                       <div className="bg-card/25 p-6 rounded-2xl border border-border/20 text-left space-y-4 pt-4 mt-4">
                         <div className="border-b border-primary/10 pb-2 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                           <h4 className="font-heading text-xs uppercase tracking-widest text-secondary flex items-center gap-2">
-                            Choghadiya Muhurats (Nighttime)
+                            <span>🌙</span> Choghadiya Muhurats (Nighttime)
                           </h4>
                           <span className="text-[8px] text-muted-foreground font-serif italic">Sunset to next Sunrise — 8 slots</span>
                         </div>
@@ -1154,16 +1166,16 @@ export default function Home() {
                               <div
                                 key={i}
                                 className={`p-3 rounded-xl border transition-all flex flex-col justify-between text-center ${isAuspicious
-                                    ? "bg-teal-500/5 border-teal-500/10 hover:border-teal-500/20"
-                                    : "bg-purple-500/5 border-purple-500/10 hover:border-purple-500/20"
+                                  ? "bg-teal-500/5 border-teal-500/10 hover:border-teal-500/20"
+                                  : "bg-purple-500/5 border-purple-500/10 hover:border-purple-500/20"
                                   }`}
                               >
                                 <div className="flex flex-col items-center gap-1">
                                   <span className="text-[8px] text-muted-foreground font-heading uppercase tracking-wider">Slot {i + 1}</span>
                                   <span
                                     className={`text-[6px] font-heading uppercase tracking-widest px-1.5 py-0.5 rounded-full font-bold ${isAuspicious
-                                        ? "bg-teal-500/10 text-teal-600"
-                                        : "bg-purple-500/10 text-purple-600"
+                                      ? "bg-teal-500/10 text-teal-600"
+                                      : "bg-purple-500/10 text-purple-600"
                                       }`}
                                   >
                                     {slot.nature}
@@ -1190,12 +1202,13 @@ export default function Home() {
                       <div className="bg-card/25 p-6 rounded-2xl border border-border/20 text-left space-y-4 pt-4 mt-6">
                         <div className="border-b border-primary/10 pb-2 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                           <h4 className="font-heading text-xs uppercase tracking-widest text-secondary flex items-center gap-2">
-                            Planetary Horas (Daytime)
+                            <span>☀️</span> Planetary Horas (Daytime)
                           </h4>
                           <span className="text-[8px] text-muted-foreground font-serif italic">12 planetary hours from sunrise</span>
                         </div>
                         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
                           {panchangData.horas_day.map((hora: any, i: number) => {
+                            const planetEmoji: Record<string, string> = { Sun: "☀️", Moon: "🌙", Mars: "♂️", Mercury: "☿️", Jupiter: "♃", Venus: "♀️", Saturn: "♄" };
                             const colorMap: Record<string, string> = {
                               "Highly Auspicious": "bg-emerald-500/8 border-emerald-500/15 text-emerald-700",
                               "Auspicious": "bg-teal-500/8 border-teal-500/15 text-teal-700",
@@ -1206,12 +1219,13 @@ export default function Home() {
                             return (
                               <div key={i} className={`p-3 rounded-xl border transition-all text-center ${cls}`}>
                                 <div className="text-[8px] text-muted-foreground font-heading uppercase tracking-wider">Hora {hora.hora_num}</div>
-                                <div className="font-heading text-sm font-bold mt-2">{hora.planet}</div>
+                                <div className="text-xl my-1">{planetEmoji[hora.planet] || "🪐"}</div>
+                                <div className="font-heading text-xs font-bold">{hora.planet}</div>
                                 <div className="text-[7px] text-muted-foreground font-serif mt-1">{hora.start} – {hora.end}</div>
                                 <span className={`text-[6px] font-heading uppercase tracking-widest px-1.5 py-0.5 rounded-full font-bold mt-1 inline-block ${hora.nature === "Highly Auspicious" ? "bg-emerald-500/10 text-emerald-600" :
-                                    hora.nature === "Auspicious" ? "bg-teal-500/10 text-teal-600" :
-                                      hora.nature === "Neutral" ? "bg-amber-500/10 text-amber-600" :
-                                        "bg-rose-500/10 text-rose-600"
+                                  hora.nature === "Auspicious" ? "bg-teal-500/10 text-teal-600" :
+                                    hora.nature === "Neutral" ? "bg-amber-500/10 text-amber-600" :
+                                      "bg-rose-500/10 text-rose-600"
                                   }`}>{hora.nature}</span>
                               </div>
                             );
@@ -1225,12 +1239,13 @@ export default function Home() {
                       <div className="bg-card/25 p-6 rounded-2xl border border-border/20 text-left space-y-4 pt-4 mt-4">
                         <div className="border-b border-primary/10 pb-2 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                           <h4 className="font-heading text-xs uppercase tracking-widest text-secondary flex items-center gap-2">
-                            Planetary Horas (Nighttime)
+                            <span>🌙</span> Planetary Horas (Nighttime)
                           </h4>
                           <span className="text-[8px] text-muted-foreground font-serif italic">12 planetary hours from sunset</span>
                         </div>
                         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
                           {panchangData.horas_night.map((hora: any, i: number) => {
+                            const planetEmoji: Record<string, string> = { Sun: "☀️", Moon: "🌙", Mars: "♂️", Mercury: "☿️", Jupiter: "♃", Venus: "♀️", Saturn: "♄" };
                             const colorMap: Record<string, string> = {
                               "Highly Auspicious": "bg-emerald-500/8 border-emerald-500/15 text-emerald-700",
                               "Auspicious": "bg-teal-500/8 border-teal-500/15 text-teal-700",
@@ -1241,12 +1256,13 @@ export default function Home() {
                             return (
                               <div key={i} className={`p-3 rounded-xl border transition-all text-center ${cls}`}>
                                 <div className="text-[8px] text-muted-foreground font-heading uppercase tracking-wider">Hora {hora.hora_num}</div>
-                                <div className="font-heading text-sm font-bold mt-2">{hora.planet}</div>
+                                <div className="text-xl my-1">{planetEmoji[hora.planet] || "🪐"}</div>
+                                <div className="font-heading text-xs font-bold">{hora.planet}</div>
                                 <div className="text-[7px] text-muted-foreground font-serif mt-1">{hora.start} – {hora.end}</div>
                                 <span className={`text-[6px] font-heading uppercase tracking-widest px-1.5 py-0.5 rounded-full font-bold mt-1 inline-block ${hora.nature === "Highly Auspicious" ? "bg-emerald-500/10 text-emerald-600" :
-                                    hora.nature === "Auspicious" ? "bg-teal-500/10 text-teal-600" :
-                                      hora.nature === "Neutral" ? "bg-amber-500/10 text-amber-600" :
-                                        "bg-purple-500/10 text-purple-600"
+                                  hora.nature === "Auspicious" ? "bg-teal-500/10 text-teal-600" :
+                                    hora.nature === "Neutral" ? "bg-amber-500/10 text-amber-600" :
+                                      "bg-purple-500/10 text-purple-600"
                                   }`}>{hora.nature}</span>
                               </div>
                             );
@@ -1257,52 +1273,66 @@ export default function Home() {
                   </div>
                 </div>
               )}
+            </motion.div>
+          ) : appView === "related-sites" ? (
+            <motion.div
+              key="related-sites"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.05 }}
+              className="space-y-8"
+            >
+              <div className="glass-parchment p-8 md:p-12 rounded-2xl vedic-border shadow-2xl relative max-w-2xl mx-auto group">
+                <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none group-hover:bg-primary/10 transition-colors" />
 
-              {/* Related Sites Section */}
-              <div className="max-w-4xl mx-auto mt-12 pt-8 border-t border-primary/10 text-center space-y-6">
-                <div className="flex items-center justify-center gap-2">
-                  <BookOpen className="w-5 h-5 text-primary gold-glow" />
-                  <h3 className="font-heading text-lg font-bold text-primary tracking-wider">Our Related Sites</h3>
-                </div>
-                <p className="text-xs text-muted-foreground font-serif max-w-md mx-auto">
-                  Explore our other platforms dedicated to Sanatan Dharma scriptures, wisdom, and directory services.
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto">
-                  <a
-                    href="https://srimad-bhgavad-gita.vercel.app/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-between p-4 rounded-xl border border-primary/10 bg-primary/5 hover:bg-primary/10 hover:border-primary/20 transition-all group cursor-pointer"
-                  >
-                    <div className="flex items-center gap-3 text-left">
-                      <div className="p-2 bg-primary/10 rounded-lg text-primary group-hover:scale-110 transition-transform">
-                        <BookOpen className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <h4 className="font-heading text-sm font-bold text-foreground">Srimad Bhagavad Gita</h4>
-                        <p className="text-[10px] text-muted-foreground font-serif mt-0.5">Read and contemplate the divine dialogue</p>
-                      </div>
+                <div className="space-y-8 relative">
+                  <div className="text-center space-y-2">
+                    <div className="inline-flex p-3 bg-primary/10 rounded-2xl text-primary mb-2">
+                      <BookOpen className="w-6 h-6" />
                     </div>
-                    <ExternalLink className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                  </a>
+                    <h2 className="text-2xl font-heading text-primary">Our Related Sites</h2>
+                    <p className="text-xs text-muted-foreground font-serif max-w-md mx-auto">
+                      Explore our other platforms dedicated to Sanatan Dharma scriptures, wisdom, and directory services.
+                    </p>
+                  </div>
 
-                  <a
-                    href="https://dhruvil-8.github.io/SanatanDharmaDirectory/site/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-between p-4 rounded-xl border border-primary/10 bg-primary/5 hover:bg-primary/10 hover:border-primary/20 transition-all group cursor-pointer"
-                  >
-                    <div className="flex items-center gap-3 text-left">
-                      <div className="p-2 bg-primary/10 rounded-lg text-primary group-hover:scale-110 transition-transform">
-                        <Compass className="w-4 h-4" />
+                  <div className="grid grid-cols-1 gap-4">
+                    <a
+                      href="https://srimad-bhgavad-gita.vercel.app/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between p-5 rounded-xl border border-primary/10 bg-primary/5 hover:bg-primary/10 hover:border-primary/20 transition-all group cursor-pointer"
+                    >
+                      <div className="flex items-center gap-4 text-left">
+                        <div className="p-3 bg-primary/10 rounded-lg text-primary group-hover:scale-110 transition-transform">
+                          <BookOpen className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className="font-heading text-sm font-bold text-foreground">Srimad Bhagavad Gita</h4>
+                          <p className="text-xs text-muted-foreground font-serif mt-1">Read, search, and contemplate the divine dialogue between Lord Krishna and Arjuna.</p>
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="font-heading text-sm font-bold text-foreground">Sanatan Dharma Directory</h4>
-                        <p className="text-[10px] text-muted-foreground font-serif mt-0.5">Comprehensive spiritual resource directory</p>
+                      <ExternalLink className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0" />
+                    </a>
+
+                    <a
+                      href="https://dhruvil-8.github.io/SanatanDharmaDirectory/site/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between p-5 rounded-xl border border-primary/10 bg-primary/5 hover:bg-primary/10 hover:border-primary/20 transition-all group cursor-pointer"
+                    >
+                      <div className="flex items-center gap-4 text-left">
+                        <div className="p-3 bg-primary/10 rounded-lg text-primary group-hover:scale-110 transition-transform">
+                          <Compass className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className="font-heading text-sm font-bold text-foreground">Sanatan Dharma Directory</h4>
+                          <p className="text-xs text-muted-foreground font-serif mt-1">A comprehensive directory of spiritual resources, temples, services, and literature.</p>
+                        </div>
                       </div>
-                    </div>
-                    <ExternalLink className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                  </a>
+                      <ExternalLink className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0" />
+                    </a>
+                  </div>
                 </div>
               </div>
             </motion.div>
@@ -1487,8 +1517,8 @@ export default function Home() {
                 <button
                   onClick={() => setActiveTab("chart")}
                   className={`flex items-center gap-2 px-6 py-4 font-heading text-xs md:text-sm tracking-widest uppercase border-b-2 transition-all flex-shrink-0 cursor-pointer ${activeTab === "chart"
-                      ? "border-primary text-primary font-bold"
-                      : "border-transparent text-muted-foreground hover:text-foreground"
+                    ? "border-primary text-primary font-bold"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
                     }`}
                 >
                   <Compass className="w-4 h-4 flex-shrink-0" /> Vedic Calculations
@@ -1496,8 +1526,8 @@ export default function Home() {
                 <button
                   onClick={() => setActiveTab("chat")}
                   className={`flex items-center gap-2 px-6 py-4 font-heading text-xs md:text-sm tracking-widest uppercase border-b-2 transition-all flex-shrink-0 cursor-pointer ${activeTab === "chat"
-                      ? "border-primary text-primary font-bold"
-                      : "border-transparent text-muted-foreground hover:text-foreground"
+                    ? "border-primary text-primary font-bold"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
                     }`}
                 >
                   <MessageSquare className="w-4 h-4 flex-shrink-0" /> Ask AI Rishi
@@ -1505,8 +1535,8 @@ export default function Home() {
                 <button
                   onClick={() => setActiveTab("report")}
                   className={`flex items-center gap-2 px-6 py-4 font-heading text-xs md:text-sm tracking-widest uppercase border-b-2 transition-all flex-shrink-0 cursor-pointer ${activeTab === "report"
-                      ? "border-primary text-primary font-bold"
-                      : "border-transparent text-muted-foreground hover:text-foreground"
+                    ? "border-primary text-primary font-bold"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
                     }`}
                 >
                   <BookOpen className="w-4 h-4 flex-shrink-0" /> Celestial Report
@@ -1514,8 +1544,8 @@ export default function Home() {
                 <button
                   onClick={() => setActiveTab("matching")}
                   className={`flex items-center gap-2 px-6 py-4 font-heading text-xs md:text-sm tracking-widest uppercase border-b-2 transition-all flex-shrink-0 cursor-pointer ${activeTab === "matching"
-                      ? "border-primary text-primary font-bold"
-                      : "border-transparent text-muted-foreground hover:text-foreground"
+                    ? "border-primary text-primary font-bold"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
                     }`}
                 >
                   <Heart className="w-4 h-4 flex-shrink-0" /> Kundali Matching
@@ -1982,10 +2012,10 @@ export default function Home() {
                                     </td>
                                     <td className="px-3 py-2 text-center">
                                       <span className={`px-2 py-0.5 rounded text-[9px] font-heading font-bold border ${details.net_argala_status === "Active"
-                                          ? "bg-emerald-950/20 border-emerald-500/20 text-emerald-400"
-                                          : details.net_argala_status === "Obstructed"
-                                            ? "bg-amber-950/20 border-amber-500/20 text-amber-400"
-                                            : "bg-card border-border/20 text-muted-foreground"
+                                        ? "bg-emerald-950/20 border-emerald-500/20 text-emerald-400"
+                                        : details.net_argala_status === "Obstructed"
+                                          ? "bg-amber-950/20 border-amber-500/20 text-amber-400"
+                                          : "bg-card border-border/20 text-muted-foreground"
                                         }`}>
                                         {details.net_argala_status}
                                       </span>
@@ -2002,8 +2032,8 @@ export default function Home() {
                         <Accordion id="sadesati" title="Sade Sati & Transits" explanation="Current transit status of Saturn relative to natal Moon sign." icon={Star} isOpen={expandedAccordions.sadesati || false} onToggle={() => toggleAccordion("sadesati")}>
                           <div className="space-y-4">
                             <div className={`p-5 rounded-2xl border ${chartData.sade_sati.is_active
-                                ? "bg-amber-950/20 border-amber-500/30 text-amber-100"
-                                : "bg-emerald-950/10 border-emerald-500/20 text-emerald-100"
+                              ? "bg-amber-950/20 border-amber-500/30 text-amber-100"
+                              : "bg-emerald-950/10 border-emerald-500/20 text-emerald-100"
                               }`}>
                               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                 <div>
@@ -2396,10 +2426,10 @@ export default function Home() {
                               </div>
                             </div>
                             <div className={`mt-5 px-5 py-1.5 rounded-full border font-heading text-[10px] uppercase tracking-wider ${matchingResult.total_score >= 28
-                                ? "bg-emerald-950/20 border-emerald-500/30 text-emerald-400"
-                                : matchingResult.total_score >= 18
-                                  ? "bg-amber-950/20 border-amber-500/30 text-amber-400"
-                                  : "bg-red-950/20 border-red-500/30 text-red-400"
+                              ? "bg-emerald-950/20 border-emerald-500/30 text-emerald-400"
+                              : matchingResult.total_score >= 18
+                                ? "bg-amber-950/20 border-amber-500/30 text-amber-400"
+                                : "bg-red-950/20 border-red-500/30 text-red-400"
                               }`}>
                               {matchingResult.total_score >= 28
                                 ? "Auspicious Match"
@@ -2484,8 +2514,8 @@ export default function Home() {
                                       <td className="px-3 py-3 text-center font-serif font-bold text-primary">{data.score} / {data.max_score}</td>
                                       <td className="px-3 py-3 text-center">
                                         <span className={`px-2.5 py-0.5 rounded text-[9px] font-heading font-bold border ${data.matched
-                                            ? "bg-emerald-950/20 border-emerald-500/20 text-emerald-400"
-                                            : "bg-red-950/20 border-red-500/20 text-red-400"
+                                          ? "bg-emerald-950/20 border-emerald-500/20 text-emerald-400"
+                                          : "bg-red-950/20 border-red-500/20 text-red-400"
                                           }`}>
                                           {data.matched ? "MATCHED" : "CONFLICT"}
                                         </span>
@@ -2511,8 +2541,8 @@ export default function Home() {
                               { name: "Rajju", val: !matchingResult.rajju, activeDesc: "No body-longevity conflicts (Rajju is absent - Highly Auspicious).", inactiveDesc: "Longevity conflicts detected (Rajju active)." }
                             ].map((test, i) => (
                               <div key={i} className={`p-4 rounded-xl border flex flex-col justify-between ${test.val
-                                  ? "bg-emerald-950/10 border-emerald-500/20"
-                                  : "bg-red-950/10 border-red-500/20"
+                                ? "bg-emerald-950/10 border-emerald-500/20"
+                                : "bg-red-950/10 border-red-500/20"
                                 }`}>
                                 <div>
                                   <div className="flex items-center justify-between font-heading font-bold text-[10px]">
@@ -2552,7 +2582,7 @@ export default function Home() {
 
         {/* Footer */}
         <footer className="mt-24 text-center text-muted-foreground font-serif tracking-widest text-[10px] uppercase opacity-50 space-x-3">
-          <span>© 2025 Vedic Jyotish • Powered by High-Precision Ephemeris &amp; Gemini</span>
+          <span>© 2026 Vedic Jyotish • Powered by High-Precision Ephemeris &amp; Gemini</span>
           <span>•</span>
           <a href="/privacy" className="underline underline-offset-2 hover:opacity-80 transition-opacity">Privacy Policy</a>
         </footer>
