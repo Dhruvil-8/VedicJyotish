@@ -79,7 +79,7 @@ export default function PrivacyPolicyPage() {
           </h1>
           <div className="flex items-center justify-center gap-4 text-secondary/80 font-serif tracking-[0.2em] uppercase text-xs mb-4">
             <span className="h-px w-8 bg-secondary/30" />
-            Vedic Jyotish — Ancient Wisdom, Modern Integrity
+            ॥ ॐ गं गणपतये नमः ॥
             <span className="h-px w-8 bg-secondary/30" />
           </div>
           <p className="text-xs font-serif text-muted-foreground">
