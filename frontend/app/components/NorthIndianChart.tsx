@@ -63,10 +63,6 @@ const SIGN_POSITIONS = [
   { x: 75, y: 8 },  // H12 — top-right corner area
 ];
 
-const SIGN_SYMBOLS = [
-  "♈", "♉", "♊", "♋", "♌", "♍", "♎", "♏", "♐", "♑", "♒", "♓"
-];
-
 const PLANET_SYMBOLS: Record<string, string> = {
   Sun: "Su", Moon: "Mo", Mars: "Ma", Mercury: "Me",
   Jupiter: "Ju", Venus: "Ve", Saturn: "Sa", Rahu: "Ra", Ketu: "Ke"
@@ -135,7 +131,7 @@ function NorthIndianChart({
           {/* Planet Names and Sign Symbols */}
           {HOUSE_CENTERS.map((pos, i) => (
             <React.Fragment key={i}>
-              {/* House Sign Symbol */}
+              {/* House Sign Number */}
               <text
                 x={SIGN_POSITIONS[i].x}
                 y={SIGN_POSITIONS[i].y}
@@ -143,7 +139,7 @@ function NorthIndianChart({
                 dominantBaseline="middle"
                 className="fill-primary font-heading text-[5px] font-bold"
               >
-                {SIGN_SYMBOLS[(ascIdx + i) % 12]}
+                {((ascIdx + i) % 12) + 1}
               </text>
 
               {/* Planets */}
