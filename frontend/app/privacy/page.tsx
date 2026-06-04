@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Privacy Policy | Vedic Jyotish",
-  description: "Privacy Policy for Vedic Jyotish — Learn how we handle your birth data, what third-party services we use, and your rights under GDPR and India's DPDPA.",
+  description: "Privacy Policy for Vedic Jyotish — Learn how we handle your birth data, what third-party services we use, and your data privacy rights.",
 };
 
 const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
@@ -60,7 +60,7 @@ const ThirdParty = ({
 };
 
 export default function PrivacyPolicyPage() {
-  const lastUpdated = "23 May 2026";
+  const lastUpdated = "4 June 2026";
 
   return (
     <main className="min-h-screen selection:bg-primary/30 selection:text-primary">
@@ -97,9 +97,6 @@ export default function PrivacyPolicyPage() {
             <p>
               By using the Service and clicking "I Understand — Agree & Proceed" on our consent screen, you acknowledge that you have read and understood this Privacy Policy and consent to its terms.
             </p>
-            <p>
-              This policy complies with the <strong>European Union General Data Protection Regulation (GDPR)</strong> and India's <strong>Digital Personal Data Protection Act, 2023 (DPDPA)</strong>.
-            </p>
           </Section>
 
           {/* Data We Collect */}
@@ -124,14 +121,14 @@ export default function PrivacyPolicyPage() {
                 <span className="mt-1 w-2 h-2 rounded-full bg-amber-600/60 flex-shrink-0" />
                 <div>
                   <strong className="text-foreground">Computed Astrological Chart Data</strong>
-                  <p className="text-xs mt-0.5">Planetary positions, house placements, and Dasha timelines derived from your birth details. This computed data (not your raw birth date) is transmitted to Google Gemini AI to generate your report. See Section 4 for details.</p>
+                  <p className="text-xs mt-0.5">Planetary positions, house placements, and Dasha timelines derived from your birth details. This computed data is transmitted to Google Gemini AI to generate your report. See Section 4 for details.</p>
                 </div>
               </div>
               <div className="flex gap-3 items-start">
                 <span className="mt-1 w-2 h-2 rounded-full bg-primary/30 flex-shrink-0" />
                 <div>
                   <strong className="text-foreground">Technical Data (Automatic)</strong>
-                  <p className="text-xs mt-0.5">Standard server logs may include your IP address and browser user agent. These are retained for a maximum of 7 days for security and debugging purposes only and are never linked to your astrological data.</p>
+                  <p className="text-xs mt-0.5">Standard server logs may include your IP address and browser user agent. These logs are transiently available while the hosting containers are running and are managed by our hosting providers' own log lifecycles. They are never linked to your astrological data.</p>
                 </div>
               </div>
               <div className="flex gap-3 items-start">
@@ -167,15 +164,15 @@ export default function PrivacyPolicyPage() {
               <ThirdParty
                 name="Google Gemini API (Google LLC, USA)"
                 role="AI report generation and conversational astrology chat."
-                data="Computed astrological chart data (planetary positions, houses, nakshatras, dashas). Your raw birth date, name, or email are NOT sent."
+                data="Computed astrological chart data (planetary positions, houses, nakshatras, dashas)."
                 policy="https://ai.google.dev/gemini-api/terms"
                 risk="Medium"
               />
 
               <ThirdParty
                 name="Hugging Face Spaces (Hugging Face Inc., USA)"
-                role="Hosting the backend API server (FastAPI)."
-                data="Processes all API requests. Standard server logs may include your IP address. Hugging Face does not have access to your processed astrological data beyond transient request handling."
+                role="Primary backend API server (FastAPI) serving the web application, Android application, and Telegram chatbot."
+                data="Processes all API requests including chart calculations and AI report generation. Standard server logs may transiently include your IP address while the container is running. Hugging Face does not have access to your processed astrological data beyond transient request handling."
                 policy="https://huggingface.co/privacy"
                 risk="Low"
               />
@@ -184,6 +181,13 @@ export default function PrivacyPolicyPage() {
                 role="Hosting and delivering the frontend web application globally via serverless CDN."
                 data="Standard CDN telemetry: IP address, browser type, and request headers for performance and security. No astrological data is processed by Vercel."
                 policy="https://vercel.com/legal/privacy-policy"
+                risk="Low"
+              />
+              <ThirdParty
+                name="Render (Render Services Inc., USA)"
+                role="Hosting the Telegram chatbot relay server that forwards user requests to the primary backend."
+                data="Processes Telegram webhook requests containing user messages and chat metadata. Server logs are transiently available while the container is running. User data is processed in-memory only and is not persisted in a database."
+                policy="https://render.com/privacy"
                 risk="Low"
               />
               <ThirdParty
@@ -211,7 +215,7 @@ export default function PrivacyPolicyPage() {
               <li>Your birth details exist only in your browser's memory for the duration of your active session.</li>
               <li>When you close or refresh the browser tab, all session data is permanently deleted from your browser.</li>
               <li>No birth data, chart data, or report content is written to any database or file on our servers.</li>
-              <li>Server access logs (IP address, timestamp) are retained for a maximum of 7 days for security purposes, then automatically deleted.</li>
+              <li>Server access logs (IP address, timestamp) are transiently available in our hosting providers' container logs while the server is running. These are not persistently stored and are subject to each provider's own log lifecycle management.</li>
             </ul>
           </Section>
 
@@ -225,7 +229,6 @@ export default function PrivacyPolicyPage() {
                 { right: "Right to Withdraw Consent", desc: "Stop using the service at any time. No data is retained after your session ends." },
                 { right: "Right to Data Portability", desc: "Receive your data in a structured, machine-readable format." },
                 { right: "Right to Object", desc: "Object to processing of your data for any purpose." },
-                { right: "DPDPA Rights (India)", desc: "All rights under India's Digital Personal Data Protection Act, 2023 are honoured." },
               ].map((item) => (
                 <div key={item.right} className="p-3 rounded-lg bg-primary/5 border border-primary/10">
                   <p className="text-xs font-bold text-primary mb-1">{item.right}</p>

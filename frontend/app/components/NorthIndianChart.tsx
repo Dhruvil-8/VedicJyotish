@@ -72,7 +72,7 @@ const PLANET_SYMBOLS: Record<string, string> = {
   Jupiter: "Ju", Venus: "Ve", Saturn: "Sa", Rahu: "Ra", Ketu: "Ke"
 };
 
-export default function NorthIndianChart({
+function NorthIndianChart({
   chartData,
   ascendantSign,
   title,
@@ -163,3 +163,5 @@ export default function NorthIndianChart({
     </div>
   );
 }
+
+export default React.memo(NorthIndianChart);

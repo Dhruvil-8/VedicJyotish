@@ -2,6 +2,7 @@
 import type { Metadata, Viewport } from "next";
 import { Cinzel, Libre_Baskerville } from "next/font/google";
 import "./globals.css";
+import { ToastProvider } from "./hooks/useToast";
 
 const cinzel = Cinzel({
   subsets: ["latin"],
@@ -92,7 +93,7 @@ export default function RootLayout({
       <body
         className={`${cinzel.variable} ${libreBaskerville.variable} antialiased`}
       >
-        {children}
+        <ToastProvider>{children}</ToastProvider>
       </body>
     </html>
   );

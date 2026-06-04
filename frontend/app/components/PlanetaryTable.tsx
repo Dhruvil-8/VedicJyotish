@@ -25,7 +25,7 @@ interface PlanetaryTableProps {
     className?: string;
 }
 
-export default function PlanetaryTable({ planets, className }: PlanetaryTableProps) {
+function PlanetaryTable({ planets, className }: PlanetaryTableProps) {
     return (
         <div className={cn("overflow-x-auto scroll-thin", className)}>
             <table className="w-full text-left border-collapse">
@@ -79,3 +79,6 @@ export default function PlanetaryTable({ planets, className }: PlanetaryTablePro
         </div>
     );
 }
+
+export default React.memo(PlanetaryTable);
+
