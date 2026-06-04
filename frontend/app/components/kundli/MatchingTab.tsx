@@ -20,14 +20,14 @@ export default function MatchingTab({ activeProfile }: MatchingTabProps) {
   const { showToast } = useToast();
 
   // Boy's details state
-  const [matchingBoyDate, setMatchingBoyDate] = useState("14/12/2023");
-  const [matchingBoyTime, setMatchingBoyTime] = useState("10:30");
+  const [matchingBoyDate, setMatchingBoyDate] = useState("");
+  const [matchingBoyTime, setMatchingBoyTime] = useState("");
   const [matchingBoyCityInput, setMatchingBoyCityInput] = useState("");
   const [matchingBoySelectedCity, setMatchingBoySelectedCity] = useState<any>(null);
 
   // Girl's details state
-  const [matchingGirlDate, setMatchingGirlDate] = useState("14/12/2023");
-  const [matchingGirlTime, setMatchingGirlTime] = useState("10:30");
+  const [matchingGirlDate, setMatchingGirlDate] = useState("");
+  const [matchingGirlTime, setMatchingGirlTime] = useState("");
   const [matchingGirlCityInput, setMatchingGirlCityInput] = useState("");
   const [matchingGirlSelectedCity, setMatchingGirlSelectedCity] = useState<any>(null);
 

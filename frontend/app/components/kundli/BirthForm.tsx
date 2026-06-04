@@ -24,8 +24,8 @@ interface BirthFormProps {
 
 export default function BirthForm({
   onCalculate,
-  defaultDate = "14/12/2023",
-  defaultTime = "10:30",
+  defaultDate = "",
+  defaultTime = "",
   defaultLanguage = "English",
 }: BirthFormProps) {
   const { showToast } = useToast();
