@@ -111,7 +111,7 @@ pub fn get_varga_sign(factor: usize, rasi_sign: usize, degree_in_sign: f64) -> u
     match factor {
         2 => {
             // Traditional Parasara Hora
-            let is_odd = rasi_sign % 2 == 1;
+            let is_odd = rasi_sign % 2 == 0;
             if is_odd {
                 if l == 0 { 4 } else { 3 } // Leo / Cancer
             } else {
@@ -131,7 +131,7 @@ pub fn get_varga_sign(factor: usize, rasi_sign: usize, degree_in_sign: f64) -> u
             let odd = [0, 10, 8, 2, 6];
             let even = [1, 5, 11, 9, 7];
             let idx = l.min(4);
-            if rasi_sign % 2 == 1 {
+            if rasi_sign % 2 == 0 {
                 odd[idx]
             } else {
                 even[idx]
@@ -139,7 +139,7 @@ pub fn get_varga_sign(factor: usize, rasi_sign: usize, degree_in_sign: f64) -> u
         }
         6 => {
             // Shashthamsa
-            if rasi_sign % 2 == 1 {
+            if rasi_sign % 2 == 0 {
                 l % 12
             } else {
                 (l + 6) % 12
@@ -147,7 +147,7 @@ pub fn get_varga_sign(factor: usize, rasi_sign: usize, degree_in_sign: f64) -> u
         }
         7 => {
             // Saptamsa
-            if rasi_sign % 2 == 1 {
+            if rasi_sign % 2 == 0 {
                 (rasi_sign + l) % 12
             } else {
                 (rasi_sign + 6 + l) % 12
@@ -180,7 +180,7 @@ pub fn get_varga_sign(factor: usize, rasi_sign: usize, degree_in_sign: f64) -> u
         }
         10 => {
             // Dasamsa
-            if rasi_sign % 2 == 1 {
+            if rasi_sign % 2 == 0 {
                 (rasi_sign + l) % 12
             } else {
                 (rasi_sign + 8 + l) % 12
@@ -220,7 +220,7 @@ pub fn get_varga_sign(factor: usize, rasi_sign: usize, degree_in_sign: f64) -> u
         }
         24 => {
             // Siddhamsa / Chaturvimsamsa
-            if rasi_sign % 2 == 1 {
+            if rasi_sign % 2 == 0 {
                 (4 + l) % 12
             } else {
                 (3 + l) % 12
@@ -240,7 +240,7 @@ pub fn get_varga_sign(factor: usize, rasi_sign: usize, degree_in_sign: f64) -> u
         }
         30 => {
             // Trimsamsa
-            if rasi_sign % 2 == 1 {
+            if rasi_sign % 2 == 0 {
                 if degree_in_sign < 5.0 {
                     0 // Aries
                 } else if degree_in_sign < 10.0 {
@@ -268,7 +268,7 @@ pub fn get_varga_sign(factor: usize, rasi_sign: usize, degree_in_sign: f64) -> u
         }
         40 => {
             // Khavedamsa
-            if rasi_sign % 2 == 1 {
+            if rasi_sign % 2 == 0 {
                 l % 12
             } else {
                 (l + 6) % 12
@@ -510,5 +510,21 @@ mod tests {
     #[test]
     fn test_navamsa_d9() {
         assert_eq!(get_varga_sign(9, 3, 19.0), 8);
+    }
+
+    #[test]
+    fn test_hora_d2() {
+        // Aries (index 0, odd): 0-15 degrees is Sun (Leo = 4)
+        assert_eq!(get_varga_sign(2, 0, 10.0), 4);
+        // Taurus (index 1, even): 0-15 degrees is Moon (Cancer = 3)
+        assert_eq!(get_varga_sign(2, 1, 10.0), 3);
+    }
+
+    #[test]
+    fn test_trimsamsa_d30() {
+        // Aries (index 0, odd): 5.0 degrees is Aquarius = 10
+        assert_eq!(get_varga_sign(30, 0, 5.0), 10);
+        // Taurus (index 1, even): 5.0 degrees is Virgo = 5
+        assert_eq!(get_varga_sign(30, 1, 5.0), 5);
     }
 }

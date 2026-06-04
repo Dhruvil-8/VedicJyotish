@@ -237,26 +237,27 @@ pub fn calculate(
     // Dur Muhurtham: Calculated using standard daily astronomical offsets
     let vaara_idx = (weekday_idx + 1) % 7; // Sunday = 0, Monday = 1, ..., Saturday = 6
     let dur_offsets = [
-        [10.4, 0.0],  // Sunday
+        [10.4, -1.0], // Sunday
         [6.4, 8.8],   // Monday
         [2.4, 4.8],   // Tuesday
-        [5.6, 0.0],   // Wednesday
+        [5.6, -1.0],  // Wednesday
         [4.0, 8.8],   // Thursday
         [2.4, 6.4],   // Friday
-        [1.6, 0.0],   // Saturday
+        [0.0, -1.0],  // Saturday
     ];
 
     let mut dur_muhurtham_slots = Vec::new();
     for i in 0..2 {
         let offset = dur_offsets[vaara_idx][i];
-        if offset > 0.0 {
+        if offset >= 0.0 {
             let (base_jd, dur) = if vaara_idx == 2 && i == 1 {
                 (sunset_jd, night_dur)
             } else {
                 (sunrise_jd, daytime_jd)
             };
             let start_jd = base_jd + dur * offset / 12.0;
-            let end_jd = start_jd + daytime_jd * 0.8 / 12.0;
+            let span = if vaara_idx == 6 { 1.6 } else { 0.8 };
+            let end_jd = start_jd + daytime_jd * span / 12.0;
             dur_muhurtham_slots.push(format!(
                 "{} - {}",
                 julian_to_local_time(start_jd, offset_hours),

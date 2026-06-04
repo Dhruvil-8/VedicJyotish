@@ -741,7 +741,7 @@ pub fn calculate_kalathra(p_houses: &HashMap<String, u8>, ref_planet: &str) -> b
     let malefics = ["Sun", "Mars", "Saturn", "Rahu", "Ketu"];
     let kalathra_houses = [1, 2, 4, 7, 8, 12];
 
-    malefics.iter().all(|&name| {
+    malefics.iter().any(|&name| {
         if let Some(&h) = p_houses.get(name) {
             let relative = ((h as i16 - ref_house as i16).rem_euclid(12) + 1) as u8;
             kalathra_houses.contains(&relative)

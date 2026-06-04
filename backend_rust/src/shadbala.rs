@@ -341,11 +341,14 @@ pub fn detect_graha_yuddha(planets: &[PlanetData]) -> Vec<GrahaYuddha> {
             if sign_1 == sign_2 {
                 let diff = (p1.full_degree - p2.full_degree).abs();
                 if diff <= 1.0 {
-                    // Planetary War! Winner is the one with higher degree in the sign
+                    // Planetary War! Winner is the one with lower degree in the sign, except Venus always wins
                     let deg_1 = p1.full_degree % 30.0;
                     let deg_2 = p2.full_degree % 30.0;
-
-                    let winner = if deg_1 >= deg_2 {
+                    let winner = if p1.name == "Venus" {
+                        p1.name.clone()
+                    } else if p2.name == "Venus" {
+                        p2.name.clone()
+                    } else if deg_1 < deg_2 {
                         p1.name.clone()
                     } else {
                         p2.name.clone()
