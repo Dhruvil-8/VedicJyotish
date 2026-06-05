@@ -4,20 +4,22 @@ use axum::http::StatusCode;
 use chrono::Datelike;
 
 use crate::{
-    atlas, chart, yoga,
+    atlas, chart,
     constants::{
-        COMBUSTION_DEGREES, DASHA_SEQ, FUNCTIONAL_MALEFICS, MOOLATRIKONA,
-        NAKSHATRA_NAMES, SIGNS, STRENGTH_CHART,
+        COMBUSTION_DEGREES, DASHA_SEQ, FUNCTIONAL_MALEFICS, MOOLATRIKONA, NAKSHATRA_NAMES, SIGNS,
+        STRENGTH_CHART,
     },
     models::{
         AscendantInfo, BirthData, CalculationProfile, ChartResponse, LocationInfo,
         MoonIntelligence, Nakshatra, PlanetData, PlanetaryRow,
     },
-    panchanga, service, swiss, timezones, ApiError,
+    panchanga, service, swiss, timezones, yoga, ApiError,
 };
 
 fn assign_chara_karakas(planets: &mut [PlanetData]) {
-    let classical_names = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu"];
+    let classical_names = [
+        "Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu",
+    ];
     let mut sort_list = Vec::new();
     for p in planets.iter() {
         if classical_names.contains(&p.name.as_str()) {
@@ -54,18 +56,18 @@ fn assign_fivefold_friendship(planets: &mut [PlanetData]) {
 
     let sign_lord = |sign_idx: usize| -> &'static str {
         match sign_idx {
-            0 => "Mars",      // Aries
-            1 => "Venus",     // Taurus
-            2 => "Mercury",   // Gemini
-            3 => "Moon",      // Cancer
-            4 => "Sun",       // Leo
-            5 => "Mercury",   // Virgo
-            6 => "Venus",     // Libra
-            7 => "Mars",      // Scorpio
-            8 => "Jupiter",   // Sagittarius
-            9 => "Saturn",    // Capricorn
-            10 => "Saturn",   // Aquarius
-            11 => "Jupiter",  // Pisces
+            0 => "Mars",     // Aries
+            1 => "Venus",    // Taurus
+            2 => "Mercury",  // Gemini
+            3 => "Moon",     // Cancer
+            4 => "Sun",      // Leo
+            5 => "Mercury",  // Virgo
+            6 => "Venus",    // Libra
+            7 => "Mars",     // Scorpio
+            8 => "Jupiter",  // Sagittarius
+            9 => "Saturn",   // Capricorn
+            10 => "Saturn",  // Aquarius
+            11 => "Jupiter", // Pisces
             _ => "Unknown",
         }
     };
@@ -76,13 +78,13 @@ fn assign_fivefold_friendship(planets: &mut [PlanetData]) {
             let sign_idx = crate::chart::sign_index(p.full_degree);
             let lord = sign_lord(sign_idx);
             if let Some(&lord_house) = house_map.get(lord) {
-                let relationship = crate::maitri::get_fivefold_relationship(&p.name, lord, p.house, lord_house);
+                let relationship =
+                    crate::maitri::get_fivefold_relationship(&p.name, lord, p.house, lord_house);
                 planets[i].strength = relationship.to_string();
             }
         }
     }
 }
-
 
 pub async fn compute_chart(data: BirthData) -> Result<ChartResponse, ApiError> {
     compute_chart_with_profile(data, CalculationProfile::default()).await
@@ -97,11 +99,14 @@ pub async fn compute_chart_with_profile(
     let (lat, lon) = resolve_coordinates(&data).await?;
     let resolved_time = timezones::resolve(&data.date, &data.time, lat, lon, data.timezone)?;
     let jd = resolved_time.jd_ut;
-    let snapshot = tokio::task::spawn_blocking(move || {
-        swiss::calculate_snapshot(jd, lat, lon)
-    })
-    .await
-    .map_err(|e| ApiError::new(StatusCode::INTERNAL_SERVER_ERROR, format!("Task join error: {e}")))??;
+    let snapshot = tokio::task::spawn_blocking(move || swiss::calculate_snapshot(jd, lat, lon))
+        .await
+        .map_err(|e| {
+            ApiError::new(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Task join error: {e}"),
+            )
+        })??;
 
     let asc_idx = chart::sign_index(snapshot.ascendant_degree);
     let sun_deg = snapshot
@@ -130,7 +135,14 @@ pub async fn compute_chart_with_profile(
         )
     })?;
     let ketu_deg = swiss::normalize_degree(rahu.full_degree + 180.0);
-    planets.push(build_planet("Ketu", ketu_deg, -1.0, asc_idx, sun_deg, snapshot.ascendant_degree));
+    planets.push(build_planet(
+        "Ketu",
+        ketu_deg,
+        -1.0,
+        asc_idx,
+        sun_deg,
+        snapshot.ascendant_degree,
+    ));
 
     assign_chara_karakas(&mut planets);
     assign_fivefold_friendship(&mut planets);
@@ -201,7 +213,6 @@ pub async fn compute_chart_with_profile(
 
     let vaisheshikamsa = chart::calculate_vaisheshikamsa(&planets, &divisional_planets);
 
-
     let dosha_input: Vec<yoga::DoshaInputPlanet> = planets
         .iter()
         .map(|p| yoga::DoshaInputPlanet {
@@ -224,9 +235,6 @@ pub async fn compute_chart_with_profile(
 
     let chara_dasha = crate::dasha::calculate_chara_dasha(SIGNS[asc_idx], &planets, &data.date);
 
-
-
-
     let now = chrono::Local::now();
     let today_date = now.format("%d/%m/%Y").to_string();
     let today_time = "12:00:00".to_string();
@@ -234,7 +242,9 @@ pub async fn compute_chart_with_profile(
     let ss_res = if let Ok(resolved) = now_resolved {
         let jd_today = resolved.jd_ut;
         let saturn_raw = tokio::task::spawn_blocking(move || {
-            let _guard = swiss::SWISS_LOCK.lock().expect("Swiss Ephemeris lock poisoned");
+            let _guard = swiss::SWISS_LOCK
+                .lock()
+                .expect("Swiss Ephemeris lock poisoned");
             let mut xx = [0.0_f64; 6];
             let mut serr = [0_i8; 256];
             unsafe {
@@ -246,7 +256,11 @@ pub async fn compute_chart_with_profile(
                     xx.as_mut_ptr(),
                     serr.as_mut_ptr(),
                 );
-                if res >= 0 { Some(xx[0]) } else { None }
+                if res >= 0 {
+                    Some(xx[0])
+                } else {
+                    None
+                }
             }
         })
         .await
@@ -257,7 +271,6 @@ pub async fn compute_chart_with_profile(
             let saturn_sign_idx = chart::sign_index(sat_long);
             let saturn_sign = SIGNS[saturn_sign_idx];
             Some(calculate_sade_sati(&moon.sign, saturn_sign))
-
         } else {
             None
         }
@@ -265,9 +278,18 @@ pub async fn compute_chart_with_profile(
         None
     };
 
-    let shadbala_res = crate::shadbala::calculate_shadbala(&planets, snapshot.ascendant_degree, &data.date);
-    let bhava_res = crate::shadbala::calculate_bhava_bala(snapshot.ascendant_degree, &planets, &shadbala_res);
-    let war_res = crate::shadbala::detect_graha_yuddha(&planets);
+    let (sunrise_jd, _) = crate::swiss::calculate_sunrise_sunset(resolved_time.jd_ut, lat, lon)?;
+    let mut weekday_idx = resolved_time.local_naive.weekday().num_days_from_monday() as usize;
+    if resolved_time.jd_ut < sunrise_jd {
+        weekday_idx = (weekday_idx + 6) % 7;
+    }
+    let vedic_weekday_idx = (weekday_idx + 1) % 7;
+
+    let shadbala_res =
+        crate::shadbala::calculate_shadbala(&planets, snapshot.ascendant_degree, vedic_weekday_idx);
+    let bhava_res =
+        crate::shadbala::calculate_bhava_bala(snapshot.ascendant_degree, &planets, &shadbala_res);
+    let war_res = crate::shadbala::detect_graha_yuddha(&planets, &shadbala_res);
 
     Ok(ChartResponse {
         birth_date: data.date.clone(),
@@ -311,9 +333,6 @@ pub async fn compute_chart_with_profile(
         graha_yuddha: Some(war_res),
     })
 }
-
-
-
 
 fn validate_profile(profile: &CalculationProfile) -> Result<(), ApiError> {
     let ayanamsa_ok = profile.ayanamsa.eq_ignore_ascii_case("lahiri");
@@ -577,19 +596,13 @@ pub async fn compute_transits(
 ) -> Result<crate::models::TransitResponse, ApiError> {
     let natal = compute_chart(request.birth_data.clone()).await?;
     let asc_sign = &natal.ascendant.sign;
-    let asc_idx = SIGNS
-        .iter()
-        .position(|&s| s == asc_sign)
-        .unwrap_or(0);
-        
+    let asc_idx = SIGNS.iter().position(|&s| s == asc_sign).unwrap_or(0);
+
     let moon_sign = &natal.moon_intelligence.sign;
-    let moon_idx = SIGNS
-        .iter()
-        .position(|&s| s == moon_sign)
-        .unwrap_or(0);
+    let moon_idx = SIGNS.iter().position(|&s| s == moon_sign).unwrap_or(0);
 
     let (lat, lon) = resolve_coordinates(&request.birth_data).await?;
-    
+
     let mut transit_data = BirthData {
         date: request.transit_date.clone(),
         time: request.transit_time.clone(),
@@ -599,7 +612,7 @@ pub async fn compute_transits(
         timezone: request.birth_data.timezone,
     };
     normalize_birth_data(&mut transit_data)?;
-    
+
     let resolved_time = timezones::resolve(
         &transit_data.date,
         &transit_data.time,
@@ -607,15 +620,19 @@ pub async fn compute_transits(
         lon,
         transit_data.timezone,
     )?;
-    
+
     let jd_transit = resolved_time.jd_ut;
     let lat_t = lat;
     let lon_t = lon;
-    let snapshot = tokio::task::spawn_blocking(move || {
-        swiss::calculate_snapshot(jd_transit, lat_t, lon_t)
-    })
-    .await
-    .map_err(|e| ApiError::new(StatusCode::INTERNAL_SERVER_ERROR, format!("Task join error: {e}")))??;
+    let snapshot =
+        tokio::task::spawn_blocking(move || swiss::calculate_snapshot(jd_transit, lat_t, lon_t))
+            .await
+            .map_err(|e| {
+                ApiError::new(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("Task join error: {e}"),
+                )
+            })??;
     let transit_sun_deg = snapshot
         .planets
         .iter()
@@ -624,21 +641,21 @@ pub async fn compute_transits(
         .unwrap_or(0.0);
 
     let mut transit_planets = Vec::new();
-    
+
     for raw in snapshot.planets {
         let t_idx = chart::sign_index(raw.longitude);
         let sign = SIGNS[t_idx].to_string();
         let deg_in_sign = raw.longitude % 30.0;
         let house_lagna = ((t_idx + 12 - asc_idx) % 12 + 1) as u8;
         let house_moon = ((t_idx + 12 - moon_idx) % 12 + 1) as u8;
-        
+
         let retrograde = if raw.name == "Sun" || raw.name == "Moon" || raw.name == "Rahu" {
             raw.name == "Rahu"
         } else {
             raw.speed < 0.0
         };
         let combust = check_combustion(&raw.name, raw.longitude, transit_sun_deg);
-        
+
         transit_planets.push(crate::models::TransitPlanetData {
             name: raw.name.to_string(),
             transit_sign: sign,
@@ -649,7 +666,7 @@ pub async fn compute_transits(
             combust,
         });
     }
-    
+
     let rahu = transit_planets
         .iter()
         .find(|p| p.name == "Rahu")
@@ -659,20 +676,20 @@ pub async fn compute_transits(
                 "Transit Rahu calculation missing.",
             )
         })?;
-    
+
     let rahu_idx = SIGNS
         .iter()
         .position(|&s| s == rahu.transit_sign)
         .unwrap_or(0);
     let rahu_full = rahu_idx as f64 * 30.0 + rahu.transit_degree;
     let ketu_deg = swiss::normalize_degree(rahu_full + 180.0);
-    
+
     let k_idx = chart::sign_index(ketu_deg);
     let k_sign = SIGNS[k_idx].to_string();
     let k_deg_in_sign = ketu_deg % 30.0;
     let k_house_lagna = ((k_idx + 12 - asc_idx) % 12 + 1) as u8;
     let k_house_moon = ((k_idx + 12 - moon_idx) % 12 + 1) as u8;
-    
+
     transit_planets.push(crate::models::TransitPlanetData {
         name: "Ketu".to_string(),
         transit_sign: k_sign,
@@ -700,7 +717,6 @@ pub async fn compute_transits(
     })
 }
 
-
 // ─── Jaimini Calculations ────────────────────────────────────────────────────
 
 pub fn calculate_jaimini_lagnas(
@@ -710,25 +726,29 @@ pub fn calculate_jaimini_lagnas(
 ) -> crate::models::JaiminiResponse {
     let sign_lord = |sign_idx: usize| -> &'static str {
         match sign_idx {
-            0 => "Mars",      // Aries
-            1 => "Venus",     // Taurus
-            2 => "Mercury",   // Gemini
-            3 => "Moon",      // Cancer
-            4 => "Sun",       // Leo
-            5 => "Mercury",   // Virgo
-            6 => "Venus",     // Libra
-            7 => "Mars",      // Scorpio
-            8 => "Jupiter",   // Sagittarius
-            9 => "Saturn",    // Capricorn
-            10 => "Saturn",   // Aquarius
-            11 => "Jupiter",  // Pisces
+            0 => "Mars",     // Aries
+            1 => "Venus",    // Taurus
+            2 => "Mercury",  // Gemini
+            3 => "Moon",     // Cancer
+            4 => "Sun",      // Leo
+            5 => "Mercury",  // Virgo
+            6 => "Venus",    // Libra
+            7 => "Mars",     // Scorpio
+            8 => "Jupiter",  // Sagittarius
+            9 => "Saturn",   // Capricorn
+            10 => "Saturn",  // Aquarius
+            11 => "Jupiter", // Pisces
             _ => "Unknown",
         }
     };
 
     // 1. Arudha Lagna (AL)
     let lagna_lord_name = sign_lord(asc_idx);
-    let lagna_lord_house = planets.iter().find(|p| p.name == lagna_lord_name).map(|p| p.house).unwrap_or(1);
+    let lagna_lord_house = planets
+        .iter()
+        .find(|p| p.name == lagna_lord_name)
+        .map(|p| p.house)
+        .unwrap_or(1);
     let mut al_house = ((2 * lagna_lord_house as i16 - 1 - 1).rem_euclid(12) + 1) as u8;
     if al_house == 1 {
         al_house = 10;
@@ -744,7 +764,11 @@ pub fn calculate_jaimini_lagnas(
 
     // 2. Upapada Lagna (UL)
     let lord_12_name = sign_lord((asc_idx + 11) % 12);
-    let lord_12_house = planets.iter().find(|p| p.name == lord_12_name).map(|p| p.house).unwrap_or(1);
+    let lord_12_house = planets
+        .iter()
+        .find(|p| p.name == lord_12_name)
+        .map(|p| p.house)
+        .unwrap_or(1);
     let dist = (lord_12_house as i16 - 12).rem_euclid(12) + 1;
     let mut ul_house = ((lord_12_house as i16 + dist - 1 - 1).rem_euclid(12) + 1) as u8;
     if ul_house == 12 {
@@ -760,7 +784,9 @@ pub fn calculate_jaimini_lagnas(
     };
 
     // 3. Karakamsha Lagna
-    let ak_planet = planets.iter().find(|p| p.chara_karaka.as_deref() == Some("AK"));
+    let ak_planet = planets
+        .iter()
+        .find(|p| p.chara_karaka.as_deref() == Some("AK"));
     let (kk_sign, kk_sign_idx, kk_house) = if let Some(ak) = ak_planet {
         let sig = ak.navamsa_sign.clone();
         let idx = SIGNS.iter().position(|&s| s == sig).unwrap_or(0);
@@ -792,11 +818,18 @@ pub fn calculate_jaimini_lagnas(
     }
 }
 
-
-pub fn calculate_sade_sati(natal_moon_sign: &str, transit_saturn_sign: &str) -> crate::models::SadeSatiResponse {
-
-    let moon_idx = SIGNS.iter().position(|&s| s == natal_moon_sign).unwrap_or(0);
-    let saturn_idx = SIGNS.iter().position(|&s| s == transit_saturn_sign).unwrap_or(0);
+pub fn calculate_sade_sati(
+    natal_moon_sign: &str,
+    transit_saturn_sign: &str,
+) -> crate::models::SadeSatiResponse {
+    let moon_idx = SIGNS
+        .iter()
+        .position(|&s| s == natal_moon_sign)
+        .unwrap_or(0);
+    let saturn_idx = SIGNS
+        .iter()
+        .position(|&s| s == transit_saturn_sign)
+        .unwrap_or(0);
 
     let diff = (saturn_idx + 12 - moon_idx) % 12;
 
@@ -832,7 +865,6 @@ pub fn calculate_sade_sati(natal_moon_sign: &str, transit_saturn_sign: &str) -> 
     }
 }
 
-
 #[cfg(test)]
 
 mod tests {
@@ -853,39 +885,69 @@ mod tests {
 
         // 1. Check Chara Karakas
         let planetary = res.planetary_table;
-        let classical = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu"];
+        let classical = [
+            "Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu",
+        ];
         for p in &planetary {
             if classical.contains(&p.name.as_str()) {
-                assert!(p.chara_karaka.is_some(), "Classical planet {} must have a Chara Karaka assigned", p.name);
+                assert!(
+                    p.chara_karaka.is_some(),
+                    "Classical planet {} must have a Chara Karaka assigned",
+                    p.name
+                );
             } else if p.name == "Ketu" {
-                assert!(p.chara_karaka.is_none(), "Ketu must not have a Chara Karaka");
+                assert!(
+                    p.chara_karaka.is_none(),
+                    "Ketu must not have a Chara Karaka"
+                );
             }
         }
 
         // 2. Check Dig Bala
-        let house_data: Vec<&PlanetData> = res.chart_data.values().flat_map(|h| &h.planets).collect();
+        let house_data: Vec<&PlanetData> =
+            res.chart_data.values().flat_map(|h| &h.planets).collect();
         for p in &house_data {
             if classical.contains(&p.name.as_str()) && p.name != "Rahu" {
-                assert!(p.dig_bala_points.is_some(), "Planet {} must have Dig Bala points", p.name);
-                assert!(p.dig_bala_percentage.is_some(), "Planet {} must have Dig Bala percentage", p.name);
+                assert!(
+                    p.dig_bala_points.is_some(),
+                    "Planet {} must have Dig Bala points",
+                    p.name
+                );
+                assert!(
+                    p.dig_bala_percentage.is_some(),
+                    "Planet {} must have Dig Bala percentage",
+                    p.name
+                );
             }
         }
 
         // 3. Check Divisional Charts
         let vargas = res.divisional_charts.unwrap();
-        let expected_vargas = ["D2", "D3", "D4", "D5", "D6", "D7", "D8", "D10", "D11", "D12", "D16", "D20", "D24", "D27", "D30", "D40", "D45", "D60"];
+        let expected_vargas = [
+            "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D10", "D11", "D12", "D16", "D20", "D24",
+            "D27", "D30", "D40", "D45", "D60",
+        ];
         for v in &expected_vargas {
             assert!(vargas.contains_key(*v), "Varga chart {} must be present", v);
             let chart = vargas.get(*v).unwrap();
             for h in 1..=12 {
-                assert!(chart.contains_key(&format!("house_{h}")), "Varga {} must contain house_{}", v, h);
+                assert!(
+                    chart.contains_key(&format!("house_{h}")),
+                    "Varga {} must contain house_{}",
+                    v,
+                    h
+                );
             }
         }
 
         // 4. Check Divisional Planets
         let v_planets = res.divisional_planets.unwrap();
         for v in &expected_vargas {
-            assert!(v_planets.contains_key(*v), "Varga planets for {} must be present", v);
+            assert!(
+                v_planets.contains_key(*v),
+                "Varga planets for {} must be present",
+                v
+            );
             let p_list = v_planets.get(*v).unwrap();
             assert_eq!(p_list.len(), 9, "Varga {} must contain 9 planets", v);
         }
@@ -894,6 +956,25 @@ mod tests {
         let doshas = res.doshas.unwrap();
         assert!(doshas.ganda_moola.has_dosha || !doshas.ganda_moola.has_dosha); // Compiles and resolves successfully
         assert!(doshas.kala_sarpa.has_dosha || !doshas.kala_sarpa.has_dosha);
+    }
+
+    #[tokio::test]
+    async fn test_vedic_weekday_before_sunrise() {
+        let birth = BirthData {
+            date: "22/05/1991".to_string(),
+            time: "04:00:00".to_string(), // Before sunrise (civil day is Wednesday)
+            city: Some("Ujjain".to_string()),
+            lat: Some(23.1765),
+            lon: Some(75.7885),
+            timezone: Some(5.5),
+        };
+
+        let res = compute_chart(birth).await.unwrap();
+
+        // The civil weekday is Wednesday, but since birth is before sunrise (around 5:45 AM),
+        // the Vedic weekday (Vara) must be Tuesday.
+        let panchanga = res.panchanga;
+        assert_eq!(panchanga.vara, "Tuesday");
     }
 }
 

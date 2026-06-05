@@ -50,7 +50,7 @@ All endpoints (except public health checks) support optional calculation profile
 * **Response**: Matches ranking cities from the GeoNames database.
 ```json
 [
-  { "name": "London, ENG, GB", "lat": 51.50853, "lon": -0.12574 }
+  { "name": "Ujjain, MP, IN", "lat": 23.1765, "lon": 75.7885 }
 ]
 ```
 
@@ -144,4 +144,3 @@ The server will start on port `7860`.
 * Jagannatha Hora (JHora) & PyJHora: [JHora](https://www.vedicastrologer.org/jh/) and the open-source [PyJHora](https://github.com/naturalstupid/PyJHora) project were used as references during development and manual verification of selected chart calculations.
 
 **Project Status: VedicJyotish project in active development. Comprehensive validation across all implemented calculations is still ongoing.**
-

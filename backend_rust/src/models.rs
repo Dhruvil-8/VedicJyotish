@@ -184,10 +184,6 @@ pub struct GrahaYuddha {
     pub winner: String,
 }
 
-
-
-
-
 #[derive(Debug, Clone, Serialize)]
 pub struct Panchanga {
     pub vara: String,
@@ -390,7 +386,6 @@ pub struct CharaDashaPeriod {
     pub end_date: String,
 }
 
-
 #[derive(Debug, Clone)]
 pub struct Nakshatra {
     pub name: String,
@@ -547,7 +542,7 @@ impl Default for CapabilityResponse {
                     notes: "Full six-fold strength system requires source-specific rules and golden fixtures.".to_string(),
                 },
                 Capability {
-                    key: "jhora_grade_dashas".to_string(),
+                    key: "advanced_dashas".to_string(),
                     status: "planned".to_string(),
                     api: None,
                     notes: "Yogini, Chara, Narayana, Kalachakra, Ashtottari, and related dasha systems.".to_string(),
@@ -573,7 +568,6 @@ pub struct TransitResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sade_sati: Option<SadeSatiResponse>,
 }
-
 
 #[derive(Debug, Clone, Serialize)]
 pub struct TransitPlanetData {
@@ -753,8 +747,3 @@ pub struct ArgalaContributor {
     pub argala_house: u8,
     pub is_malefic: bool,
 }
-
-
-
-
-

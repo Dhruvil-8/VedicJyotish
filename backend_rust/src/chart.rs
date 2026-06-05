@@ -1,5 +1,5 @@
 use crate::constants::SIGNS;
-use crate::models::{PlanetData, HouseData, NavamsaHouseData, VargaHouseData, VargaPlanetRow};
+use crate::models::{HouseData, NavamsaHouseData, PlanetData, VargaHouseData, VargaPlanetRow};
 use std::collections::HashMap;
 
 // ─── Coordinate Helper Functions ─────────────────────────────────────────────
@@ -113,9 +113,17 @@ pub fn get_varga_sign(factor: usize, rasi_sign: usize, degree_in_sign: f64) -> u
             // Traditional Parasara Hora
             let is_odd = rasi_sign % 2 == 0;
             if is_odd {
-                if l == 0 { 4 } else { 3 } // Leo / Cancer
+                if l == 0 {
+                    4
+                } else {
+                    3
+                } // Leo / Cancer
             } else {
-                if l == 0 { 3 } else { 4 } // Cancer / Leo
+                if l == 0 {
+                    3
+                } else {
+                    4
+                } // Cancer / Leo
             }
         }
         3 => {
@@ -241,25 +249,25 @@ pub fn get_varga_sign(factor: usize, rasi_sign: usize, degree_in_sign: f64) -> u
         30 => {
             // Trimsamsa
             if rasi_sign % 2 == 0 {
-                if degree_in_sign < 5.0 {
+                if degree_in_sign <= 5.0 {
                     0 // Aries
-                } else if degree_in_sign < 10.0 {
+                } else if degree_in_sign <= 10.0 {
                     10 // Aquarius
-                } else if degree_in_sign < 18.0 {
+                } else if degree_in_sign <= 18.0 {
                     8 // Sagittarius
-                } else if degree_in_sign < 25.0 {
+                } else if degree_in_sign <= 25.0 {
                     2 // Gemini
                 } else {
                     6 // Libra
                 }
             } else {
-                if degree_in_sign < 5.0 {
+                if degree_in_sign <= 5.0 {
                     1 // Taurus
-                } else if degree_in_sign < 12.0 {
+                } else if degree_in_sign <= 12.0 {
                     5 // Virgo
-                } else if degree_in_sign < 20.0 {
+                } else if degree_in_sign <= 20.0 {
                     11 // Pisces
-                } else if degree_in_sign < 25.0 {
+                } else if degree_in_sign <= 25.0 {
                     9 // Capricorn
                 } else {
                     7 // Scorpio
@@ -306,7 +314,9 @@ pub fn calculate_varga_charts(
     let mut charts_res = HashMap::new();
     let mut planets_res = HashMap::new();
 
-    let factors = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 16, 20, 24, 27, 30, 40, 45, 60];
+    let factors = [
+        2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 16, 20, 24, 27, 30, 40, 45, 60,
+    ];
 
     let asc_sign = sign_index(ascendant_degree);
     let asc_deg_in_sign = ascendant_degree % 30.0;
@@ -353,18 +363,15 @@ pub fn calculate_varga_charts(
                     planets: house_planets,
                 },
             );
-
         }
         charts_res.insert(v_key, v_houses);
-
     }
 
     (charts_res, planets_res)
 }
 
 fn is_supportive(planet: &str, sign: &str) -> bool {
-
-    use crate::constants::{STRENGTH_CHART, MOOLATRIKONA};
+    use crate::constants::{MOOLATRIKONA, STRENGTH_CHART};
     if let Some(rule) = STRENGTH_CHART.get(planet) {
         if sign == rule.exalt {
             return true;
@@ -388,23 +395,29 @@ pub fn calculate_vaisheshikamsa(
     let mut res = HashMap::new();
 
     let saptavarga_keys = ["D1", "D2", "D3", "D7", "D9", "D12", "D30"];
-    let dashavarga_keys = ["D1", "D2", "D3", "D7", "D9", "D10", "D12", "D16", "D30", "D60"];
+    let dashavarga_keys = [
+        "D1", "D2", "D3", "D7", "D9", "D10", "D12", "D16", "D30", "D60",
+    ];
     let shodasavarga_keys = [
-        "D1", "D2", "D3", "D4", "D7", "D9", "D10", "D12", "D16", "D20", "D24", "D27", "D30", "D40", "D45", "D60",
+        "D1", "D2", "D3", "D4", "D7", "D9", "D10", "D12", "D16", "D20", "D24", "D27", "D30", "D40",
+        "D45", "D60",
     ];
 
     for p in planets {
         let name = &p.name;
         if name == "Ketu" || name == "Lagna" {
             // Shadowy nodes like Ketu and non-planet points are usually skipped in standard Vaisheshikamsa, but we can return 0
-            res.insert(name.clone(), crate::models::VaisheshikamsaResponse {
-                saptavarga_count: 0,
-                saptavarga_grade: "None".to_string(),
-                dashavarga_count: 0,
-                dashavarga_grade: "None".to_string(),
-                shodasavarga_count: 0,
-                shodasavarga_grade: "None".to_string(),
-            });
+            res.insert(
+                name.clone(),
+                crate::models::VaisheshikamsaResponse {
+                    saptavarga_count: 0,
+                    saptavarga_grade: "None".to_string(),
+                    dashavarga_count: 0,
+                    dashavarga_grade: "None".to_string(),
+                    shodasavarga_count: 0,
+                    shodasavarga_grade: "None".to_string(),
+                },
+            );
             continue;
         }
 
@@ -422,7 +435,6 @@ pub fn calculate_vaisheshikamsa(
 
         // Check other Vargas
         for (v_key, p_rows) in divisional_planets {
-
             if let Some(row) = p_rows.iter().find(|r| r.name == *name) {
                 let is_sup = is_supportive(name, &row.sign);
                 if is_sup {
@@ -448,7 +460,8 @@ pub fn calculate_vaisheshikamsa(
             6 => "Paravata",
             7 => "Devaloka",
             _ => "None",
-        }.to_string();
+        }
+        .to_string();
 
         let dashavarga_grade = match dash_count {
             2 => "Parijata",
@@ -461,7 +474,8 @@ pub fn calculate_vaisheshikamsa(
             9 => "Indrasana",
             10 => "Shridhama",
             _ => "None",
-        }.to_string();
+        }
+        .to_string();
 
         let shodasavarga_grade = match shod_count {
             2 => "Bhedaka",
@@ -480,23 +494,26 @@ pub fn calculate_vaisheshikamsa(
             15 => "Goloka",
             16 => "Shrivallabha",
             _ => "None",
-        }.to_string();
+        }
+        .to_string();
 
-        res.insert(name.clone(), crate::models::VaisheshikamsaResponse {
-            saptavarga_count: sap_count,
-            saptavarga_grade,
-            dashavarga_count: dash_count,
-            dashavarga_grade,
-            shodasavarga_count: shod_count,
-            shodasavarga_grade,
-        });
+        res.insert(
+            name.clone(),
+            crate::models::VaisheshikamsaResponse {
+                saptavarga_count: sap_count,
+                saptavarga_grade,
+                dashavarga_count: dash_count,
+                dashavarga_grade,
+                shodasavarga_count: shod_count,
+                shodasavarga_grade,
+            },
+        );
     }
 
     res
 }
 
 // ─── Unit Tests ───────────────────────────────────────────────────────────────
-
 
 #[cfg(test)]
 mod tests {
@@ -522,9 +539,15 @@ mod tests {
 
     #[test]
     fn test_trimsamsa_d30() {
-        // Aries (index 0, odd): 5.0 degrees is Aquarius = 10
-        assert_eq!(get_varga_sign(30, 0, 5.0), 10);
-        // Taurus (index 1, even): 5.0 degrees is Virgo = 5
-        assert_eq!(get_varga_sign(30, 1, 5.0), 5);
+        assert_eq!(get_varga_sign(30, 0, 5.0), 0);
+        assert_eq!(get_varga_sign(30, 0, 5.01), 10);
+        assert_eq!(get_varga_sign(30, 0, 10.0), 10);
+        assert_eq!(get_varga_sign(30, 0, 18.0), 8);
+        assert_eq!(get_varga_sign(30, 0, 25.0), 2);
+        assert_eq!(get_varga_sign(30, 1, 5.0), 1);
+        assert_eq!(get_varga_sign(30, 1, 5.01), 5);
+        assert_eq!(get_varga_sign(30, 1, 12.0), 5);
+        assert_eq!(get_varga_sign(30, 1, 20.0), 11);
+        assert_eq!(get_varga_sign(30, 1, 25.0), 9);
     }
 }

@@ -1,16 +1,16 @@
-use crate::models::{
-    DoshaResponse, GandaMoolaResult, GuruChandalaResult, KalaSarpaResult, ManglikResult, PitruResult,
-    PlanetData, Yoga,
-};
 use crate::constants::SIGNS;
+use crate::models::{
+    DoshaResponse, GandaMoolaResult, GuruChandalaResult, KalaSarpaResult, ManglikResult,
+    PitruResult, PlanetData, Yoga,
+};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct DoshaInputPlanet {
     pub name: String,
-    pub sign_idx: usize,   // 0 = Aries, 11 = Pisces
-    pub house: u8,         // 1-indexed relative to Lagna (1 = Lagna, 12 = 12th house)
-    pub deg_in_sign: f64,  // 0.0 to 30.0
+    pub sign_idx: usize,  // 0 = Aries, 11 = Pisces
+    pub house: u8,        // 1-indexed relative to Lagna (1 = Lagna, 12 = 12th house)
+    pub deg_in_sign: f64, // 0.0 to 30.0
     pub retrograde: bool,
     pub combust: bool,
 }
@@ -23,18 +23,18 @@ fn sign_index(degree: f64) -> usize {
 
 fn sign_lord(sign_idx: usize) -> &'static str {
     match sign_idx {
-        0 => "Mars",      // Aries
-        1 => "Venus",     // Taurus
-        2 => "Mercury",   // Gemini
-        3 => "Moon",      // Cancer
-        4 => "Sun",       // Leo
-        5 => "Mercury",   // Virgo
-        6 => "Venus",     // Libra
-        7 => "Mars",      // Scorpio
-        8 => "Jupiter",   // Sagittarius
-        9 => "Saturn",    // Capricorn
-        10 => "Saturn",   // Aquarius
-        11 => "Jupiter",  // Pisces
+        0 => "Mars",     // Aries
+        1 => "Venus",    // Taurus
+        2 => "Mercury",  // Gemini
+        3 => "Moon",     // Cancer
+        4 => "Sun",      // Leo
+        5 => "Mercury",  // Virgo
+        6 => "Venus",    // Libra
+        7 => "Mars",     // Scorpio
+        8 => "Jupiter",  // Sagittarius
+        9 => "Saturn",   // Capricorn
+        10 => "Saturn",  // Aquarius
+        11 => "Jupiter", // Pisces
         _ => "Unknown",
     }
 }
@@ -66,10 +66,9 @@ fn yoga(name: &str, description: &str, kind: &str) -> Yoga {
 
 pub fn check_neechabhanga(planets: &[PlanetData]) -> Vec<Yoga> {
     let mut neechabhanga_yogas = Vec::new();
-    
-    let get_sign_idx = |sign_name: &str| -> usize {
-        SIGNS.iter().position(|&s| s == sign_name).unwrap_or(0)
-    };
+
+    let get_sign_idx =
+        |sign_name: &str| -> usize { SIGNS.iter().position(|&s| s == sign_name).unwrap_or(0) };
 
     let exaltation_sign_idx = |planet_name: &str| -> Option<usize> {
         match planet_name {
@@ -89,7 +88,7 @@ pub fn check_neechabhanga(planets: &[PlanetData]) -> Vec<Yoga> {
             let p_sign_idx = get_sign_idx(&p.sign);
             let lord = sign_lord(p_sign_idx);
             let lord_house = planets.iter().find(|pl| pl.name == lord).map(|pl| pl.house);
-            
+
             let mut is_neechabhanga = false;
             let mut reasons = Vec::new();
 
@@ -97,7 +96,9 @@ pub fn check_neechabhanga(planets: &[PlanetData]) -> Vec<Yoga> {
             if let Some(lh) = lord_house {
                 if [1, 4, 7, 10].contains(&lh) {
                     is_neechabhanga = true;
-                    reasons.push(format!("the lord of its sign ({lord}) is in Kendra (House {lh}) from Lagna"));
+                    reasons.push(format!(
+                        "the lord of its sign ({lord}) is in Kendra (House {lh}) from Lagna"
+                    ));
                 }
             }
 
@@ -114,8 +115,11 @@ pub fn check_neechabhanga(planets: &[PlanetData]) -> Vec<Yoga> {
 
             if let Some(ex_sign_idx) = exaltation_sign_idx(&p.name) {
                 let ex_lord = sign_lord(ex_sign_idx);
-                let ex_lord_house = planets.iter().find(|pl| pl.name == ex_lord).map(|pl| pl.house);
-                
+                let ex_lord_house = planets
+                    .iter()
+                    .find(|pl| pl.name == ex_lord)
+                    .map(|pl| pl.house);
+
                 // Rule 3: Exaltation lord is in Kendra from Lagna
                 if let Some(elh) = ex_lord_house {
                     if [1, 4, 7, 10].contains(&elh) {
@@ -139,7 +143,9 @@ pub fn check_neechabhanga(planets: &[PlanetData]) -> Vec<Yoga> {
                 let ex_sign_name = SIGNS[ex_sign_idx];
                 if p.navamsa_sign == ex_sign_name {
                     is_neechabhanga = true;
-                    reasons.push(format!("it is exalted in the Navamsa (D9) chart ({ex_sign_name})"));
+                    reasons.push(format!(
+                        "it is exalted in the Navamsa (D9) chart ({ex_sign_name})"
+                    ));
                 }
             }
 
@@ -298,12 +304,18 @@ pub fn detect_yogas(planets: &[PlanetData], asc_idx: usize) -> Vec<Yoga> {
 
         let has_planets_in_second = house_planets
             .get(&second_from_moon)
-            .map(|list| list.iter().any(|&p| !matches!(p, "Moon" | "Sun" | "Rahu" | "Ketu")))
+            .map(|list| {
+                list.iter()
+                    .any(|&p| !matches!(p, "Moon" | "Sun" | "Rahu" | "Ketu"))
+            })
             .unwrap_or(false);
 
         let has_planets_in_twelfth = house_planets
             .get(&twelfth_from_moon)
-            .map(|list| list.iter().any(|&p| !matches!(p, "Moon" | "Sun" | "Rahu" | "Ketu")))
+            .map(|list| {
+                list.iter()
+                    .any(|&p| !matches!(p, "Moon" | "Sun" | "Rahu" | "Ketu"))
+            })
             .unwrap_or(false);
 
         if has_planets_in_second && has_planets_in_twelfth {
@@ -395,7 +407,11 @@ pub fn detect_yogas(planets: &[PlanetData], asc_idx: usize) -> Vec<Yoga> {
     if let (Some(&jup_h), Some(&mars_h)) = (p_house.get("Jupiter"), p_house.get("Mars")) {
         let diff = (jup_h as i16 - mars_h as i16).abs();
         if diff == 0 || diff == 6 {
-            let relationship = if diff == 0 { "conjoined" } else { "mutually aspecting (7th house opposition)" };
+            let relationship = if diff == 0 {
+                "conjoined"
+            } else {
+                "mutually aspecting (7th house opposition)"
+            };
             yogas.push(yoga(
                 "Guru Mangala Yoga",
                 &format!(
@@ -408,7 +424,9 @@ pub fn detect_yogas(planets: &[PlanetData], asc_idx: usize) -> Vec<Yoga> {
     }
 
     // Nabhasa Ashraya Yogas
-    let main_planets = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"];
+    let main_planets = [
+        "Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn",
+    ];
     let mut all_movable = true;
     let mut all_fixed = true;
     let mut all_dual = true;
@@ -463,13 +481,21 @@ pub fn detect_yogas(planets: &[PlanetData], asc_idx: usize) -> Vec<Yoga> {
 
 pub fn calculate_kala_sarpa(p_houses: &HashMap<String, u8>) -> KalaSarpaResult {
     let Some(&rahu_h) = p_houses.get("Rahu") else {
-        return KalaSarpaResult { has_dosha: false, type_index: None };
+        return KalaSarpaResult {
+            has_dosha: false,
+            type_index: None,
+        };
     };
     let Some(&ketu_h) = p_houses.get("Ketu") else {
-        return KalaSarpaResult { has_dosha: false, type_index: None };
+        return KalaSarpaResult {
+            has_dosha: false,
+            type_index: None,
+        };
     };
 
-    let classical = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"];
+    let classical = [
+        "Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn",
+    ];
     let r_0 = rahu_h as usize - 1;
     let k_0 = ketu_h as usize - 1;
 
@@ -507,10 +533,18 @@ pub fn calculate_manglik(
     asc_sign_idx: usize,
 ) -> ManglikResult {
     let Some(&ref_house) = p_houses.get(ref_planet) else {
-        return ManglikResult { has_dosha: false, has_exceptions: false, exceptions_triggered: vec![] };
+        return ManglikResult {
+            has_dosha: false,
+            has_exceptions: false,
+            exceptions_triggered: vec![],
+        };
     };
     let Some(&mars_house) = p_houses.get("Mars") else {
-        return ManglikResult { has_dosha: false, has_exceptions: false, exceptions_triggered: vec![] };
+        return ManglikResult {
+            has_dosha: false,
+            has_exceptions: false,
+            exceptions_triggered: vec![],
+        };
     };
 
     let relative_mars = ((mars_house as i16 - ref_house as i16).rem_euclid(12) + 1) as u8;
@@ -586,16 +620,16 @@ pub fn calculate_manglik(
     if asc_sign_idx == 0 || asc_sign_idx == 7 {
         exceptions.push(10);
     }
-    if [0, 7, 9, 3, 4, 8, 11].contains(&mars.sign_idx) {
-        exceptions.push(11);
-    }
-    if [0, 3, 6, 9].contains(&mars.sign_idx) {
+    if [0, 4, 7, 8, 9, 11].contains(&mars.sign_idx) {
         exceptions.push(12);
     }
-    if asc_sign_idx == 3 || asc_sign_idx == 4 {
+    if [0, 3, 6, 9].contains(&mars.sign_idx) {
         exceptions.push(13);
     }
-    
+    if asc_sign_idx == 3 || asc_sign_idx == 4 {
+        exceptions.push(15);
+    }
+
     let mut conjoined_benefic = false;
     if let Some(jup_p) = jup {
         if jup_p.house == mars.house {
@@ -608,7 +642,7 @@ pub fn calculate_manglik(
         }
     }
     if conjoined_benefic {
-        exceptions.push(14);
+        exceptions.push(16);
     }
 
     let mut benefic_in_lagna = false;
@@ -623,7 +657,7 @@ pub fn calculate_manglik(
         }
     }
     if benefic_in_lagna {
-        exceptions.push(15);
+        exceptions.push(17);
     }
 
     let has_exceptions = !exceptions.is_empty();
@@ -658,9 +692,32 @@ pub fn calculate_pitru(p_houses: &HashMap<String, u8>) -> PitruResult {
     let mut afflicted = false;
     for &p in &["Sun", "Moon", "Rahu", "Ketu"] {
         if let Some(&ph) = p_houses.get(p) {
+            // 1. Conjunction
             if Some(&ph) == mars_h || Some(&ph) == sat_h {
                 afflicted = true;
                 break;
+            }
+            // 2. Mars aspects (4th, 7th, 8th from Mars position)
+            if let Some(&mh) = mars_h {
+                let mars_0 = mh as i16 - 1;
+                let aspect_4 = (mars_0 + 3).rem_euclid(12) + 1;
+                let aspect_7 = (mars_0 + 6).rem_euclid(12) + 1;
+                let aspect_8 = (mars_0 + 7).rem_euclid(12) + 1;
+                if ph as i16 == aspect_4 || ph as i16 == aspect_7 || ph as i16 == aspect_8 {
+                    afflicted = true;
+                    break;
+                }
+            }
+            // 3. Saturn aspects (3rd, 7th, 10th from Saturn position)
+            if let Some(&sth) = sat_h {
+                let sat_0 = sth as i16 - 1;
+                let aspect_3 = (sat_0 + 2).rem_euclid(12) + 1;
+                let aspect_7 = (sat_0 + 6).rem_euclid(12) + 1;
+                let aspect_10 = (sat_0 + 9).rem_euclid(12) + 1;
+                if ph as i16 == aspect_3 || ph as i16 == aspect_7 || ph as i16 == aspect_10 {
+                    afflicted = true;
+                    break;
+                }
             }
         }
     }
@@ -672,9 +729,15 @@ pub fn calculate_pitru(p_houses: &HashMap<String, u8>) -> PitruResult {
     let mut two_matched = false;
     for &h in &target_houses {
         let mut count = 0;
-        if Some(&h) == ven_h { count += 1; }
-        if Some(&h) == mer_h { count += 1; }
-        if Some(&h) == rahu_h { count += 1; }
+        if Some(&h) == ven_h {
+            count += 1;
+        }
+        if Some(&h) == mer_h {
+            count += 1;
+        }
+        if Some(&h) == rahu_h {
+            count += 1;
+        }
         if count >= 2 {
             two_matched = true;
             break;
@@ -712,7 +775,10 @@ pub fn calculate_guru_chandala(
     planets: &[DoshaInputPlanet],
 ) -> GuruChandalaResult {
     let Some(&jup_h) = p_houses.get("Jupiter") else {
-        return GuruChandalaResult { has_dosha: false, jupiter_stronger: false };
+        return GuruChandalaResult {
+            has_dosha: false,
+            jupiter_stronger: false,
+        };
     };
     let rahu_h = p_houses.get("Rahu");
     let ketu_h = p_houses.get("Ketu");
@@ -752,12 +818,18 @@ pub fn calculate_kalathra(p_houses: &HashMap<String, u8>, ref_planet: &str) -> b
 }
 
 pub fn calculate_ganda_moola(moon_nakshatra: &str) -> GandaMoolaResult {
-    let ganda_moola_stars = ["Ashwini", "Ashlesha", "Magha", "Jyeshtha", "Moola", "Revati"];
+    let ganda_moola_stars = [
+        "Ashwini", "Ashlesha", "Magha", "Jyeshtha", "Moola", "Revati",
+    ];
     let has_dosha = ganda_moola_stars.contains(&moon_nakshatra);
 
     GandaMoolaResult {
         has_dosha,
-        nakshatra_name: if has_dosha { Some(moon_nakshatra.to_string()) } else { None },
+        nakshatra_name: if has_dosha {
+            Some(moon_nakshatra.to_string())
+        } else {
+            None
+        },
     }
 }
 
@@ -811,15 +883,78 @@ mod tests {
     #[test]
     fn test_dosha_calculations_with_chart_7() {
         let input_planets = vec![
-            DoshaInputPlanet { name: "Sun".to_string(), sign_idx: 9, house: 3, deg_in_sign: 15.0, retrograde: false, combust: false },
-            DoshaInputPlanet { name: "Moon".to_string(), sign_idx: 0, house: 6, deg_in_sign: 12.0, retrograde: false, combust: false },
-            DoshaInputPlanet { name: "Mars".to_string(), sign_idx: 8, house: 2, deg_in_sign: 8.0, retrograde: false, combust: false },
-            DoshaInputPlanet { name: "Mercury".to_string(), sign_idx: 8, house: 2, deg_in_sign: 18.0, retrograde: false, combust: true },
-            DoshaInputPlanet { name: "Jupiter".to_string(), sign_idx: 11, house: 12, deg_in_sign: 5.0, retrograde: true, combust: false },
-            DoshaInputPlanet { name: "Venus".to_string(), sign_idx: 10, house: 4, deg_in_sign: 22.0, retrograde: false, combust: false },
-            DoshaInputPlanet { name: "Saturn".to_string(), sign_idx: 0, house: 6, deg_in_sign: 25.0, retrograde: false, combust: false },
-            DoshaInputPlanet { name: "Rahu".to_string(), sign_idx: 6, house: 12, deg_in_sign: 1.0, retrograde: true, combust: false },
-            DoshaInputPlanet { name: "Ketu".to_string(), sign_idx: 10, house: 4, deg_in_sign: 1.0, retrograde: true, combust: false },
+            DoshaInputPlanet {
+                name: "Sun".to_string(),
+                sign_idx: 9,
+                house: 3,
+                deg_in_sign: 15.0,
+                retrograde: false,
+                combust: false,
+            },
+            DoshaInputPlanet {
+                name: "Moon".to_string(),
+                sign_idx: 0,
+                house: 6,
+                deg_in_sign: 12.0,
+                retrograde: false,
+                combust: false,
+            },
+            DoshaInputPlanet {
+                name: "Mars".to_string(),
+                sign_idx: 8,
+                house: 2,
+                deg_in_sign: 8.0,
+                retrograde: false,
+                combust: false,
+            },
+            DoshaInputPlanet {
+                name: "Mercury".to_string(),
+                sign_idx: 8,
+                house: 2,
+                deg_in_sign: 18.0,
+                retrograde: false,
+                combust: true,
+            },
+            DoshaInputPlanet {
+                name: "Jupiter".to_string(),
+                sign_idx: 11,
+                house: 12,
+                deg_in_sign: 5.0,
+                retrograde: true,
+                combust: false,
+            },
+            DoshaInputPlanet {
+                name: "Venus".to_string(),
+                sign_idx: 10,
+                house: 4,
+                deg_in_sign: 22.0,
+                retrograde: false,
+                combust: false,
+            },
+            DoshaInputPlanet {
+                name: "Saturn".to_string(),
+                sign_idx: 0,
+                house: 6,
+                deg_in_sign: 25.0,
+                retrograde: false,
+                combust: false,
+            },
+            DoshaInputPlanet {
+                name: "Rahu".to_string(),
+                sign_idx: 6,
+                house: 12,
+                deg_in_sign: 1.0,
+                retrograde: true,
+                combust: false,
+            },
+            DoshaInputPlanet {
+                name: "Ketu".to_string(),
+                sign_idx: 10,
+                house: 4,
+                deg_in_sign: 1.0,
+                retrograde: true,
+                combust: false,
+            },
         ];
 
         let res = calculate_doshas(&input_planets, 7, "Ashwini");
@@ -875,7 +1010,12 @@ mod tests {
         ];
 
         let yogas = detect_yogas(&planets, 3);
-        let nb_yoga = yogas.iter().find(|y| y.name.contains("Neechabhanga Raja Yoga (Mars)"));
-        assert!(nb_yoga.is_some(), "Neechabhanga Raja Yoga for Mars should be detected");
+        let nb_yoga = yogas
+            .iter()
+            .find(|y| y.name.contains("Neechabhanga Raja Yoga (Mars)"));
+        assert!(
+            nb_yoga.is_some(),
+            "Neechabhanga Raja Yoga for Mars should be detected"
+        );
     }
 }

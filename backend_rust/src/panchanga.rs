@@ -95,8 +95,11 @@ const VARA_NAMES: [&str; 7] = [
 
 fn julian_to_local_time(jd_ut: f64, offset_hours: f64) -> String {
     let unix_timestamp = (jd_ut - 2440587.5) * 86400.0;
-    if let Some(naive_utc) = chrono::DateTime::from_timestamp(unix_timestamp.round() as i64, 0).map(|dt| dt.naive_utc()) {
-        let local_dt = naive_utc + chrono::Duration::seconds((offset_hours * 3600.0).round() as i64);
+    if let Some(naive_utc) =
+        chrono::DateTime::from_timestamp(unix_timestamp.round() as i64, 0).map(|dt| dt.naive_utc())
+    {
+        let local_dt =
+            naive_utc + chrono::Duration::seconds((offset_hours * 3600.0).round() as i64);
         local_dt.format("%H:%M").to_string()
     } else {
         "Unknown".to_string()
@@ -128,46 +131,77 @@ pub fn calculate(
     let karana_index = karana_index((moon_sun / 6.0).floor() as usize);
     let karana_progress = (moon_sun % 6.0) / 6.0;
 
-    let sun_sign = Some(planets.iter().find(|p| p.name == "Sun").map(|p| p.sign.clone()).unwrap_or_default());
-    let moon_sign = Some(planets.iter().find(|p| p.name == "Moon").map(|p| p.sign.clone()).unwrap_or_default());
+    let sun_sign = Some(
+        planets
+            .iter()
+            .find(|p| p.name == "Sun")
+            .map(|p| p.sign.clone())
+            .unwrap_or_default(),
+    );
+    let moon_sign = Some(
+        planets
+            .iter()
+            .find(|p| p.name == "Moon")
+            .map(|p| p.sign.clone())
+            .unwrap_or_default(),
+    );
 
-    let lords = ["Ketu", "Venus", "Sun", "Moon", "Mars", "Rahu", "Jupiter", "Saturn", "Mercury"];
+    let lords = [
+        "Ketu", "Venus", "Sun", "Moon", "Mars", "Rahu", "Jupiter", "Saturn", "Mercury",
+    ];
     let nakshatra_lord = Some(lords[nak_index % 9].to_string());
 
-    let tithi_lords = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Ketu"];
+    let tithi_lords = [
+        "Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Sun", "Moon",
+        "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Ketu",
+    ];
     let tithi_lord = Some(match tithi_index {
         14 => "Saturn".to_string(), // Purnima
         29 => "Ketu".to_string(),   // Amavasya
         idx => tithi_lords[idx % 15].to_string(),
     });
 
-    let yoga_lords = ["Jupiter", "Saturn", "Ketu", "Venus", "Sun", "Moon", "Mars", "Rahu", "Mercury"];
+    let yoga_lords = [
+        "Jupiter", "Saturn", "Ketu", "Venus", "Sun", "Moon", "Mars", "Rahu", "Mercury",
+    ];
     let yoga_lord = Some(yoga_lords[yoga_index % 9].to_string());
 
-    let karana_lords = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu", "Rahu", "Ketu"];
+    let karana_lords = [
+        "Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu", "Rahu",
+        "Ketu",
+    ];
     let karana_lord = Some(karana_lords[karana_index].to_string());
-
-    let vara_lord = Some(match VARA_NAMES[local_dt.weekday().num_days_from_monday() as usize] {
-        "Monday" => "Moon",
-        "Tuesday" => "Mars",
-        "Wednesday" => "Mercury",
-        "Thursday" => "Jupiter",
-        "Friday" => "Venus",
-        "Saturday" => "Saturn",
-        "Sunday" => "Sun",
-        _ => "Unknown",
-    }.to_string());
-
-    let ayanamsha = unsafe {
-        let _guard = swiss::SWISS_LOCK.lock().expect("Swiss Ephemeris lock poisoned");
-        Some(swiss_eph::swe_get_ayanamsa_ut(jd_ut))
-    };
 
     let (sunrise_jd, sunset_jd) = crate::swiss::calculate_sunrise_sunset(jd_ut, lat, lon)?;
     let sunrise = Some(julian_to_local_time(sunrise_jd, offset_hours));
     let sunset = Some(julian_to_local_time(sunset_jd, offset_hours));
 
-    let weekday_idx = local_dt.weekday().num_days_from_monday() as usize;
+    let mut weekday_idx = local_dt.weekday().num_days_from_monday() as usize;
+    if jd_ut < sunrise_jd {
+        weekday_idx = (weekday_idx + 6) % 7;
+    }
+
+    let vara_lord = Some(
+        match VARA_NAMES[weekday_idx] {
+            "Monday" => "Moon",
+            "Tuesday" => "Mars",
+            "Wednesday" => "Mercury",
+            "Thursday" => "Jupiter",
+            "Friday" => "Venus",
+            "Saturday" => "Saturn",
+            "Sunday" => "Sun",
+            _ => "Unknown",
+        }
+        .to_string(),
+    );
+
+    let ayanamsha = unsafe {
+        let _guard = swiss::SWISS_LOCK
+            .lock()
+            .expect("Swiss Ephemeris lock poisoned");
+        Some(swiss_eph::swe_get_ayanamsa_ut(jd_ut))
+    };
+
     let rahu_slots = [2, 7, 5, 6, 4, 3, 8];
     let yama_slots = [5, 4, 3, 2, 1, 8, 7];
     let gulika_slots = [6, 5, 4, 3, 2, 1, 8];
@@ -315,7 +349,9 @@ pub fn calculate(
     let choghadiya_night = Some(choghadiya_night_slots);
 
     // Planetary Horas (Day & Night)
-    let hora_planets = ["Sun", "Venus", "Mercury", "Moon", "Saturn", "Jupiter", "Mars"];
+    let hora_planets = [
+        "Sun", "Venus", "Mercury", "Moon", "Saturn", "Jupiter", "Mars",
+    ];
     let hora_starts = [3, 6, 2, 5, 1, 4, 0];
     let start_idx = hora_starts[weekday_idx % 7];
 
@@ -366,7 +402,7 @@ pub fn calculate(
     let horas_night = Some(horas_night_slots);
 
     Ok(Panchanga {
-        vara: VARA_NAMES[local_dt.weekday().num_days_from_monday() as usize].to_string(),
+        vara: VARA_NAMES[weekday_idx].to_string(),
         tithi: PanchangaElement {
             index: (tithi_index + 1) as u8,
             name: TITHI_NAMES[tithi_index.min(29)].to_string(),
