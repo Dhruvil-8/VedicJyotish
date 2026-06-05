@@ -59,6 +59,7 @@ export default function Home() {
 
   // Tab State
   const [activeTab, setActiveTab] = useState<"chart" | "chat" | "report" | "matching">("chart");
+  const [mountedTabs, setMountedTabs] = useState<Set<string>>(new Set(["chart"]));
   const [selectedLanguage, setSelectedLanguage] = useState<string>("English");
 
   // PWA Install State
@@ -74,6 +75,16 @@ export default function Home() {
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
     return () => window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
   }, []);
+
+  // Stagger the mounting of hidden background tabs to prevent UI freeze
+  useEffect(() => {
+    if (step === "dashboard") {
+      const timer = setTimeout(() => {
+        setMountedTabs((prev) => new Set([...prev, "chat", "report", "matching"]));
+      }, 800); // 800ms delay to let the main ChartTab render smoothly
+      return () => clearTimeout(timer);
+    }
+  }, [step]);
 
   const handleInstall = async () => {
     if (!deferredPrompt) return;
@@ -101,6 +112,7 @@ export default function Home() {
     setSelectedLanguage(data.language);
     setStep("dashboard");
     setActiveTab("chart");
+    setMountedTabs(new Set(["chart"]));
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -170,7 +182,7 @@ export default function Home() {
             <div className="flex border-b border-primary/20 overflow-x-auto scroll-thin select-none">
               <button
                 type="button"
-                onClick={() => setActiveTab("chart")}
+                onClick={() => { setActiveTab("chart"); setMountedTabs(prev => new Set([...prev, "chart"])); }}
                 className={`flex items-center gap-2 px-6 py-4 font-heading text-xs md:text-sm tracking-widest uppercase border-b-2 transition-all flex-shrink-0 cursor-pointer ${
                   activeTab === "chart"
                     ? "border-primary text-primary font-bold"
@@ -181,7 +193,7 @@ export default function Home() {
               </button>
               <button
                 type="button"
-                onClick={() => setActiveTab("chat")}
+                onClick={() => { setActiveTab("chat"); setMountedTabs(prev => new Set([...prev, "chat"])); }}
                 className={`flex items-center gap-2 px-6 py-4 font-heading text-xs md:text-sm tracking-widest uppercase border-b-2 transition-all flex-shrink-0 cursor-pointer ${
                   activeTab === "chat"
                     ? "border-primary text-primary font-bold"
@@ -192,7 +204,7 @@ export default function Home() {
               </button>
               <button
                 type="button"
-                onClick={() => setActiveTab("report")}
+                onClick={() => { setActiveTab("report"); setMountedTabs(prev => new Set([...prev, "report"])); }}
                 className={`flex items-center gap-2 px-6 py-4 font-heading text-xs md:text-sm tracking-widest uppercase border-b-2 transition-all flex-shrink-0 cursor-pointer ${
                   activeTab === "report"
                     ? "border-primary text-primary font-bold"
@@ -203,7 +215,7 @@ export default function Home() {
               </button>
               <button
                 type="button"
-                onClick={() => setActiveTab("matching")}
+                onClick={() => { setActiveTab("matching"); setMountedTabs(prev => new Set([...prev, "matching"])); }}
                 className={`flex items-center gap-2 px-6 py-4 font-heading text-xs md:text-sm tracking-widest uppercase border-b-2 transition-all flex-shrink-0 cursor-pointer ${
                   activeTab === "matching"
                     ? "border-primary text-primary font-bold"
@@ -216,26 +228,34 @@ export default function Home() {
 
             {/* Tab Contents */}
             <div className="pt-4 text-foreground">
-              <div className={activeTab === "chart" ? "block" : "hidden"}>
-                <ChartTab chartData={chartData} />
-              </div>
-              <div className={activeTab === "chat" ? "block" : "hidden"}>
-                <ChatPanel
-                  key={activeProfile ? `${activeProfile.date}-${activeProfile.time}-${activeProfile.city.name}` : "empty"}
-                  chartData={chartData}
-                  selectedLanguage={selectedLanguage}
-                />
-              </div>
-              <div className={activeTab === "report" ? "block" : "hidden"}>
-                <ReportTab
-                  key={activeProfile ? `${activeProfile.date}-${activeProfile.time}-${activeProfile.city.name}` : "empty"}
-                  chartData={chartData}
-                  selectedLanguage={selectedLanguage}
-                />
-              </div>
-              <div className={activeTab === "matching" ? "block" : "hidden"}>
-                <MatchingTab activeProfile={activeProfile} />
-              </div>
+              {mountedTabs.has("chart") && (
+                <div className={activeTab === "chart" ? "block" : "hidden"}>
+                  <ChartTab chartData={chartData} />
+                </div>
+              )}
+              {mountedTabs.has("chat") && (
+                <div className={activeTab === "chat" ? "block" : "hidden"}>
+                  <ChatPanel
+                    key={activeProfile ? `${activeProfile.date}-${activeProfile.time}-${activeProfile.city.name}` : "empty"}
+                    chartData={chartData}
+                    selectedLanguage={selectedLanguage}
+                  />
+                </div>
+              )}
+              {mountedTabs.has("report") && (
+                <div className={activeTab === "report" ? "block" : "hidden"}>
+                  <ReportTab
+                    key={activeProfile ? `${activeProfile.date}-${activeProfile.time}-${activeProfile.city.name}` : "empty"}
+                    chartData={chartData}
+                    selectedLanguage={selectedLanguage}
+                  />
+                </div>
+              )}
+              {mountedTabs.has("matching") && (
+                <div className={activeTab === "matching" ? "block" : "hidden"}>
+                  <MatchingTab activeProfile={activeProfile} />
+                </div>
+              )}
             </div>
           </motion.div>
         )}
