@@ -216,22 +216,26 @@ export default function Home() {
 
             {/* Tab Contents */}
             <div className="pt-4 text-foreground">
-              {activeTab === "chart" && <ChartTab chartData={chartData} />}
-              {activeTab === "chat" && (
+              <div className={activeTab === "chart" ? "block" : "hidden"}>
+                <ChartTab chartData={chartData} />
+              </div>
+              <div className={activeTab === "chat" ? "block" : "hidden"}>
                 <ChatPanel
                   key={activeProfile ? `${activeProfile.date}-${activeProfile.time}-${activeProfile.city.name}` : "empty"}
                   chartData={chartData}
                   selectedLanguage={selectedLanguage}
                 />
-              )}
-              {activeTab === "report" && (
+              </div>
+              <div className={activeTab === "report" ? "block" : "hidden"}>
                 <ReportTab
                   key={activeProfile ? `${activeProfile.date}-${activeProfile.time}-${activeProfile.city.name}` : "empty"}
                   chartData={chartData}
                   selectedLanguage={selectedLanguage}
                 />
-              )}
-              {activeTab === "matching" && <MatchingTab activeProfile={activeProfile} />}
+              </div>
+              <div className={activeTab === "matching" ? "block" : "hidden"}>
+                <MatchingTab activeProfile={activeProfile} />
+              </div>
             </div>
           </motion.div>
         )}
