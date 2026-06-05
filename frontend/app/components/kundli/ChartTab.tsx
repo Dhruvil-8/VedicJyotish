@@ -71,7 +71,7 @@ export default function ChartTab({ chartData }: ChartTabProps) {
             <Star className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-[10px] text-muted-foreground font-heading uppercase tracking-tighter">
+            <div className="text-xs text-muted-foreground font-heading uppercase tracking-tighter">
               Ascendant
             </div>
             <div className="font-heading text-lg">{chartData.ascendant.sign}</div>
@@ -83,7 +83,7 @@ export default function ChartTab({ chartData }: ChartTabProps) {
             <Moon className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-[10px] text-muted-foreground font-heading uppercase tracking-tighter">
+            <div className="text-xs text-muted-foreground font-heading uppercase tracking-tighter">
               Moon Sign
             </div>
             <div className="font-heading text-lg">{chartData.moon_intelligence.sign}</div>
@@ -95,7 +95,7 @@ export default function ChartTab({ chartData }: ChartTabProps) {
             <Sparkles className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-[10px] text-muted-foreground font-heading uppercase tracking-tighter">
+            <div className="text-xs text-muted-foreground font-heading uppercase tracking-tighter">
               Nakshatra
             </div>
             <div className="font-heading text-lg leading-tight">
@@ -112,7 +112,7 @@ export default function ChartTab({ chartData }: ChartTabProps) {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div>
               <h3 className="text-secondary font-heading mb-0.5 gold-glow">Divisional Kundli</h3>
-              <p className="text-[10px] text-muted-foreground font-serif">
+              <p className="text-xs text-muted-foreground font-serif">
                 Explore 16 divisional charts mapping distinct life aspects.
               </p>
             </div>
@@ -162,7 +162,7 @@ export default function ChartTab({ chartData }: ChartTabProps) {
         <div className="glass-parchment p-6 rounded-2xl shadow-xl overflow-hidden flex flex-col justify-between">
           <div>
             <h3 className="text-secondary font-heading mb-1 gold-glow">Planetary Details</h3>
-            <p className="text-[10px] text-muted-foreground font-serif mb-4">
+            <p className="text-xs text-muted-foreground font-serif mb-4">
               Accurate planetary positions, retrogrades, and dignities in your natal chart.
             </p>
             <PlanetaryTable planets={chartData.planetary_table || []} />
@@ -278,11 +278,11 @@ export default function ChartTab({ chartData }: ChartTabProps) {
                           <span className="font-heading text-xs font-bold text-foreground">
                             {name}
                           </span>
-                          <span className={`text-[10px] font-heading font-bold ${statusColor}`}>
+                          <span className={`text-xs font-heading font-bold ${statusColor}`}>
                             {bala.strength_ratio}x req
                           </span>
                         </div>
-                        <div className="text-[10px] space-y-1.5 font-serif text-muted-foreground">
+                        <div className="text-xs space-y-1.5 font-serif text-muted-foreground">
                           <div className="flex justify-between">
                             <span>Total Rupas:</span>{" "}
                             <span className="text-foreground font-semibold">{bala.total_rupas}</span>
@@ -372,7 +372,7 @@ export default function ChartTab({ chartData }: ChartTabProps) {
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-heading text-xs font-bold text-foreground">{p.name}</span>
-                      <span className="text-[10px] font-heading text-primary font-bold">
+                      <span className="text-xs font-heading text-primary font-bold">
                         {p.dig_bala_points} Pts
                       </span>
                     </div>
@@ -560,16 +560,19 @@ export default function ChartTab({ chartData }: ChartTabProps) {
                 {
                   name: "Manglik (Lagna)",
                   val: chartData.doshas.manglik_lagna?.has_dosha,
+                  exceptions: chartData.doshas.manglik_lagna?.has_exceptions,
                   desc: "Mars placement in houses 1, 4, 7, 8, or 12 of Birth chart, indicating martial passion.",
                 },
                 {
                   name: "Manglik (Moon)",
                   val: chartData.doshas.manglik_moon?.has_dosha,
+                  exceptions: chartData.doshas.manglik_moon?.has_exceptions,
                   desc: "Mars placement relative to Moon sign, affecting emotional relationship harmony.",
                 },
                 {
                   name: "Manglik (Venus)",
                   val: chartData.doshas.manglik_venus?.has_dosha,
+                  exceptions: chartData.doshas.manglik_venus?.has_exceptions,
                   desc: "Mars placement relative to Venus, affecting love compatibility and passion.",
                 },
                 {
@@ -580,6 +583,7 @@ export default function ChartTab({ chartData }: ChartTabProps) {
                 {
                   name: "Guru Chandala",
                   val: chartData.doshas.guru_chandala?.has_dosha,
+                  mitigated: chartData.doshas.guru_chandala?.jupiter_stronger,
                   desc: "Jupiter conjoined with Rahu or Ketu, testing moral wisdom and spiritual beliefs.",
                 },
                 {
@@ -601,7 +605,7 @@ export default function ChartTab({ chartData }: ChartTabProps) {
                 <div
                   key={i}
                   className={`p-4 rounded-xl border flex flex-col justify-between transition-all ${
-                    d.val ? "bg-red-950/20 border-red-500/30 text-red-100" : "bg-card/40 border-border/20 text-foreground"
+                    d.val ? (d.mitigated ? "bg-amber-950/20 border-amber-500/30 text-amber-100" : "bg-red-950/20 border-red-500/30 text-red-100") : (d.exceptions ? "bg-amber-950/20 border-amber-500/30 text-amber-100" : "bg-card/40 border-border/20 text-foreground")
                   }`}
                 >
                   <div>
@@ -610,14 +614,14 @@ export default function ChartTab({ chartData }: ChartTabProps) {
                       <span
                         className={`text-[9px] font-heading px-2 py-0.5 rounded-full border ${
                           d.val
-                            ? "bg-red-900/40 border-red-500/50 text-red-400"
-                            : "bg-emerald-950/20 border-emerald-500/20 text-emerald-500"
+                            ? (d.mitigated ? "bg-amber-900/40 border-amber-500/50 text-amber-400" : "bg-red-900/40 border-red-500/50 text-red-400")
+                            : (d.exceptions ? "bg-amber-900/40 border-amber-500/50 text-amber-400" : "bg-emerald-950/20 border-emerald-500/20 text-emerald-500")
                         }`}
                       >
-                        {d.val ? "ACTIVE" : "NO DOSHA"}
+                        {d.val ? (d.mitigated ? "MITIGATED" : "ACTIVE") : (d.exceptions ? "CANCELLED" : "NO DOSHA")}
                       </span>
                     </div>
-                    <p className="text-[10px] text-muted-foreground font-serif leading-relaxed mt-2">
+                    <p className="text-xs text-muted-foreground font-serif leading-relaxed mt-2">
                       {d.desc}
                     </p>
                   </div>
@@ -673,7 +677,7 @@ export default function ChartTab({ chartData }: ChartTabProps) {
                       </span>
                     </div>
                   </div>
-                  <p className="text-[10px] text-muted-foreground font-serif italic mt-2 leading-relaxed">
+                  <p className="text-xs text-muted-foreground font-serif italic mt-2 leading-relaxed">
                     {item.desc}
                   </p>
                 </div>
@@ -943,7 +947,7 @@ export default function ChartTab({ chartData }: ChartTabProps) {
                       />
                       Saturn Sade Sati: {chartData.sade_sati.is_active ? "ACTIVE" : "INACTIVE"}
                     </h5>
-                    <p className="text-[10px] text-muted-foreground font-serif mt-1">
+                    <p className="text-xs text-muted-foreground font-serif mt-1">
                       Sade Sati is the 7.5-year cycle of Saturn transiting over the natal Moon sign
                       and adjacent houses.
                     </p>

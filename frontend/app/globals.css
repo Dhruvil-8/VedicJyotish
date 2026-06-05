@@ -6,9 +6,9 @@
 
   /* --- Vedic Color System (oklch for precision) --- */
   --color-background: oklch(0.93 0.012 80);
-  --color-foreground: oklch(0.15 0.025 30);
+  --color-foreground: oklch(0.12 0.02 30);
   --color-card: oklch(0.95 0.008 80);
-  --color-card-foreground: oklch(0.12 0.02 30);
+  --color-card-foreground: oklch(0.10 0.02 30);
   --color-primary: oklch(0.5 0.18 45);
   --color-primary-foreground: oklch(0.98 0.005 80);
   --color-secondary: oklch(0.65 0.16 70);
@@ -16,7 +16,7 @@
   --color-accent: oklch(0.35 0.1 30);
   --color-accent-foreground: oklch(0.95 0.01 80);
   --color-muted: oklch(0.88 0.01 80);
-  --color-muted-foreground: oklch(0.30 0.04 40);
+  --color-muted-foreground: oklch(0.22 0.03 35);
   --color-border: oklch(0.78 0.03 70);
   --color-parchment: oklch(0.92 0.02 85);
 }

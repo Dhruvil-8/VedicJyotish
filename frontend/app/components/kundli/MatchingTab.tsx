@@ -139,7 +139,7 @@ export default function MatchingTab({ activeProfile }: MatchingTabProps) {
                 <button
                   type="button"
                   onClick={() => loadActiveProfile("boy")}
-                  className="text-[10px] font-heading text-secondary px-2.5 py-1 bg-secondary/10 border border-secondary/20 rounded-full hover:bg-secondary/20 transition-all cursor-pointer flex items-center gap-1"
+                  className="text-xs font-heading text-secondary px-2.5 py-1 bg-secondary/10 border border-secondary/20 rounded-full hover:bg-secondary/20 transition-all cursor-pointer flex items-center gap-1"
                 >
                   <RefreshCw className="w-2.5 h-2.5" /> Load My Details
                 </button>
@@ -147,7 +147,7 @@ export default function MatchingTab({ activeProfile }: MatchingTabProps) {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="flex items-center gap-1.5 text-[10px] font-heading text-secondary tracking-wider uppercase">
+                  <label className="flex items-center gap-1.5 text-xs font-heading text-secondary tracking-wider uppercase">
                     <Calendar className="w-3 h-3" /> Date (DD/MM/YYYY)
                   </label>
                   <div className="relative">
@@ -173,7 +173,7 @@ export default function MatchingTab({ activeProfile }: MatchingTabProps) {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="flex items-center gap-1.5 text-[10px] font-heading text-secondary tracking-wider uppercase">
+                  <label className="flex items-center gap-1.5 text-xs font-heading text-secondary tracking-wider uppercase">
                     <Clock className="w-3 h-3" /> Time (HH:MM, 24h)
                   </label>
                   <div className="relative">
@@ -198,7 +198,7 @@ export default function MatchingTab({ activeProfile }: MatchingTabProps) {
               </div>
 
               <div className="space-y-2 relative">
-                <label className="flex items-center gap-1.5 text-[10px] font-heading text-secondary tracking-wider uppercase">
+                <label className="flex items-center gap-1.5 text-xs font-heading text-secondary tracking-wider uppercase">
                   <MapPin className="w-3 h-3" /> Birth Place
                 </label>
                 <div className="relative">
@@ -250,7 +250,7 @@ export default function MatchingTab({ activeProfile }: MatchingTabProps) {
                 <button
                   type="button"
                   onClick={() => loadActiveProfile("girl")}
-                  className="text-[10px] font-heading text-secondary px-2.5 py-1 bg-secondary/10 border border-secondary/20 rounded-full hover:bg-secondary/20 transition-all cursor-pointer flex items-center gap-1"
+                  className="text-xs font-heading text-secondary px-2.5 py-1 bg-secondary/10 border border-secondary/20 rounded-full hover:bg-secondary/20 transition-all cursor-pointer flex items-center gap-1"
                 >
                   <RefreshCw className="w-2.5 h-2.5" /> Load My Details
                 </button>
@@ -258,7 +258,7 @@ export default function MatchingTab({ activeProfile }: MatchingTabProps) {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="flex items-center gap-1.5 text-[10px] font-heading text-secondary tracking-wider uppercase">
+                  <label className="flex items-center gap-1.5 text-xs font-heading text-secondary tracking-wider uppercase">
                     <Calendar className="w-3 h-3" /> Date (DD/MM/YYYY)
                   </label>
                   <div className="relative">
@@ -284,7 +284,7 @@ export default function MatchingTab({ activeProfile }: MatchingTabProps) {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="flex items-center gap-1.5 text-[10px] font-heading text-secondary tracking-wider uppercase">
+                  <label className="flex items-center gap-1.5 text-xs font-heading text-secondary tracking-wider uppercase">
                     <Clock className="w-3 h-3" /> Time (HH:MM, 24h)
                   </label>
                   <div className="relative">
@@ -309,7 +309,7 @@ export default function MatchingTab({ activeProfile }: MatchingTabProps) {
               </div>
 
               <div className="space-y-2 relative">
-                <label className="flex items-center gap-1.5 text-[10px] font-heading text-secondary tracking-wider uppercase">
+                <label className="flex items-center gap-1.5 text-xs font-heading text-secondary tracking-wider uppercase">
                   <MapPin className="w-3 h-3" /> Birth Place
                 </label>
                 <div className="relative">
@@ -358,7 +358,7 @@ export default function MatchingTab({ activeProfile }: MatchingTabProps) {
           {/* Matching Method & Button */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 max-w-lg mx-auto">
             <div className="space-y-1">
-              <label className="text-[10px] font-heading text-secondary tracking-wider uppercase">
+              <label className="text-xs font-heading text-secondary tracking-wider uppercase">
                 Matching Method
               </label>
               <select
@@ -396,19 +396,19 @@ export default function MatchingTab({ activeProfile }: MatchingTabProps) {
               <div className="relative w-40 h-40 flex items-center justify-center rounded-full border-4 border-dashed border-primary/20 shadow-2xl glass-parchment">
                 <div className="absolute inset-2 rounded-full border border-primary/10" />
                 <div className="text-center z-10">
-                  <div className="text-[9px] text-muted-foreground font-heading uppercase tracking-widest">
+                  <div className="text-[10px] text-muted-foreground font-heading uppercase tracking-widest">
                     Score
                   </div>
                   <div className="text-4xl font-heading font-extrabold text-primary my-1 gold-glow">
                     {matchingResult.total_score}
                   </div>
-                  <div className="text-[9px] text-muted-foreground font-serif">
+                  <div className="text-[10px] text-muted-foreground font-serif">
                     Out of {matchingResult.max_score} Gunas
                   </div>
                 </div>
               </div>
               <div
-                className={`mt-5 px-5 py-1.5 rounded-full border font-heading text-[10px] uppercase tracking-wider ${
+                className={`mt-5 px-5 py-1.5 rounded-full border font-heading text-xs uppercase tracking-wider ${
                   matchingResult.total_score >= 28
                     ? "bg-emerald-950/20 border-emerald-500/30 text-emerald-400"
                     : matchingResult.total_score >= 18
@@ -444,7 +444,7 @@ export default function MatchingTab({ activeProfile }: MatchingTabProps) {
                   <div className="font-heading text-xs text-primary font-bold mt-1.5 leading-relaxed">
                     {matchingResult.boy_details?.nakshatra} Star
                   </div>
-                  <div className="text-[10px] font-serif text-muted-foreground italic mt-0.5">
+                  <div className="text-xs font-serif text-muted-foreground italic mt-0.5">
                     {matchingResult.boy_details?.sign} • Pada {matchingResult.boy_details?.pada}
                   </div>
                 </div>
@@ -456,7 +456,7 @@ export default function MatchingTab({ activeProfile }: MatchingTabProps) {
                   <div className="font-heading text-xs text-secondary font-bold mt-1.5 leading-relaxed">
                     {matchingResult.girl_details?.nakshatra} Star
                   </div>
-                  <div className="text-[10px] font-serif text-muted-foreground italic mt-0.5">
+                  <div className="text-xs font-serif text-muted-foreground italic mt-0.5">
                     {matchingResult.girl_details?.sign} • Pada {matchingResult.girl_details?.pada}
                   </div>
                 </div>
@@ -477,7 +477,7 @@ export default function MatchingTab({ activeProfile }: MatchingTabProps) {
             <h4 className="text-secondary font-heading mb-1 gold-glow text-center">
               Ashtakoota Score Breakdown
             </h4>
-            <p className="text-[10px] text-muted-foreground font-serif text-center mb-6">
+            <p className="text-xs text-muted-foreground font-serif text-center mb-6">
               Breakdown of the 8 relational dimensions calculated using Moon longitudes.
             </p>
 
@@ -550,7 +550,7 @@ export default function MatchingTab({ activeProfile }: MatchingTabProps) {
                       desc: "Genetic compatibility, physiological chemistry, and children health.",
                     },
                   ].map((k, i) => {
-                    const data = matchingResult[k.key] || {
+                    const data = matchingResult.ashta_kuta?.[k.key] || {
                       score: 0,
                       max_score: k.max,
                       matched: false,
@@ -560,7 +560,7 @@ export default function MatchingTab({ activeProfile }: MatchingTabProps) {
                         <td className="px-3 py-3 font-heading font-bold text-foreground">
                           {k.name}
                         </td>
-                        <td className="px-3 py-3 font-serif text-muted-foreground text-[10px] leading-relaxed max-w-[320px]">
+                        <td className="px-3 py-3 font-serif text-muted-foreground text-xs leading-relaxed max-w-[320px]">
                           {k.desc}
                         </td>
                         <td className="px-3 py-3 text-center font-serif font-bold text-primary">
@@ -568,7 +568,7 @@ export default function MatchingTab({ activeProfile }: MatchingTabProps) {
                         </td>
                         <td className="px-3 py-3 text-center">
                           <span
-                            className={`px-2.5 py-0.5 rounded text-[9px] font-heading font-bold border ${
+                            className={`px-2.5 py-0.5 rounded text-[10px] font-heading font-bold border ${
                               data.matched
                                 ? "bg-emerald-950/20 border-emerald-500/20 text-emerald-400"
                                 : "bg-red-950/20 border-red-500/30 text-red-400"
@@ -590,7 +590,7 @@ export default function MatchingTab({ activeProfile }: MatchingTabProps) {
             <h4 className="text-secondary font-heading mb-1 gold-glow text-center">
               Secondary Compatibility Tests
             </h4>
-            <p className="text-[10px] text-muted-foreground font-serif text-center mb-6">
+            <p className="text-xs text-muted-foreground font-serif text-center mb-6">
               Crucial southern porutham checkmarks verifying physical and familial well-being.
             </p>
 
@@ -628,7 +628,7 @@ export default function MatchingTab({ activeProfile }: MatchingTabProps) {
                   }`}
                 >
                   <div>
-                    <div className="flex items-center justify-between font-heading font-bold text-[10px]">
+                    <div className="flex items-center justify-between font-heading font-bold text-xs">
                       <span>{test.name}</span>
                       {test.val ? (
                         <CheckCircle className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
@@ -636,7 +636,7 @@ export default function MatchingTab({ activeProfile }: MatchingTabProps) {
                         <XCircle className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
                       )}
                     </div>
-                    <p className="text-[9px] text-muted-foreground mt-2 leading-relaxed">
+                    <p className="text-[10px] text-muted-foreground mt-2 leading-relaxed">
                       {test.val ? test.activeDesc : test.inactiveDesc}
                     </p>
                   </div>
@@ -644,6 +644,54 @@ export default function MatchingTab({ activeProfile }: MatchingTabProps) {
               ))}
             </div>
           </div>
+
+          {/* Manglik Compatibility */}
+          {matchingResult.manglik_compatibility && (
+            <div className="glass-parchment rounded-2xl vedic-border shadow-xl p-6">
+              <h4 className="text-secondary font-heading mb-1 gold-glow text-center">
+                Manglik (Kuja Dosha) Compatibility
+              </h4>
+              <p className="text-xs text-muted-foreground font-serif text-center mb-6">
+                Assessment of Mars placement and mutual cancellation rules.
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div className={`p-5 rounded-xl border flex flex-col justify-between ${
+                  matchingResult.manglik_compatibility.boy_has_dosha ? (matchingResult.manglik_compatibility.boy_exceptions?.length > 0 ? "bg-amber-950/20 border-amber-500/30" : "bg-red-950/20 border-red-500/30") : "bg-emerald-950/10 border-emerald-500/20"
+                }`}>
+                  <div className="flex items-center justify-between font-heading font-bold mb-2">
+                    <span className="text-foreground">Boy's Manglik Status</span>
+                    <span className={`text-xs px-2.5 py-0.5 rounded border ${
+                      matchingResult.manglik_compatibility.boy_has_dosha ? (matchingResult.manglik_compatibility.boy_exceptions?.length > 0 ? "text-amber-400 border-amber-500/50 bg-amber-900/40" : "text-red-400 border-red-500/50 bg-red-900/40") : "text-emerald-500 border-emerald-500/20 bg-emerald-950/20"
+                    }`}>
+                      {matchingResult.manglik_compatibility.boy_has_dosha ? (matchingResult.manglik_compatibility.boy_exceptions?.length > 0 ? "CANCELLED" : "ACTIVE") : "NO DOSHA"}
+                    </span>
+                  </div>
+                </div>
+                <div className={`p-5 rounded-xl border flex flex-col justify-between ${
+                  matchingResult.manglik_compatibility.girl_has_dosha ? (matchingResult.manglik_compatibility.girl_exceptions?.length > 0 ? "bg-amber-950/20 border-amber-500/30" : "bg-red-950/20 border-red-500/30") : "bg-emerald-950/10 border-emerald-500/20"
+                }`}>
+                  <div className="flex items-center justify-between font-heading font-bold mb-2">
+                    <span className="text-foreground">Girl's Manglik Status</span>
+                    <span className={`text-xs px-2.5 py-0.5 rounded border ${
+                      matchingResult.manglik_compatibility.girl_has_dosha ? (matchingResult.manglik_compatibility.girl_exceptions?.length > 0 ? "text-amber-400 border-amber-500/50 bg-amber-900/40" : "text-red-400 border-red-500/50 bg-red-900/40") : "text-emerald-500 border-emerald-500/20 bg-emerald-950/20"
+                    }`}>
+                      {matchingResult.manglik_compatibility.girl_has_dosha ? (matchingResult.manglik_compatibility.girl_exceptions?.length > 0 ? "CANCELLED" : "ACTIVE") : "NO DOSHA"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="text-center p-4 bg-card/40 rounded-xl border border-border/20">
+                <div className="text-sm font-heading font-bold text-primary mb-2">
+                  {matchingResult.manglik_compatibility.compatibility_status}
+                </div>
+                <p className="text-xs text-muted-foreground font-serif leading-relaxed max-w-2xl mx-auto">
+                  {matchingResult.manglik_compatibility.conclusion}
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Reset button */}
           <div className="mt-8 text-center">

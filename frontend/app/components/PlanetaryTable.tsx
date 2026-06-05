@@ -46,8 +46,8 @@ function PlanetaryTable({ planets, className }: PlanetaryTableProps) {
                                 <div className="flex flex-col">
                                     <span className="font-heading text-foreground font-bold">{p.name}</span>
                                     <div className="flex gap-1 mt-1">
-                                        {p.retrograde && <span className="text-[10px] bg-amber-900/40 text-amber-400 px-1 rounded border border-amber-400/30">Retro</span>}
-                                        {p.combust && <span className="text-[10px] bg-red-900/40 text-red-400 px-1 rounded border border-red-400/30">Combust</span>}
+                                        {p.retrograde && <span className="text-xs bg-amber-900/40 text-amber-400 px-1 rounded border border-amber-400/30">Retro</span>}
+                                        {p.combust && <span className="text-xs bg-red-900/40 text-red-400 px-1 rounded border border-red-400/30">Combust</span>}
                                     </div>
                                 </div>
                             </td>
