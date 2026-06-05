@@ -9,6 +9,9 @@ import { useToast } from "../../hooks/useToast";
 import { LANGUAGES } from "../../lib/constants";
 import { convertTo24Hour } from "../../lib/helpers";
 
+// In-memory cache to store API calculation results for duplicate inputs
+const chartCache = new Map<string, any>();
+
 interface BirthFormProps {
   onCalculate: (data: {
     chartData: any;
@@ -71,7 +74,17 @@ export default function BirthForm({
         lat: selectedCity.lat,
         lon: selectedCity.lon,
       };
-      const data = await calculateChart(payload);
+      
+      const cacheKey = `${payload.date}|${payload.time}|${payload.lat}|${payload.lon}`;
+      let data: any;
+      
+      if (chartCache.has(cacheKey)) {
+        data = chartCache.get(cacheKey);
+      } else {
+        data = await calculateChart(payload);
+        chartCache.set(cacheKey, data);
+      }
+
       onCalculate({
         chartData: data,
         date,

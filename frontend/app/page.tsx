@@ -61,15 +61,6 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<"chart" | "chat" | "report" | "matching">("chart");
   const [selectedLanguage, setSelectedLanguage] = useState<string>("English");
 
-  // Lifted Chat State
-  const [chatHistory, setChatHistory] = useState<any[]>([]);
-  const [userQuestion, setUserQuestion] = useState("");
-  const [chatLoading, setChatLoading] = useState(false);
-
-  // Lifted Report State
-  const [aiReport, setAiReport] = useState<string>("");
-  const [reportLoading, setReportLoading] = useState(false);
-
   // PWA Install State
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isInstallable, setIsInstallable] = useState(false);
@@ -110,9 +101,6 @@ export default function Home() {
     setSelectedLanguage(data.language);
     setStep("dashboard");
     setActiveTab("chart");
-    // Clear chat/report states when a new chart is calculated
-    setChatHistory([]);
-    setAiReport("");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -231,24 +219,16 @@ export default function Home() {
               {activeTab === "chart" && <ChartTab chartData={chartData} />}
               {activeTab === "chat" && (
                 <ChatPanel
+                  key={activeProfile ? `${activeProfile.date}-${activeProfile.time}-${activeProfile.city.name}` : "empty"}
                   chartData={chartData}
                   selectedLanguage={selectedLanguage}
-                  chatHistory={chatHistory}
-                  setChatHistory={setChatHistory}
-                  userQuestion={userQuestion}
-                  setUserQuestion={setUserQuestion}
-                  chatLoading={chatLoading}
-                  setChatLoading={setChatLoading}
                 />
               )}
               {activeTab === "report" && (
                 <ReportTab
+                  key={activeProfile ? `${activeProfile.date}-${activeProfile.time}-${activeProfile.city.name}` : "empty"}
                   chartData={chartData}
                   selectedLanguage={selectedLanguage}
-                  aiReport={aiReport}
-                  setAiReport={setAiReport}
-                  reportLoading={reportLoading}
-                  setReportLoading={setReportLoading}
                 />
               )}
               {activeTab === "matching" && <MatchingTab activeProfile={activeProfile} />}

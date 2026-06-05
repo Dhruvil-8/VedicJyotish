@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Wand2, Sparkles } from "lucide-react";
 import ReportSection from "../ReportSection";
 import { generateReportStream } from "../ui/api";
@@ -9,20 +9,14 @@ import { useToast } from "../../hooks/useToast";
 interface ReportTabProps {
   chartData: any;
   selectedLanguage: string;
-  aiReport: string;
-  setAiReport: React.Dispatch<React.SetStateAction<string>>;
-  reportLoading: boolean;
-  setReportLoading: (val: boolean) => void;
 }
 
 export default function ReportTab({
   chartData,
   selectedLanguage,
-  aiReport,
-  setAiReport,
-  reportLoading,
-  setReportLoading,
 }: ReportTabProps) {
+  const [aiReport, setAiReport] = useState<string>("");
+  const [reportLoading, setReportLoading] = useState(false);
   const { showToast } = useToast();
 
   const handleGenerateReport = async () => {

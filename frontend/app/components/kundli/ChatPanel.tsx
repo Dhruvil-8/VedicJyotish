@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { MessageSquare, ExternalLink, Send } from "lucide-react";
 import { motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
@@ -10,24 +10,15 @@ import { useToast } from "../../hooks/useToast";
 interface ChatPanelProps {
   chartData: any;
   selectedLanguage: string;
-  chatHistory: any[];
-  setChatHistory: React.Dispatch<React.SetStateAction<any[]>>;
-  userQuestion: string;
-  setUserQuestion: (val: string) => void;
-  chatLoading: boolean;
-  setChatLoading: (val: boolean) => void;
 }
 
 export default function ChatPanel({
   chartData,
   selectedLanguage,
-  chatHistory,
-  setChatHistory,
-  userQuestion,
-  setUserQuestion,
-  chatLoading,
-  setChatLoading,
 }: ChatPanelProps) {
+  const [chatHistory, setChatHistory] = useState<any[]>([]);
+  const [userQuestion, setUserQuestion] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
   const { showToast } = useToast();
   const MAX_QUESTIONS = 3;
   const userQuestionCount = chatHistory.filter((m) => m.role === "user").length;
