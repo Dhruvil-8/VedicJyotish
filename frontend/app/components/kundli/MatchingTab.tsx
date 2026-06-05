@@ -661,8 +661,8 @@ export default function MatchingTab({ activeProfile }: MatchingTabProps) {
                 }`}>
                   <div className="flex items-center justify-between font-heading font-bold mb-2">
                     <span className="text-foreground">Boy's Manglik Status</span>
-                    <span className={`text-xs px-2.5 py-0.5 rounded border ${
-                      matchingResult.manglik_compatibility.boy_has_dosha ? (matchingResult.manglik_compatibility.boy_exceptions?.length > 0 ? "text-amber-400 border-amber-500/50 bg-amber-900/40" : "text-red-400 border-red-500/50 bg-red-900/40") : "text-emerald-500 border-emerald-500/20 bg-emerald-950/20"
+                    <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border shadow-sm ${
+                      matchingResult.manglik_compatibility.boy_has_dosha ? (matchingResult.manglik_compatibility.boy_exceptions?.length > 0 ? "text-amber-300 border-amber-500/80 bg-amber-900/60" : "text-red-300 border-red-500/80 bg-red-900/60") : "text-emerald-400 border-emerald-500/40 bg-emerald-950/40"
                     }`}>
                       {matchingResult.manglik_compatibility.boy_has_dosha ? (matchingResult.manglik_compatibility.boy_exceptions?.length > 0 ? "CANCELLED" : "ACTIVE") : "NO DOSHA"}
                     </span>
@@ -673,8 +673,8 @@ export default function MatchingTab({ activeProfile }: MatchingTabProps) {
                 }`}>
                   <div className="flex items-center justify-between font-heading font-bold mb-2">
                     <span className="text-foreground">Girl's Manglik Status</span>
-                    <span className={`text-xs px-2.5 py-0.5 rounded border ${
-                      matchingResult.manglik_compatibility.girl_has_dosha ? (matchingResult.manglik_compatibility.girl_exceptions?.length > 0 ? "text-amber-400 border-amber-500/50 bg-amber-900/40" : "text-red-400 border-red-500/50 bg-red-900/40") : "text-emerald-500 border-emerald-500/20 bg-emerald-950/20"
+                    <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border shadow-sm ${
+                      matchingResult.manglik_compatibility.girl_has_dosha ? (matchingResult.manglik_compatibility.girl_exceptions?.length > 0 ? "text-amber-300 border-amber-500/80 bg-amber-900/60" : "text-red-300 border-red-500/80 bg-red-900/60") : "text-emerald-400 border-emerald-500/40 bg-emerald-950/40"
                     }`}>
                       {matchingResult.manglik_compatibility.girl_has_dosha ? (matchingResult.manglik_compatibility.girl_exceptions?.length > 0 ? "CANCELLED" : "ACTIVE") : "NO DOSHA"}
                     </span>
