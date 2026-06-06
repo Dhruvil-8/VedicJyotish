@@ -405,6 +405,10 @@ async fn resolve_coordinates(data: &BirthData) -> Result<(f64, f64), ApiError> {
 }
 
 fn calculate_dig_bala(name: &str, planet_long: f64, asc_long: f64) -> Option<(f64, f64)> {
+    // Powerless houses are 0-indexed house offsets from Lagna (1st house).
+    // E.g. Saturn is powerless in 1st house (offset 0), Sun/Mars in 4th house (offset 3),
+    // Mercury/Jupiter in 7th house (offset 6), Moon/Venus in 10th house (offset 9).
+    // This matches the 1-indexed formula in shadbala.rs: (powerless_house - 1) * 30.0.
     let powerless_house = match name {
         "Sun" => Some(3),
         "Moon" => Some(9),
@@ -724,21 +728,25 @@ pub fn calculate_jaimini_lagnas(
     asc_idx: usize,
     asc_degree: f64,
 ) -> crate::models::JaiminiResponse {
-    let sign_lord = |sign_idx: usize| -> &'static str {
-        match sign_idx {
-            0 => "Mars",     // Aries
-            1 => "Venus",    // Taurus
-            2 => "Mercury",  // Gemini
-            3 => "Moon",     // Cancer
-            4 => "Sun",      // Leo
-            5 => "Mercury",  // Virgo
-            6 => "Venus",    // Libra
-            7 => "Mars",     // Scorpio
-            8 => "Jupiter",  // Sagittarius
-            9 => "Saturn",   // Capricorn
-            10 => "Saturn",  // Aquarius
-            11 => "Jupiter", // Pisces
-            _ => "Unknown",
+    let sign_lord = |sign_idx: usize| -> String {
+        if sign_idx == 7 {
+            crate::chart::get_stronger_co_lord("Mars", "Ketu", 7, planets)
+        } else if sign_idx == 10 {
+            crate::chart::get_stronger_co_lord("Saturn", "Rahu", 10, planets)
+        } else {
+            match sign_idx {
+                0 => "Mars",     // Aries
+                1 => "Venus",    // Taurus
+                2 => "Mercury",  // Gemini
+                3 => "Moon",     // Cancer
+                4 => "Sun",      // Leo
+                5 => "Mercury",  // Virgo
+                6 => "Venus",    // Libra
+                8 => "Jupiter",  // Sagittarius
+                9 => "Saturn",   // Capricorn
+                11 => "Jupiter", // Pisces
+                _ => "Unknown",
+            }.to_string()
         }
     };
 
@@ -975,6 +983,54 @@ mod tests {
         // the Vedic weekday (Vara) must be Tuesday.
         let panchanga = res.panchanga;
         assert_eq!(panchanga.vara, "Tuesday");
+    }
+
+    #[test]
+    fn test_jaimini_lagnas_co_lord_resolution() {
+        fn make_planet(name: &str, sign: &str, house: u8, full_degree: f64) -> PlanetData {
+            PlanetData {
+                name: name.to_string(),
+                sign: sign.to_string(),
+                house,
+                strength: String::new(),
+                nature: String::new(),
+                nakshatra: String::new(),
+                nakshatra_lord: String::new(),
+                nakshatra_pada: 1,
+                full_degree,
+                deg_in_sign: full_degree % 30.0,
+                retrograde: false,
+                combust: false,
+                navamsa_sign: "Aries".to_string(),
+                chara_karaka: None,
+                dig_bala_points: None,
+                dig_bala_percentage: None,
+            }
+        }
+
+        // Scorpio (7): Mars in Scorpio (215.0) in house 1, Ketu in Pisces (335.0) in house 5.
+        // Basic rule: Mars in Scorpio own sign Scorpio makes Ketu the stronger lord.
+        // So the lord of Scorpio is resolved as Ketu (located in house 5).
+        // Let's test Arudha Lagna (AL) when Scorpio is the ascendant (asc_idx = 7).
+        // Lagna lord (resolved as Ketu) is in house 5.
+        // AL house = ((2 * 5 - 1 - 1) % 12) + 1 = 9th house.
+        // Since AL house is 9 (not 1 or 7), no exception.
+        // AL sign index = (asc_idx (7) + AL house (9) - 1) % 12 = 3 (Cancer).
+        let planets = vec![
+            make_planet("Mars", "Scorpio", 1, 215.0),
+            make_planet("Ketu", "Pisces", 5, 335.0),
+            make_planet("Venus", "Taurus", 7, 45.0),
+            make_planet("Mercury", "Gemini", 8, 75.0),
+            make_planet("Moon", "Cancer", 9, 105.0),
+            make_planet("Sun", "Leo", 10, 135.0),
+            make_planet("Jupiter", "Sagittarius", 2, 255.0),
+            make_planet("Saturn", "Capricorn", 3, 285.0),
+            make_planet("Rahu", "Virgo", 11, 165.0),
+        ];
+
+        let res = calculate_jaimini_lagnas(&planets, 7, 215.0);
+        assert_eq!(res.arudha_lagna.sign, "Cancer"); // Cancer is sign_index 3
+        assert_eq!(res.arudha_lagna.house, 9);
     }
 }
 

@@ -153,13 +153,13 @@ mod tests {
     #[test]
     fn test_ashtakavarga_with_pvr_chart_7() {
         // From standard test case Chart 7:
-        // Mesham (0): Mars, Moon, Saturn
+        // Mesham (0): Moon, Saturn
         // Rishabam (1) to Kanni (5): Empty
-        // Thulaam (6): Rahu, Jupiter
+        // Thulaam (6): Jupiter
         // Vrichigam (7): Lagna
-        // Dhanusu (8): Mercury, Venus
+        // Dhanusu (8): Mars, Mercury
         // Makaram (9): Sun
-        // Kumbam (10): Ketu
+        // Kumbam (10): Venus
         // Meenam (11): Empty
         
         let positions = [

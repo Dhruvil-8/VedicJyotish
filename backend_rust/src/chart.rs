@@ -513,7 +513,144 @@ pub fn calculate_vaisheshikamsa(
     res
 }
 
+pub fn primary_sign_lord(sign_idx: usize) -> &'static str {
+    match sign_idx {
+        0 => "Mars",     // Aries
+        1 => "Venus",    // Taurus
+        2 => "Mercury",  // Gemini
+        3 => "Moon",     // Cancer
+        4 => "Sun",      // Leo
+        5 => "Mercury",  // Virgo
+        6 => "Venus",    // Libra
+        7 => "Mars",     // Scorpio
+        8 => "Jupiter",  // Sagittarius
+        9 => "Saturn",   // Capricorn
+        10 => "Saturn",  // Aquarius
+        11 => "Jupiter", // Pisces
+        _ => "Unknown",
+    }
+}
+
+pub fn get_rasi_drishti_aspecting_signs(sign_idx: usize) -> Vec<usize> {
+    let movable = [0, 3, 6, 9];   // Aries, Cancer, Libra, Capricorn
+    let fixed = [1, 4, 7, 10];    // Taurus, Leo, Scorpio, Aquarius
+    let dual = [2, 5, 8, 11];     // Gemini, Virgo, Sagittarius, Pisces
+
+    if movable.contains(&sign_idx) {
+        fixed.iter().copied().filter(|&f| f != (sign_idx + 1) % 12 && f != (sign_idx + 11) % 12).collect()
+    } else if fixed.contains(&sign_idx) {
+        movable.iter().copied().filter(|&m| m != (sign_idx + 1) % 12 && m != (sign_idx + 11) % 12).collect()
+    } else {
+        dual.iter().copied().filter(|&d| d != sign_idx).collect()
+    }
+}
+
+pub fn get_stronger_co_lord(
+    planet1_name: &str,
+    planet2_name: &str,
+    lord_sign_idx: usize,
+    planets: &[PlanetData],
+) -> String {
+    let p1 = match planets.iter().find(|p| p.name == planet1_name) {
+        Some(p) => p,
+        None => return planet1_name.to_string(),
+    };
+    let p2 = match planets.iter().find(|p| p.name == planet2_name) {
+        Some(p) => p,
+        None => return planet1_name.to_string(),
+    };
+
+    let p1_sign_idx = sign_index(p1.full_degree);
+    let p2_sign_idx = sign_index(p2.full_degree);
+
+    // Basic Rule: If one is in Scorpio/Aquarius (lord_sign_idx) and the other is not,
+    // the OTHER one is stronger! (e.g. if Mars in Scorpio and Ketu elsewhere, Ketu is stronger).
+    if p1_sign_idx == lord_sign_idx && p2_sign_idx != lord_sign_idx {
+        return planet2_name.to_string();
+    }
+    if p2_sign_idx == lord_sign_idx && p1_sign_idx != lord_sign_idx {
+        return planet1_name.to_string();
+    }
+
+    let mut p1_count = 0;
+    let mut p2_count = 0;
+    for p in planets {
+        let s_idx = sign_index(p.full_degree);
+        if s_idx == p1_sign_idx {
+            p1_count += 1;
+        }
+        if s_idx == p2_sign_idx {
+            p2_count += 1;
+        }
+    }
+    if p1_count > p2_count {
+        return planet1_name.to_string();
+    } else if p2_count > p1_count {
+        return planet2_name.to_string();
+    }
+
+    let count_associations = |target_sign_idx: usize| -> usize {
+        let mut count = 0;
+        let dispositor_name = primary_sign_lord(target_sign_idx);
+        let aspecting_signs = get_rasi_drishti_aspecting_signs(target_sign_idx);
+
+        for p_name in &["Mercury", "Jupiter", dispositor_name] {
+            if let Some(p) = planets.iter().find(|pl| pl.name == *p_name) {
+                let p_s_idx = sign_index(p.full_degree);
+                if p_s_idx == target_sign_idx || aspecting_signs.contains(&p_s_idx) {
+                    count += 1;
+                }
+            }
+        }
+        count
+    };
+
+    let p1_assoc = count_associations(p1_sign_idx);
+    let p2_assoc = count_associations(p2_sign_idx);
+
+    if p1_assoc > p2_assoc {
+        return planet1_name.to_string();
+    } else if p2_assoc > p1_assoc {
+        return planet2_name.to_string();
+    }
+
+    let p1_exalted = p1.strength == "Exalted";
+    let p2_exalted = p2.strength == "Exalted";
+    if p1_exalted && !p2_exalted {
+        return planet1_name.to_string();
+    }
+    if p2_exalted && !p1_exalted {
+        return planet2_name.to_string();
+    }
+
+    let get_modality_rank = |sign_idx: usize| -> u8 {
+        if is_dual(sign_idx) {
+            3
+        } else if is_fixed(sign_idx) {
+            2
+        } else {
+            1
+        }
+    };
+    let p1_rank = get_modality_rank(p1_sign_idx);
+    let p2_rank = get_modality_rank(p2_sign_idx);
+    if p1_rank > p2_rank {
+        return planet1_name.to_string();
+    } else if p2_rank > p1_rank {
+        return planet2_name.to_string();
+    }
+
+    let p1_deg = p1.full_degree % 30.0;
+    let p2_deg = p2.full_degree % 30.0;
+    if p1_deg > p2_deg {
+        planet1_name.to_string()
+    } else {
+        planet2_name.to_string()
+    }
+}
+
 // ─── Unit Tests ───────────────────────────────────────────────────────────────
+
 
 #[cfg(test)]
 mod tests {
@@ -549,5 +686,51 @@ mod tests {
         assert_eq!(get_varga_sign(30, 1, 12.0), 5);
         assert_eq!(get_varga_sign(30, 1, 20.0), 11);
         assert_eq!(get_varga_sign(30, 1, 25.0), 9);
+    }
+
+    #[test]
+    fn test_co_lord_strength() {
+        fn make_planet(name: &str, sign: &str, full_degree: f64) -> PlanetData {
+            PlanetData {
+                name: name.to_string(),
+                sign: sign.to_string(),
+                house: 1,
+                strength: String::new(),
+                nature: String::new(),
+                nakshatra: String::new(),
+                nakshatra_lord: String::new(),
+                nakshatra_pada: 1,
+                full_degree,
+                deg_in_sign: full_degree % 30.0,
+                retrograde: false,
+                combust: false,
+                navamsa_sign: "Aries".to_string(),
+                chara_karaka: None,
+                dig_bala_points: None,
+                dig_bala_percentage: None,
+            }
+        }
+
+        // Test basic rule: Mars in Scorpio (7), Ketu in Aries (0) -> Scorpio owner basic rule makes Ketu stronger!
+        let planets = vec![
+            make_planet("Mars", "Scorpio", 215.0),
+            make_planet("Ketu", "Aries", 15.0),
+        ];
+        assert_eq!(get_stronger_co_lord("Mars", "Ketu", 7, &planets), "Ketu");
+
+        // Test basic rule inverted: Ketu in Scorpio (7), Mars in Taurus (1) -> Scorpio owner basic rule makes Mars stronger!
+        let planets2 = vec![
+            make_planet("Mars", "Taurus", 45.0),
+            make_planet("Ketu", "Scorpio", 225.0),
+        ];
+        assert_eq!(get_stronger_co_lord("Mars", "Ketu", 7, &planets2), "Mars");
+
+        // Test rule 1: Mars in Gemini (2) with Sun (Gemini has 2 planets), Ketu in Taurus (1) alone -> Mars stronger!
+        let planets3 = vec![
+            make_planet("Mars", "Gemini", 75.0),
+            make_planet("Ketu", "Taurus", 45.0),
+            make_planet("Sun", "Gemini", 80.0),
+        ];
+        assert_eq!(get_stronger_co_lord("Mars", "Ketu", 7, &planets3), "Mars");
     }
 }

@@ -227,11 +227,11 @@ pub fn compute_guna_milan(
 
     let mut tara_score = 0.0;
     let g_rem = count_from_girl % 9;
-    if [3, 5, 7].contains(&g_rem) {
+    if ![3, 5, 7].contains(&g_rem) {
         tara_score += 1.5;
     }
     let b_rem = count_from_boy % 9;
-    if [3, 5, 7].contains(&b_rem) {
+    if ![3, 5, 7].contains(&b_rem) {
         tara_score += 1.5;
     }
 

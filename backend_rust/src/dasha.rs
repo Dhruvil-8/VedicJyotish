@@ -85,9 +85,15 @@ pub fn calculate_chara_dasha(
 
     for &sign_idx in &sequence {
         let sign_name = SIGNS[sign_idx].to_string();
-        let lord_name = SIGN_LORDS[sign_idx];
+        let lord_name = if sign_idx == 7 {
+            crate::chart::get_stronger_co_lord("Mars", "Ketu", 7, planets)
+        } else if sign_idx == 10 {
+            crate::chart::get_stronger_co_lord("Saturn", "Rahu", 10, planets)
+        } else {
+            SIGN_LORDS[sign_idx].to_string()
+        };
         let lord_sign_idx = planet_sign_indices
-            .get(lord_name)
+            .get(&lord_name)
             .copied()
             .unwrap_or(sign_idx);
 
@@ -206,5 +212,51 @@ mod tests {
         assert_eq!(res.periods[0].start_date, "01/01/2000");
         assert_eq!(res.periods[0].end_date, "01/01/2002");
         assert_eq!(res.periods[1].sign, "Taurus");
+    }
+
+    #[test]
+    fn test_chara_dasha_co_lord_resolution() {
+        fn make_planet(name: &str, sign: &str, full_degree: f64) -> PlanetData {
+            PlanetData {
+                name: name.to_string(),
+                sign: sign.to_string(),
+                house: 1,
+                strength: String::new(),
+                nature: String::new(),
+                nakshatra: String::new(),
+                nakshatra_lord: String::new(),
+                nakshatra_pada: 1,
+                full_degree,
+                deg_in_sign: full_degree % 30.0,
+                retrograde: false,
+                combust: false,
+                navamsa_sign: "Aries".to_string(),
+                chara_karaka: None,
+                dig_bala_points: None,
+                dig_bala_percentage: None,
+            }
+        }
+
+        // Scorpio (7): Mars in Scorpio (215.0), Ketu in Pisces (335.0) -> basic rule: Ketu is stronger!
+        // Scorpio (7) to Ketu (11) is 4 years.
+        let planets = vec![
+            make_planet("Mars", "Scorpio", 215.0),
+            make_planet("Ketu", "Pisces", 335.0),
+            make_planet("Venus", "Taurus", 45.0),
+            make_planet("Mercury", "Gemini", 75.0),
+            make_planet("Moon", "Cancer", 105.0),
+            make_planet("Sun", "Leo", 135.0),
+            make_planet("Jupiter", "Sagittarius", 255.0),
+            make_planet("Saturn", "Capricorn", 285.0),
+            make_planet("Rahu", "Virgo", 165.0), // Rahu opposite to Ketu (335 - 180 = 155) or whatever, doesn't matter for this test
+        ];
+
+        // Let's run Chara Dasha for Scorpio ascendant
+        let res = calculate_chara_dasha("Scorpio", &planets, "01/01/2000");
+        // Scorpio is the 1st dasha period (starts with Scorpio since ascendant is Scorpio, or whichever direction)
+        // Wait, for Scorpio ascendant, ninth house direction:
+        // Ninth from Scorpio is Cancer (3) (which is even-footed, so reverse sequence: Scorpio (7), Libra (6), Virgo (5), ...)
+        assert_eq!(res.periods[0].sign, "Scorpio");
+        assert_eq!(res.periods[0].duration_years, 4); // Ketu resolved as lord (Pisces) -> 4 years (Scorpio to Pisces is 4)
     }
 }

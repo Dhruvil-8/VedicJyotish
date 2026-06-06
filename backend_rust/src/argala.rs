@@ -94,16 +94,23 @@ pub fn calculate_argala(
                 }
             }
         }
-        if let Some(occ_planets) = house_to_planets.get(&vir_house_11) {
-            for p in occ_planets {
-                // If there are malefics in the 3rd, any planet in the 11th can obstruct it
-                virodhargala_contributors.push(ArgalaContributor {
-                    planet_name: p.name.clone(),
-                    sign: p.sign.clone(),
-                    house: p.house,
-                    argala_house: 11,
-                    is_malefic: is_malefic_planet(&p.name),
-                });
+        let has_malefic_in_3rd = house_to_planets
+            .get(&arg_house_3)
+            .map(|ps| ps.iter().any(|p| is_malefic_planet(&p.name)))
+            .unwrap_or(false);
+
+        if has_malefic_in_3rd {
+            if let Some(occ_planets) = house_to_planets.get(&vir_house_11) {
+                for p in occ_planets {
+                    // If there are malefics in the 3rd, any planet in the 11th can obstruct it
+                    virodhargala_contributors.push(ArgalaContributor {
+                        planet_name: p.name.clone(),
+                        sign: p.sign.clone(),
+                        house: p.house,
+                        argala_house: 11,
+                        is_malefic: is_malefic_planet(&p.name),
+                    });
+                }
             }
         }
 
@@ -154,6 +161,27 @@ pub fn calculate_argala(
 mod tests {
     use super::*;
 
+    fn create_test_planet(name: &str, house: u8, full_degree: f64) -> PlanetData {
+        PlanetData {
+            name: name.to_string(),
+            sign: "Taurus".to_string(),
+            house,
+            strength: "Neutral".to_string(),
+            nature: "Functional Benefic".to_string(),
+            nakshatra: "Dummy".to_string(),
+            nakshatra_lord: "Sun".to_string(),
+            nakshatra_pada: 1,
+            full_degree,
+            deg_in_sign: 5.0,
+            retrograde: false,
+            combust: false,
+            navamsa_sign: "Capricorn".to_string(),
+            chara_karaka: None,
+            dig_bala_points: None,
+            dig_bala_percentage: None,
+        }
+    }
+
     #[test]
     fn test_house_distance() {
         // Direct
@@ -164,5 +192,32 @@ mod tests {
         // Reverse (for Ketu)
         assert_eq!(get_house_at_distance(1, 2, true), 12);
         assert_eq!(get_house_at_distance(1, 12, true), 2);
+    }
+
+    #[test]
+    fn test_conditional_virodhargala() {
+        let mercury = create_test_planet("Mercury", 11, 300.0);
+        
+        // Scenario 1: Only Mercury in 11th (no malefics in 3rd).
+        // Virodhargala from 11th should be empty for House 1 because there is no 3rd house malefic argala to obstruct.
+        let res1 = calculate_argala(&[mercury.clone()]);
+        let house_1 = res1.house_argalas.get(&1).unwrap();
+        assert_eq!(house_1.virodhargala_contributors.len(), 0);
+
+        // Scenario 2: Mercury in 11th + Mars (malefic) in 3rd.
+        // Now virodhargala from 11th should be present.
+        let mars = create_test_planet("Mars", 3, 60.0);
+        let res2 = calculate_argala(&[mercury.clone(), mars.clone()]);
+        let house_1_new = res2.house_argalas.get(&1).unwrap();
+        
+        assert_eq!(house_1_new.argala_contributors.len(), 2);
+        let names: Vec<&str> = house_1_new.argala_contributors.iter().map(|c| c.planet_name.as_str()).collect();
+        assert!(names.contains(&"Mars"));
+        assert!(names.contains(&"Mercury"));
+        
+        assert_eq!(house_1_new.virodhargala_contributors.len(), 2);
+        let vir_names: Vec<&str> = house_1_new.virodhargala_contributors.iter().map(|c| c.planet_name.as_str()).collect();
+        assert!(vir_names.contains(&"Mars"));
+        assert!(vir_names.contains(&"Mercury"));
     }
 }
