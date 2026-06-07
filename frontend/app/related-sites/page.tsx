@@ -49,6 +49,28 @@ export default function RelatedSitesPage() {
               </a>
 
               <a
+                href="https://dharma-pragya.vercel.app/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between p-5 rounded-xl border border-primary/10 bg-primary/5 hover:bg-primary/10 hover:border-primary/20 transition-all group cursor-pointer"
+              >
+                <div className="flex items-center gap-4 text-left">
+                  <div className="p-3 bg-primary/10 rounded-lg text-primary group-hover:scale-110 transition-transform">
+                    <BookOpen className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-heading text-sm font-bold text-foreground">
+                      Dharma Pragya
+                    </h4>
+                    <p className="text-xs text-muted-foreground font-serif mt-1">
+                      An interactive platform offering deep insights, Q&A, and wisdom on Sanatan Dharma.
+                    </p>
+                  </div>
+                </div>
+                <ExternalLink className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0" />
+              </a>
+
+              <a
                 href="https://dhruvil-8.github.io/SanatanDharmaDirectory/site/"
                 target="_blank"
                 rel="noopener noreferrer"
