@@ -278,7 +278,12 @@ pub async fn compute_chart_with_profile(
         None
     };
 
-    let (sunrise_jd, _) = crate::swiss::calculate_sunrise_sunset(resolved_time.jd_ut, lat, lon)?;
+    let (sunrise_jd, _) = crate::swiss::calculate_sunrise_sunset(
+        resolved_time.jd_ut,
+        lat,
+        lon,
+        resolved_time.offset_hours,
+    )?;
     let mut weekday_idx = resolved_time.local_naive.weekday().num_days_from_monday() as usize;
     if resolved_time.jd_ut < sunrise_jd {
         weekday_idx = (weekday_idx + 6) % 7;

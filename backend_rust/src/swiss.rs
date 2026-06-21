@@ -97,20 +97,43 @@ pub fn normalize_degree(degree: f64) -> f64 {
     degree.rem_euclid(360.0)
 }
 
-pub fn calculate_sunrise_sunset(jd_ut: f64, lat: f64, lon: f64) -> Result<(f64, f64), ApiError> {
+fn jd_local_midnight(jd_ut: f64, offset_hours: f64) -> f64 {
+    let unix_timestamp = (jd_ut - 2440587.5) * 86400.0;
+    if let Some(naive_utc) = chrono::DateTime::from_timestamp(unix_timestamp.round() as i64, 0).map(|dt| dt.naive_utc()) {
+        let local_dt = naive_utc + chrono::Duration::seconds((offset_hours * 3600.0).round() as i64);
+        let local_midnight = chrono::NaiveDateTime::new(
+            local_dt.date(),
+            chrono::NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
+        );
+        let utc_midnight = local_midnight - chrono::Duration::seconds((offset_hours * 3600.0).round() as i64);
+        let utc_timestamp = utc_midnight.and_utc().timestamp();
+        (utc_timestamp as f64 / 86400.0) + 2440587.5
+    } else {
+        jd_ut - 0.5
+    }
+}
+
+pub fn calculate_sunrise_sunset(
+    jd_ut: f64,
+    lat: f64,
+    lon: f64,
+    offset_hours: f64,
+) -> Result<(f64, f64), ApiError> {
+    let search_start_jd = jd_local_midnight(jd_ut, offset_hours);
     let _guard = SWISS_LOCK.lock().expect("Swiss Ephemeris lock poisoned");
     let mut tret_rise = 0.0;
     let mut tret_set = 0.0;
     let mut serr = [0_i8; 256];
     let mut geopos = [lon, lat, 0.0];
 
+
     unsafe {
         let res_rise = swiss_eph::swe_rise_trans(
-            jd_ut,
+            search_start_jd,
             swiss_eph::SE_SUN,
             std::ptr::null_mut(),
             swiss_eph::SEFLG_SWIEPH,
-            1, // rise
+            1, // rise (apparent rising: upper limb of Sun with refraction)
             geopos.as_mut_ptr(),
             0.0,
             0.0,
@@ -125,11 +148,11 @@ pub fn calculate_sunrise_sunset(jd_ut: f64, lat: f64, lon: f64) -> Result<(f64, 
         }
 
         let res_set = swiss_eph::swe_rise_trans(
-            jd_ut,
+            search_start_jd,
             swiss_eph::SE_SUN,
             std::ptr::null_mut(),
             swiss_eph::SEFLG_SWIEPH,
-            2, // set
+            2, // set (apparent setting: upper limb of Sun with refraction)
             geopos.as_mut_ptr(),
             0.0,
             0.0,

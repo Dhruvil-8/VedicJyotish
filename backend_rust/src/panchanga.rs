@@ -100,7 +100,8 @@ fn julian_to_local_time(jd_ut: f64, offset_hours: f64) -> String {
     {
         let local_dt =
             naive_utc + chrono::Duration::seconds((offset_hours * 3600.0).round() as i64);
-        local_dt.format("%H:%M").to_string()
+        let rounded_dt = local_dt + chrono::Duration::seconds(30);
+        rounded_dt.format("%H:%M").to_string()
     } else {
         "Unknown".to_string()
     }
@@ -172,7 +173,7 @@ pub fn calculate(
     ];
     let karana_lord = Some(karana_lords[karana_index].to_string());
 
-    let (sunrise_jd, sunset_jd) = crate::swiss::calculate_sunrise_sunset(jd_ut, lat, lon)?;
+    let (sunrise_jd, sunset_jd) = crate::swiss::calculate_sunrise_sunset(jd_ut, lat, lon, offset_hours)?;
     let sunrise = Some(julian_to_local_time(sunrise_jd, offset_hours));
     let sunset = Some(julian_to_local_time(sunset_jd, offset_hours));
 
@@ -265,7 +266,7 @@ pub fn calculate(
     ));
 
     // Tomorrow's sunrise to calculate exact nighttime duration
-    let (tomorrow_sunrise_jd, _) = crate::swiss::calculate_sunrise_sunset(jd_ut + 1.0, lat, lon)?;
+    let (tomorrow_sunrise_jd, _) = crate::swiss::calculate_sunrise_sunset(jd_ut + 1.0, lat, lon, offset_hours)?;
     let night_dur = tomorrow_sunrise_jd - sunset_jd;
 
     // Dur Muhurtham: Calculated using standard daily astronomical offsets
@@ -291,7 +292,7 @@ pub fn calculate(
             };
             let start_jd = base_jd + dur * offset / 12.0;
             let span = if vaara_idx == 6 { 1.6 } else { 0.8 };
-            let end_jd = start_jd + daytime_jd * span / 12.0;
+            let end_jd = start_jd + dur * span / 12.0;
             dur_muhurtham_slots.push(format!(
                 "{} - {}",
                 julian_to_local_time(start_jd, offset_hours),
