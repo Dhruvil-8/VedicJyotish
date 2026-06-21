@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -15,12 +15,13 @@ interface AppShellProps {
 export default function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const [isNavOpen, setIsNavOpen] = useState(false);
-  const [showDisclaimer, setShowDisclaimer] = useState(() => {
+  const [showDisclaimer, setShowDisclaimer] = useState(true);
+
+  useEffect(() => {
     if (typeof window !== "undefined") {
-      return sessionStorage.getItem("vj_disclaimer_accepted") !== "true";
+      setShowDisclaimer(sessionStorage.getItem("vj_disclaimer_accepted") !== "true");
     }
-    return true;
-  });
+  }, []);
 
   const handleAcceptDisclaimer = () => {
     setShowDisclaimer(false);

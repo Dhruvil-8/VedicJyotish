@@ -26,29 +26,6 @@ export default function RelatedSitesPage() {
 
             <div className="grid grid-cols-1 gap-4">
               <a
-                href="https://srimad-bhgavad-gita.vercel.app/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-between p-5 rounded-xl border border-primary/10 bg-primary/5 hover:bg-primary/10 hover:border-primary/20 transition-all group cursor-pointer"
-              >
-                <div className="flex items-center gap-4 text-left">
-                  <div className="p-3 bg-primary/10 rounded-lg text-primary group-hover:scale-110 transition-transform">
-                    <BookOpen className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="font-heading text-sm font-bold text-foreground">
-                      Srimad Bhagavad Gita
-                    </h4>
-                    <p className="text-xs text-muted-foreground font-serif mt-1">
-                      Read, search, and contemplate the divine dialogue between Lord Krishna and
-                      Arjuna.
-                    </p>
-                  </div>
-                </div>
-                <ExternalLink className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0" />
-              </a>
-
-              <a
                 href="https://dharma-pragya.vercel.app/"
                 target="_blank"
                 rel="noopener noreferrer"

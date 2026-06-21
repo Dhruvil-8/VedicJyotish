@@ -55,11 +55,20 @@ export const metadata: Metadata = {
     siteName: "Vedic Jyotish",
     locale: "en_US",
     type: "website",
+    images: [
+      {
+        url: "/logo.png",
+        width: 512,
+        height: 512,
+        alt: "Vedic Jyotish Logo",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Vedic Jyotish | AI Astrologer",
     description: "Vedic astrological analysis powered by high-precision ephemeris and artificial intelligence.",
+    images: ["/logo.png"],
   },
   verification: {
     google: "ZO8CbfiTC918jMAEQDniTu_WAVtlUTm1Yioa4Jb-xhc",
