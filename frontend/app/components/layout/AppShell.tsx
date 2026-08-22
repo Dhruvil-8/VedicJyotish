@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Menu, User, Clock, BookOpen, AlertTriangle, ExternalLink, Star,
+  Menu, User, Clock, BookOpen, AlertTriangle, ExternalLink, Star, Heart,
 } from "lucide-react";
 
 interface AppShellProps {
@@ -32,6 +32,7 @@ export default function AppShell({ children }: AppShellProps) {
 
   const navItems = [
     { href: "/", label: "Birth Chart & Kundali", icon: User },
+    { href: "/matching", label: "Kundali Milan & Matching", icon: Heart },
     { href: "/panchanga", label: "Daily Vedic Panchang", icon: Clock },
     { href: "/related-sites", label: "Our Related Sites", icon: BookOpen },
   ];

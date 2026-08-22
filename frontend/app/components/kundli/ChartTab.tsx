@@ -1,12 +1,13 @@
-"use client";
-
 import React, { useState, useMemo } from "react";
-import { Star, Moon, Sparkles, Compass, Clock, Calendar, AlertTriangle, User } from "lucide-react";
+import { Star, Moon, Sparkles, Compass, Clock, Calendar, AlertTriangle, User, Radio, RefreshCw } from "lucide-react";
 import NorthIndianChart from "../NorthIndianChart";
 import PlanetaryTable from "../PlanetaryTable";
 import DashaTimeline from "../DashaTimeline";
 import YogaCards from "../YogaCards";
 import Accordion from "../shared/Accordion";
+import ChartInspectorModal, { InspectedItem } from "./ChartInspectorModal";
+import { calculateTransits } from "../ui/api";
+import { useToast } from "../../hooks/useToast";
 import { VARGA_INFO } from "../../lib/constants";
 import { formatDate, isCurrent } from "../../lib/helpers";
 
@@ -15,7 +16,12 @@ interface ChartTabProps {
 }
 
 export default function ChartTab({ chartData }: ChartTabProps) {
+  const { showToast } = useToast();
   const [selectedVarga, setSelectedVarga] = useState<string>("D1");
+  const [inspectedItem, setInspectedItem] = useState<InspectedItem | null>(null);
+  const [isTransitActive, setIsTransitActive] = useState(false);
+  const [transitData, setTransitData] = useState<Record<string, any[]> | null>(null);
+  const [isTransitLoading, setIsTransitLoading] = useState(false);
   const [expandedAccordions, setExpandedAccordions] = useState<Record<string, boolean>>({
     panchanga: true,
     planets: true,
@@ -59,6 +65,74 @@ export default function ChartTab({ chartData }: ChartTabProps) {
       case 8: case 11: return "Jupiter"; // Sagittarius, Pisces
       case 9: case 10: return "Saturn"; // Capricorn, Aquarius
       default: return "Unknown";
+    }
+  };
+
+  const handleSelectHouse = (houseNumber: number, signName: string, planets: any[]) => {
+    setInspectedItem({
+      type: "house",
+      houseNumber,
+      houseSign: signName,
+      housePlanets: planets,
+    });
+  };
+
+  const handleSelectPlanet = (planet: any, houseNumber: number, signName: string) => {
+    const pName = typeof planet === "string" ? planet : planet.name;
+    const matched = (chartData.planetary_table || []).find((p: any) => p.name === pName);
+    setInspectedItem({
+      type: "planet",
+      houseNumber,
+      houseSign: signName,
+      planet: matched || (typeof planet === "object" ? planet : { name: planet, sign: signName, house: houseNumber }),
+    });
+  };
+
+  const handleToggleTransits = async () => {
+    if (isTransitActive) {
+      setIsTransitActive(false);
+      return;
+    }
+
+    if (transitData) {
+      setIsTransitActive(true);
+      return;
+    }
+
+    setIsTransitLoading(true);
+    try {
+      const now = new Date();
+      const pad = (n: number) => n.toString().padStart(2, "0");
+      const transitDate = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()}`;
+      const transitTime = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+
+      const res = await calculateTransits({
+        birth_data: {
+          date: chartData.birth_date || "01/01/2000",
+          time: chartData.birth_time || "12:00",
+          city: chartData.city || "New Delhi",
+          lat: chartData.latitude || 28.61,
+          lon: chartData.longitude || 77.20,
+        },
+        transit_date: transitDate,
+        transit_time: transitTime,
+      });
+
+      if (res && res.transit_planets) {
+        const transitsByHouse: Record<string, any[]> = {};
+        res.transit_planets.forEach((tp: any) => {
+          const hKey = `house_${tp.transit_house_from_lagna}`;
+          if (!transitsByHouse[hKey]) transitsByHouse[hKey] = [];
+          transitsByHouse[hKey].push(tp);
+        });
+        setTransitData(transitsByHouse);
+        setIsTransitActive(true);
+        showToast("Live celestial transit (Gochara) overlay activated.", "success");
+      }
+    } catch (e) {
+      showToast("Could not load real-time transits. Please try again.", "error");
+    } finally {
+      setIsTransitLoading(false);
     }
   };
 
@@ -113,20 +187,41 @@ export default function ChartTab({ chartData }: ChartTabProps) {
             <div>
               <h3 className="text-secondary font-heading mb-0.5 gold-glow">Divisional Kundli</h3>
               <p className="text-xs text-muted-foreground font-serif">
-                Explore 16 divisional charts mapping distinct life aspects.
+                Explore 16 divisional charts mapping distinct life aspects. Click houses or planets to inspect.
               </p>
             </div>
-            <select
-              value={selectedVarga}
-              onChange={(e) => setSelectedVarga(e.target.value)}
-              className="bg-card border border-border/50 text-foreground rounded-lg p-2 font-heading text-xs outline-none focus:border-primary cursor-pointer transition-all"
-            >
-              {Object.entries(VARGA_INFO).map(([key, info]) => (
-                <option key={key} value={key} className="bg-card font-serif text-xs">
-                  {key}: {info.title.split(" (")[0]}
-                </option>
-              ))}
-            </select>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={handleToggleTransits}
+                disabled={isTransitLoading}
+                className={`px-3 py-1.5 rounded-lg border font-heading text-xs transition-all flex items-center gap-1.5 cursor-pointer ${
+                  isTransitActive
+                    ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-600 dark:text-emerald-400 font-bold shadow-sm"
+                    : "bg-card border-border/50 text-muted-foreground hover:text-foreground"
+                }`}
+                title="Overlay real-time celestial planetary transits (Gochara)"
+              >
+                {isTransitLoading ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Radio className="w-3.5 h-3.5" />
+                )}
+                <span>{isTransitActive ? "Transits: ON" : "Transits (Gochara)"}</span>
+              </button>
+
+              <select
+                value={selectedVarga}
+                onChange={(e) => setSelectedVarga(e.target.value)}
+                className="bg-card border border-border/50 text-foreground rounded-lg p-2 font-heading text-xs outline-none focus:border-primary cursor-pointer transition-all"
+              >
+                {Object.entries(VARGA_INFO).map(([key, info]) => (
+                  <option key={key} value={key} className="bg-card font-serif text-xs">
+                    {key}: {info.title.split(" (")[0]}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <NorthIndianChart
@@ -146,6 +241,10 @@ export default function ChartTab({ chartData }: ChartTabProps) {
                     chartData.ascendant.sign
             }
             title={VARGA_INFO[selectedVarga]?.title}
+            onSelectHouse={handleSelectHouse}
+            onSelectPlanet={handleSelectPlanet}
+            transitData={transitData}
+            isTransitActive={isTransitActive}
           />
 
           <div className="mt-6 text-center px-4 py-3 bg-primary/5 border border-primary/10 rounded-xl">
@@ -232,12 +331,12 @@ export default function ChartTab({ chartData }: ChartTabProps) {
           </div>
         </Accordion>
 
-        {/* Shadbala / Dig Bala */}
+        {/* Shadbala / Dig Bala [Beta] */}
         {chartData.shadbala ? (
           <Accordion
             id="shadbala"
-            title="Planetary Strengths (Shadbala)"
-            explanation="Six-fold planetary strength (Shadbala) representing each planet's capability to deliver results across life."
+            title="Planetary Strengths (Shadbala) [Beta]"
+            explanation="Six-fold planetary strength (Shadbala) representing each planet's capability to deliver results across life. [Beta: Under Calibration]"
             icon={Star}
             isOpen={expandedAccordions.shadbala || false}
             onToggle={() => toggleAccordion("shadbala")}
@@ -395,12 +494,12 @@ export default function ChartTab({ chartData }: ChartTabProps) {
           )
         )}
 
-        {/* Bhava Bala */}
+        {/* Bhava Bala [Beta] */}
         {chartData.bhava_bala && (
           <Accordion
             id="bhavabala"
-            title="House Strengths (Bhava Bala)"
-            explanation="The computed strength of the 12 houses (Bhavas), determining which domains of life naturally flow with ease and which require greater conscious effort."
+            title="House Strengths (Bhava Bala) [Beta]"
+            explanation="The computed strength of the 12 houses (Bhavas), determining which domains of life naturally flow with ease. [Beta: Under Calibration]"
             icon={Compass}
             isOpen={expandedAccordions.bhavabala || false}
             onToggle={() => toggleAccordion("bhavabala")}
@@ -459,12 +558,12 @@ export default function ChartTab({ chartData }: ChartTabProps) {
           <DashaTimeline timeline={chartData.vimshottari_timeline || []} className="w-full" />
         </Accordion>
 
-        {/* Chara Dasha */}
+        {/* Chara Dasha [Beta] */}
         {chartData.chara_dasha && (
           <Accordion
             id="charadasha"
-            title="Jaimini Chara Dasha"
-            explanation="Sign-based cyclic timeline mapping spiritual and material periods of experiences."
+            title="Jaimini Chara Dasha [Beta]"
+            explanation="Sign-based cyclic timeline mapping spiritual and material periods of experiences. [Beta: Under Calibration]"
             icon={Compass}
             isOpen={expandedAccordions.charadasha || false}
             onToggle={() => toggleAccordion("charadasha")}
@@ -850,12 +949,12 @@ export default function ChartTab({ chartData }: ChartTabProps) {
           </Accordion>
         )}
 
-        {/* Argala */}
+        {/* Argala [Beta] */}
         {chartData.argala && (
           <Accordion
             id="argala"
-            title="Argala & Virodhargala"
-            explanation="Direct planetary interventions (Argala) and obstructions (Virodhargala) formed on houses."
+            title="Argala & Virodhargala [Beta]"
+            explanation="Direct planetary interventions (Argala) and obstructions (Virodhargala) formed on houses. [Beta: Under Calibration]"
             icon={Compass}
             isOpen={expandedAccordions.argala || false}
             onToggle={() => toggleAccordion("argala")}
@@ -994,6 +1093,12 @@ export default function ChartTab({ chartData }: ChartTabProps) {
           </Accordion>
         )}
       </div>
+
+      {/* Chart Inspector Modal */}
+      <ChartInspectorModal
+        item={inspectedItem}
+        onClose={() => setInspectedItem(null)}
+      />
     </div>
   );
 }

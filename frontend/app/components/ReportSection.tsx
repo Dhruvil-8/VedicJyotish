@@ -1,6 +1,6 @@
 "use client";
 
-import { Printer, Sparkles, FileText } from "lucide-react";
+import { Printer, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 
@@ -164,7 +164,7 @@ export default function ReportSection({ report, isStreaming, onDownload }: Repor
                     {!isStreaming && report && (
                         <button
                             onClick={handleDownload}
-                            className="group flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground font-heading text-xs rounded-full hover:shadow-lg hover:scale-105 active:scale-95 transition-all"
+                            className="group flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground font-heading text-xs rounded-full hover:shadow-lg hover:scale-105 active:scale-95 transition-all cursor-pointer"
                         >
                             <Printer className="w-4 h-4" /> Download PDF
                         </button>
@@ -173,11 +173,6 @@ export default function ReportSection({ report, isStreaming, onDownload }: Repor
 
                 {/* Report Content */}
                 <div id="vedic-report-content" className="p-8 md:p-12 font-serif leading-relaxed relative min-h-[600px]" style={{ backgroundColor: '#f5e6c8', color: '#1a1a1a' }}>
-                    {/* Subtle Watermark/Pattern */}
-                    <div className="absolute inset-0 pointer-events-none overflow-hidden flex items-center justify-center" style={{ opacity: 0.03 }}>
-                        <FileText className="w-[500px] h-[500px] -rotate-12" style={{ color: '#1a1a1a' }} />
-                    </div>
-
                     <div className="relative z-10 markdown-report">
                         <ReactMarkdown>{report}</ReactMarkdown>
                         {isStreaming && (

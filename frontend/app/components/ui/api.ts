@@ -159,3 +159,22 @@ export const calculateCompatibility = async (payload: any) => {
   return res.json();
 };
 
+export const calculateTransits = async (payload: {
+  birth_data: { date: string; time: string; city: string; lat: number; lon: number };
+  transit_date: string;
+  transit_time: string;
+}) => {
+  const res = await fetch(`${API_BASE}/calculate_transits`, {
+    method: "POST",
+    headers: getHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err: any = new Error("Transit calculation failed");
+    err.response = res;
+    throw err;
+  }
+  return res.json();
+};
+
+

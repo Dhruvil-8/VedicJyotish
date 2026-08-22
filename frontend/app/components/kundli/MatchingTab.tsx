@@ -9,14 +9,14 @@ import { useToast } from "../../hooks/useToast";
 import { convertTo24Hour } from "../../lib/helpers";
 
 interface MatchingTabProps {
-  activeProfile: {
+  activeProfile?: {
     date: string;
     time: string;
     city: any;
   } | null;
 }
 
-export default function MatchingTab({ activeProfile }: MatchingTabProps) {
+export default function MatchingTab({ activeProfile = null }: MatchingTabProps) {
   const { showToast } = useToast();
 
   // Boy's details state

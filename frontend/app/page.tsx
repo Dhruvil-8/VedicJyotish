@@ -40,14 +40,6 @@ const ReportTab = dynamic(() => import("./components/kundli/ReportTab"), {
   ),
 });
 
-const MatchingTab = dynamic(() => import("./components/kundli/MatchingTab"), {
-  loading: () => (
-    <div className="text-center py-12 font-serif text-sm text-primary animate-pulse">
-      Preparing Matching...
-    </div>
-  ),
-});
-
 export default function Home() {
   const [step, setStep] = useState<"form" | "dashboard">("form");
   const [chartData, setChartData] = useState<any>(null);
@@ -58,7 +50,7 @@ export default function Home() {
   } | null>(null);
 
   // Tab State
-  const [activeTab, setActiveTab] = useState<"chart" | "chat" | "report" | "matching">("chart");
+  const [activeTab, setActiveTab] = useState<"chart" | "chat" | "report">("chart");
   const [mountedTabs, setMountedTabs] = useState<Set<string>>(new Set(["chart"]));
   const [selectedLanguage, setSelectedLanguage] = useState<string>("English");
 
@@ -80,7 +72,7 @@ export default function Home() {
   useEffect(() => {
     if (step === "dashboard") {
       const timer = setTimeout(() => {
-        setMountedTabs((prev) => new Set([...prev, "chat", "report", "matching"]));
+        setMountedTabs((prev) => new Set([...prev, "chat", "report"]));
       }, 800); // 800ms delay to let the main ChartTab render smoothly
       return () => clearTimeout(timer);
     }
@@ -213,17 +205,6 @@ export default function Home() {
               >
                 <BookOpen className="w-4 h-4 flex-shrink-0" /> Celestial Report
               </button>
-              <button
-                type="button"
-                onClick={() => { setActiveTab("matching"); setMountedTabs(prev => new Set([...prev, "matching"])); }}
-                className={`flex items-center gap-2 px-6 py-4 font-heading text-xs md:text-sm tracking-widest uppercase border-b-2 transition-all flex-shrink-0 cursor-pointer ${
-                  activeTab === "matching"
-                    ? "border-primary text-primary font-bold"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <Heart className="w-4 h-4 flex-shrink-0" /> Kundali Matching
-              </button>
             </div>
 
             {/* Tab Contents */}
@@ -249,11 +230,6 @@ export default function Home() {
                     chartData={chartData}
                     selectedLanguage={selectedLanguage}
                   />
-                </div>
-              )}
-              {mountedTabs.has("matching") && (
-                <div className={activeTab === "matching" ? "block" : "hidden"}>
-                  <MatchingTab activeProfile={activeProfile} />
                 </div>
               )}
             </div>
