@@ -20,11 +20,13 @@ import {
   X,
   LayoutGrid,
   Columns,
+  Star,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { calculateChart, calculateCalendar } from "../components/ui/api";
 import { useCitySearch } from "../hooks/useCitySearch";
 import { useToast } from "../hooks/useToast";
+import { getCachedLocation, setCachedLocation, CachedLocation } from "../lib/locationCache";
 
 // Classical 12 Hindu Months (Chaitradi Astronomical Order 0 to 11)
 const HINDU_MONTHS_CHAITRADI = [
@@ -115,10 +117,6 @@ export default function PanchangaView() {
   const [activeTab, setActiveTab] = useState<"calendar" | "daily">("calendar");
 
   // Separate Traditional View
-  // "gujarat" = Amanta + Kartikadi Vikram Samvat
-  // "north" = Purnimanta + Chaitradi Vikram Samvat
-  // "south" = Amanta + Shalivahana Shaka Samvat
-  // "english" = Gregorian solar calendar
   const [traditionView, setTraditionView] = useState<TraditionType>("gujarat");
 
   // Layout presentation in Calendar: 7-Day Grid vs 2-Column Paksha
@@ -126,6 +124,13 @@ export default function PanchangaView() {
 
   // Active Date & Selection for Calendar
   const now = useMemo(() => new Date(), []);
+  const todayFormatted = useMemo(() => {
+    const d = String(now.getDate()).padStart(2, "0");
+    const m = String(now.getMonth() + 1).padStart(2, "0");
+    const y = now.getFullYear();
+    return `${d}/${m}/${y}`;
+  }, [now]);
+
   const [calYear, setCalYear] = useState<number>(now.getFullYear());
   const [selectedMasaIdx, setSelectedMasaIdx] = useState<number>(4); // 4 = Shravana
   const [calGregMonth, setCalGregMonth] = useState<number>(now.getMonth() + 1);
@@ -161,7 +166,7 @@ export default function PanchangaView() {
     return () => clearInterval(timer);
   }, []);
 
-  // Initialize Default Reference City & Data on Mount
+  // Initialize System-wide Cached Location & Data on Mount
   useEffect(() => {
     const d = String(now.getDate()).padStart(2, "0");
     const m = String(now.getMonth() + 1).padStart(2, "0");
@@ -175,15 +180,10 @@ export default function PanchangaView() {
     setPanchangDate(formattedDate);
     setPanchangTime(formattedTime);
 
-    // Default reference city (New Delhi)
-    const defaultCity = {
-      name: "New Delhi, Delhi, India",
-      lat: 28.6139,
-      lon: 77.209,
-      timezone: 5.5,
-    };
-    setSelectedPanchangCity(defaultCity);
-    setPanchangCityInput(defaultCity.name);
+    // Retrieve system-wide cached location
+    const cachedCity = getCachedLocation();
+    setSelectedPanchangCity(cachedCity);
+    setPanchangCityInput(cachedCity.name);
 
     // Initial Fetch Daily Panchang
     const fetchInitialPanchang = async () => {
@@ -191,10 +191,10 @@ export default function PanchangaView() {
         const payload = {
           date: formattedDate,
           time: formattedTime,
-          city: defaultCity.name,
-          lat: defaultCity.lat,
-          lon: defaultCity.lon,
-          timezone: defaultCity.timezone,
+          city: cachedCity.name,
+          lat: cachedCity.lat,
+          lon: cachedCity.lon,
+          timezone: cachedCity.timezone,
         };
         const res = await calculateChart(payload);
         if (res && res.panchanga) {
@@ -212,9 +212,9 @@ export default function PanchangaView() {
         const payload = {
           year: y,
           month: now.getMonth() + 1,
-          lat: defaultCity.lat,
-          lon: defaultCity.lon,
-          timezone: defaultCity.timezone,
+          lat: cachedCity.lat,
+          lon: cachedCity.lon,
+          timezone: cachedCity.timezone,
           tradition: "amanta",
           view_mode: "lunar",
           lunar_masa: 4, // Shravana
@@ -232,6 +232,17 @@ export default function PanchangaView() {
 
     fetchInitialPanchang();
     fetchInitialCalendar();
+
+    // Listen for system-wide location changes across tabs/components
+    const handleLocationSync = (e: any) => {
+      if (e?.detail) {
+        setSelectedPanchangCity(e.detail);
+        setPanchangCityInput(e.detail.name);
+        fetchMonthCalendar(traditionView, selectedMasaIdx, calGregMonth, calYear, e.detail);
+      }
+    };
+    window.addEventListener("vedic_location_changed", handleLocationSync);
+    return () => window.removeEventListener("vedic_location_changed", handleLocationSync);
   }, []);
 
   // Fetch Month Calendar according to Selected Tradition
@@ -334,6 +345,15 @@ export default function PanchangaView() {
     }
   };
 
+  const handleSelectCity = (city: any) => {
+    setSelectedPanchangCity(city);
+    setPanchangCityInput(city.name);
+    setPanchangCityResults([]);
+    // Update system-wide cache
+    setCachedLocation(city);
+    fetchMonthCalendar(traditionView, selectedMasaIdx, calGregMonth, calYear, city);
+  };
+
   const handleCalculatePanchang = async () => {
     if (!panchangDate) {
       showToast("Please enter a valid date.", "error");
@@ -345,10 +365,10 @@ export default function PanchangaView() {
       const payload = {
         date: panchangDate,
         time: panchangTime,
-        city: selectedPanchangCity.name,
-        lat: selectedPanchangCity.lat,
-        lon: selectedPanchangCity.lon,
-        timezone: selectedPanchangCity.timezone,
+        city: selectedPanchangCity?.name || "New Delhi, India",
+        lat: selectedPanchangCity?.lat || 28.6139,
+        lon: selectedPanchangCity?.lon || 77.209,
+        timezone: selectedPanchangCity?.timezone || 5.5,
       };
 
       const res = await calculateChart(payload);
@@ -774,13 +794,16 @@ export default function PanchangaView() {
               </div>
             </div>
 
-            {/* Location Bar */}
+            {/* Location Bar with System-wide Cache Indicator */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-t border-primary/10 pt-3 gap-3">
               <div className="flex items-center gap-2 text-xs text-muted-foreground font-serif">
                 <MapPin className="w-3.5 h-3.5 text-primary" />
                 <span>
                   Astronomical reference:{" "}
                   <strong className="text-foreground">{selectedPanchangCity?.name || "New Delhi, India"}</strong>
+                </span>
+                <span className="text-[9px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-heading">
+                  Cached System-wide
                 </span>
               </div>
 
@@ -840,10 +863,11 @@ export default function PanchangaView() {
                       ));
                     })()}
 
-                    {/* Day Cards */}
+                    {/* Day Cards with Current Date Highlighting */}
                     {calendarData.days.map((day: any, idx: number) => {
                       const isEnglish = traditionView === "english";
                       const tithiSanskritLabel = TITHI_NAMES_SANSKRIT[(day.tithi_index - 1) % 30] || day.tithi_name;
+                      const isToday = day.date === todayFormatted;
 
                       return (
                         <motion.div
@@ -851,19 +875,38 @@ export default function PanchangaView() {
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
                           onClick={() => setSelectedDayDetail(day)}
-                          className="min-h-[115px] p-2.5 rounded-xl border transition-all text-left flex flex-col justify-between cursor-pointer relative group bg-card/40 hover:bg-card/80 border-border/30 hover:border-primary/40 shadow-sm"
+                          className={`min-h-[115px] p-2.5 rounded-xl border transition-all text-left flex flex-col justify-between cursor-pointer relative group ${
+                            isToday
+                              ? "bg-primary/20 border-primary ring-2 ring-primary/50 shadow-xl"
+                              : "bg-card/40 hover:bg-card/80 border-border/30 hover:border-primary/40 shadow-sm"
+                          }`}
                         >
-                          {/* Top Row: Primary Header & Paksha Badge */}
+                          {/* Top Row: Primary Header, Today Badge & Paksha Badge */}
                           <div className="flex items-start justify-between">
-                            {isEnglish ? (
-                              <span className="font-heading text-sm font-bold text-foreground">
-                                {day.day_of_month}
-                              </span>
-                            ) : (
-                              <span className="font-heading text-xs font-extrabold text-primary truncate max-w-[90px]">
-                                {tithiSanskritLabel.split(" ")[0]}
-                              </span>
-                            )}
+                            <div className="flex items-center gap-1">
+                              {isEnglish ? (
+                                <span
+                                  className={`font-heading text-sm font-bold ${
+                                    isToday ? "text-primary font-extrabold" : "text-foreground"
+                                  }`}
+                                >
+                                  {day.day_of_month}
+                                </span>
+                              ) : (
+                                <span
+                                  className={`font-heading text-xs truncate max-w-[85px] ${
+                                    isToday ? "text-primary font-extrabold" : "text-foreground font-bold"
+                                  }`}
+                                >
+                                  {tithiSanskritLabel.split(" ")[0]}
+                                </span>
+                              )}
+                              {isToday && (
+                                <span className="text-[7px] font-heading font-extrabold px-1 py-0.2 rounded bg-primary text-primary-foreground uppercase tracking-wider">
+                                  Today
+                                </span>
+                              )}
+                            </div>
 
                             <span
                               className={`text-[8px] font-heading px-1.5 py-0.5 rounded-md uppercase tracking-wider ${
@@ -937,17 +980,32 @@ export default function PanchangaView() {
                       {calendarData.days
                         .filter((d: any) => d.paksha === "Shukla")
                         .map((day: any, i: number) => {
-                          const tLabel = TITHI_NAMES_SANSKRIT[(day.tithi_index - 1) % 30] || day.tithi_name;
+                          const isEnglish = traditionView === "english";
+                          const tLabel = isEnglish
+                            ? `${day.day_of_month} ${GREGORIAN_MONTHS[calGregMonth - 1].slice(0, 3)} - ${day.tithi_name}`
+                            : TITHI_NAMES_SANSKRIT[(day.tithi_index - 1) % 30] || day.tithi_name;
+                          const isToday = day.date === todayFormatted;
                           return (
                             <div
                               key={i}
                               onClick={() => setSelectedDayDetail(day)}
-                              className="p-2.5 rounded-lg bg-card/60 hover:bg-amber-500/10 border border-border/20 hover:border-amber-500/30 transition-all cursor-pointer flex items-center justify-between text-xs"
+                              className={`p-2.5 rounded-lg border transition-all cursor-pointer flex items-center justify-between text-xs ${
+                                isToday
+                                  ? "bg-primary/20 border-primary ring-1 ring-primary/50 shadow-md"
+                                  : "bg-card/60 hover:bg-amber-500/10 border-border/20 hover:border-amber-500/30"
+                              }`}
                             >
                               <div className="space-y-0.5">
-                                <span className="font-heading text-xs font-bold text-primary block">
-                                  {tLabel}
-                                </span>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-heading text-xs font-bold text-primary block">
+                                    {tLabel}
+                                  </span>
+                                  {isToday && (
+                                    <span className="text-[7px] font-heading font-extrabold px-1 py-0.2 rounded bg-primary text-primary-foreground uppercase">
+                                      Today
+                                    </span>
+                                  )}
+                                </div>
                                 <span className="text-[10px] text-muted-foreground font-serif">
                                   Nakshatra: {day.nakshatra_name} | {day.vara_sanskrit}
                                 </span>
@@ -988,17 +1046,32 @@ export default function PanchangaView() {
                       {calendarData.days
                         .filter((d: any) => d.paksha === "Krishna")
                         .map((day: any, i: number) => {
-                          const tLabel = TITHI_NAMES_SANSKRIT[(day.tithi_index - 1) % 30] || day.tithi_name;
+                          const isEnglish = traditionView === "english";
+                          const tLabel = isEnglish
+                            ? `${day.day_of_month} ${GREGORIAN_MONTHS[calGregMonth - 1].slice(0, 3)} - ${day.tithi_name}`
+                            : TITHI_NAMES_SANSKRIT[(day.tithi_index - 1) % 30] || day.tithi_name;
+                          const isToday = day.date === todayFormatted;
                           return (
                             <div
                               key={i}
                               onClick={() => setSelectedDayDetail(day)}
-                              className="p-2.5 rounded-lg bg-card/60 hover:bg-indigo-500/10 border border-border/20 hover:border-indigo-500/30 transition-all cursor-pointer flex items-center justify-between text-xs"
+                              className={`p-2.5 rounded-lg border transition-all cursor-pointer flex items-center justify-between text-xs ${
+                                isToday
+                                  ? "bg-primary/20 border-primary ring-1 ring-primary/50 shadow-md"
+                                  : "bg-card/60 hover:bg-indigo-500/10 border-border/20 hover:border-indigo-500/30"
+                              }`}
                             >
                               <div className="space-y-0.5">
-                                <span className="font-heading text-xs font-bold text-primary block">
-                                  {tLabel}
-                                </span>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-heading text-xs font-bold text-primary block">
+                                    {tLabel}
+                                  </span>
+                                  {isToday && (
+                                    <span className="text-[7px] font-heading font-extrabold px-1 py-0.2 rounded bg-primary text-primary-foreground uppercase">
+                                      Today
+                                    </span>
+                                  )}
+                                </div>
                                 <span className="text-[10px] text-muted-foreground font-serif">
                                   Nakshatra: {day.nakshatra_name} | {day.vara_sanskrit}
                                 </span>
@@ -1318,11 +1391,7 @@ export default function PanchangaView() {
                       <button
                         key={i}
                         type="button"
-                        onClick={() => {
-                          setSelectedPanchangCity(c);
-                          setPanchangCityInput(c.name);
-                          setPanchangCityResults([]);
-                        }}
+                        onClick={() => handleSelectCity(c)}
                         className="w-full text-left px-3.5 py-2 text-xs hover:bg-primary/10 text-foreground border-b border-border/10 last:border-0 cursor-pointer"
                       >
                         {c.name}
@@ -1560,8 +1629,8 @@ export default function PanchangaView() {
                 </div>
               </div>
 
-              {/* Choghadiya 24-Hour Tables */}
-              {panchangData.choghadiya && (
+              {/* 24-Hour Choghadiya Timings */}
+              {(panchangData.choghadiya || panchangData.choghadiya_night) && (
                 <div className="glass-parchment p-6 rounded-2xl vedic-border shadow-xl space-y-6">
                   <div className="flex items-center justify-between border-b border-primary/10 pb-3">
                     <div>
@@ -1581,17 +1650,33 @@ export default function PanchangaView() {
                         <Sun className="w-4 h-4" /> Daytime Choghadiya (Sunrise to Sunset)
                       </div>
                       <div className="space-y-1.5">
-                        {panchangData.choghadiya.day?.map((c: any, i: number) => (
-                          <div
-                            key={i}
-                            className="p-2.5 rounded-xl bg-card/40 border border-border/20 flex items-center justify-between text-xs"
-                          >
-                            <span className="font-heading font-bold text-foreground">{c.name}</span>
-                            <span className="text-muted-foreground font-mono text-[11px]">
-                              {c.start} - {c.end}
-                            </span>
-                          </div>
-                        ))}
+                        {panchangData.choghadiya?.map((c: any, i: number) => {
+                          const isGood = c.nature === "Auspicious";
+                          return (
+                            <div
+                              key={i}
+                              className={`p-2.5 rounded-xl border flex items-center justify-between text-xs ${
+                                isGood
+                                  ? "bg-primary/10 border-primary/30"
+                                  : "bg-card/40 border-border/20"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className={`font-heading font-bold ${isGood ? "text-primary" : "text-foreground"}`}>
+                                  {c.name}
+                                </span>
+                                <span className={`text-[9px] px-1.5 py-0.2 rounded font-heading ${
+                                  isGood ? "bg-primary/20 text-primary" : "bg-card/80 text-muted-foreground"
+                                }`}>
+                                  {c.nature}
+                                </span>
+                              </div>
+                              <span className="text-muted-foreground font-mono text-[11px]">
+                                {c.start} - {c.end}
+                              </span>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
 
@@ -1601,14 +1686,108 @@ export default function PanchangaView() {
                         <Moon className="w-4 h-4" /> Nighttime Choghadiya (Sunset to Sunrise)
                       </div>
                       <div className="space-y-1.5">
-                        {panchangData.choghadiya.night?.map((c: any, i: number) => (
+                        {panchangData.choghadiya_night?.map((c: any, i: number) => {
+                          const isGood = c.nature === "Auspicious";
+                          return (
+                            <div
+                              key={i}
+                              className={`p-2.5 rounded-xl border flex items-center justify-between text-xs ${
+                                isGood
+                                  ? "bg-secondary/10 border-secondary/30"
+                                  : "bg-card/40 border-border/20"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className={`font-heading font-bold ${isGood ? "text-secondary" : "text-foreground"}`}>
+                                  {c.name}
+                                </span>
+                                <span className={`text-[9px] px-1.5 py-0.2 rounded font-heading ${
+                                  isGood ? "bg-secondary/20 text-secondary" : "bg-card/80 text-muted-foreground"
+                                }`}>
+                                  {c.nature}
+                                </span>
+                              </div>
+                              <span className="text-muted-foreground font-mono text-[11px]">
+                                {c.start} - {c.end}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 24-Hour Planetary Horas */}
+              {(panchangData.horas_day || panchangData.horas_night) && (
+                <div className="glass-parchment p-6 rounded-2xl vedic-border shadow-xl space-y-6">
+                  <div className="flex items-center justify-between border-b border-primary/10 pb-3">
+                    <div>
+                      <span className="text-[10px] font-heading text-secondary tracking-widest uppercase block">
+                        24-Hour Planetary Hours
+                      </span>
+                      <h3 className="text-xl font-heading text-primary font-bold">
+                        Planetary Horas (होरा चक्र)
+                      </h3>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Day Horas */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 text-xs font-heading text-primary font-bold uppercase tracking-wider">
+                        <Sun className="w-4 h-4" /> Daytime Planetary Horas (1 to 12)
+                      </div>
+                      <div className="space-y-1.5">
+                        {panchangData.horas_day?.map((h: any, i: number) => (
                           <div
                             key={i}
-                            className="p-2.5 rounded-xl bg-card/40 border border-border/20 flex items-center justify-between text-xs"
+                            className="p-2 rounded-xl bg-card/40 border border-border/20 flex items-center justify-between text-xs"
                           >
-                            <span className="font-heading font-bold text-foreground">{c.name}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-mono text-muted-foreground w-5">
+                                #{h.hora_num}
+                              </span>
+                              <span className="font-heading font-bold text-foreground">
+                                {h.planet} Hora
+                              </span>
+                              <span className="text-[9px] text-muted-foreground font-serif">
+                                ({h.nature})
+                              </span>
+                            </div>
                             <span className="text-muted-foreground font-mono text-[11px]">
-                              {c.start} - {c.end}
+                              {h.start} - {h.end}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Night Horas */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 text-xs font-heading text-secondary font-bold uppercase tracking-wider">
+                        <Moon className="w-4 h-4" /> Nighttime Planetary Horas (13 to 24)
+                      </div>
+                      <div className="space-y-1.5">
+                        {panchangData.horas_night?.map((h: any, i: number) => (
+                          <div
+                            key={i}
+                            className="p-2 rounded-xl bg-card/40 border border-border/20 flex items-center justify-between text-xs"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-mono text-muted-foreground w-5">
+                                #{h.hora_num}
+                              </span>
+                              <span className="font-heading font-bold text-foreground">
+                                {h.planet} Hora
+                              </span>
+                              <span className="text-[9px] text-muted-foreground font-serif">
+                                ({h.nature})
+                              </span>
+                            </div>
+                            <span className="text-muted-foreground font-mono text-[11px]">
+                              {h.start} - {h.end}
                             </span>
                           </div>
                         ))}

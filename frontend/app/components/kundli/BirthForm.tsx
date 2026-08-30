@@ -8,6 +8,7 @@ import { useCitySearch } from "../../hooks/useCitySearch";
 import { useToast } from "../../hooks/useToast";
 import { LANGUAGES } from "../../lib/constants";
 import { convertTo24Hour } from "../../lib/helpers";
+import { getCachedLocation, setCachedLocation } from "../../lib/locationCache";
 
 // In-memory cache to store API calculation results for duplicate inputs
 const chartCache = new Map<string, any>();
@@ -39,6 +40,15 @@ export default function BirthForm({
   const [selectedLanguage, setSelectedLanguage] = useState<string>(defaultLanguage);
   const [loading, setLoading] = useState(false);
 
+  // Initialize cached location on mount if no city is chosen
+  React.useEffect(() => {
+    const cached = getCachedLocation();
+    if (cached && !selectedCity) {
+      setSelectedCity(cached);
+      setCityInput(cached.name);
+    }
+  }, []);
+
   // Debounced City Search
   const { results: cityResults, setResults: setCityResults } = useCitySearch(
     cityInput,
@@ -50,6 +60,7 @@ export default function BirthForm({
     setSelectedCity(city);
     setCityInput(city.name);
     setCityResults([]);
+    setCachedLocation(city);
   };
 
   const handleCalculate = async () => {
