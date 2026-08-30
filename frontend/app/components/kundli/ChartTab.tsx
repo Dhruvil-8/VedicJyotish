@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from "react";
-import { Star, Moon, Sun, Sparkles, Compass, Clock, Calendar, AlertTriangle, User, Radio, RefreshCw } from "lucide-react";
+import { Star, Moon, Sun, Sparkles, Compass, Clock, Calendar, AlertTriangle, User, Radio, RefreshCw, Layers } from "lucide-react";
 import NorthIndianChart from "../NorthIndianChart";
+import SouthIndianChart from "../SouthIndianChart";
+import EastIndianChart from "../EastIndianChart";
 import PlanetaryTable from "../PlanetaryTable";
 import DashaTimeline from "../DashaTimeline";
 import YogaCards from "../YogaCards";
@@ -15,9 +17,12 @@ interface ChartTabProps {
   chartData: any;
 }
 
+export type ChartStyleType = "north" | "south" | "east";
+
 export default function ChartTab({ chartData }: ChartTabProps) {
   const { showToast } = useToast();
   const [selectedVarga, setSelectedVarga] = useState<string>("D1");
+  const [chartStyle, setChartStyle] = useState<ChartStyleType>("north");
   const [inspectedItem, setInspectedItem] = useState<InspectedItem | null>(null);
   const [isTransitActive, setIsTransitActive] = useState(false);
   const [transitData, setTransitData] = useState<Record<string, any[]> | null>(null);
@@ -253,6 +258,19 @@ export default function ChartTab({ chartData }: ChartTabProps) {
                 <span>{isTransitActive ? "Transits: ON" : "Transits (Gochara)"}</span>
               </button>
 
+              {/* Chart Style Switcher */}
+              <select
+                value={chartStyle}
+                onChange={(e) => setChartStyle(e.target.value as ChartStyleType)}
+                className="bg-card border border-border/50 text-foreground rounded-lg p-2 font-heading text-xs outline-none focus:border-primary cursor-pointer transition-all"
+                title="Switch Chart Tradition Style"
+              >
+                <option value="north">North Indian (Diamond)</option>
+                <option value="south">South Indian (Rasi Chakra)</option>
+                <option value="east">East Indian (Bengali)</option>
+              </select>
+
+              {/* Varga Divisional Selection */}
               <select
                 value={selectedVarga}
                 onChange={(e) => setSelectedVarga(e.target.value)}
@@ -267,28 +285,76 @@ export default function ChartTab({ chartData }: ChartTabProps) {
             </div>
           </div>
 
-          <NorthIndianChart
-            chartData={
-              selectedVarga === "D1"
-                ? chartData.chart_data
-                : selectedVarga === "D9"
-                  ? chartData.navamsa_chart || {}
-                  : chartData.divisional_charts?.[selectedVarga] || {}
-            }
-            ascendantSign={
-              selectedVarga === "D1"
-                ? chartData.ascendant.sign
-                : selectedVarga === "D9"
-                  ? chartData.navamsa_chart?.house_1?.sign || chartData.ascendant.sign
-                  : chartData.divisional_charts?.[selectedVarga]?.house_1?.sign ||
-                    chartData.ascendant.sign
-            }
-            title={VARGA_INFO[selectedVarga]?.title}
-            onSelectHouse={handleSelectHouse}
-            onSelectPlanet={handleSelectPlanet}
-            transitData={transitData}
-            isTransitActive={isTransitActive}
-          />
+          {chartStyle === "north" ? (
+            <NorthIndianChart
+              chartData={
+                selectedVarga === "D1"
+                  ? chartData.chart_data
+                  : selectedVarga === "D9"
+                    ? chartData.navamsa_chart || {}
+                    : chartData.divisional_charts?.[selectedVarga] || {}
+              }
+              ascendantSign={
+                selectedVarga === "D1"
+                  ? chartData.ascendant.sign
+                  : selectedVarga === "D9"
+                    ? chartData.navamsa_chart?.house_1?.sign || chartData.ascendant.sign
+                    : chartData.divisional_charts?.[selectedVarga]?.house_1?.sign ||
+                      chartData.ascendant.sign
+              }
+              title={VARGA_INFO[selectedVarga]?.title}
+              onSelectHouse={handleSelectHouse}
+              onSelectPlanet={handleSelectPlanet}
+              transitData={transitData}
+              isTransitActive={isTransitActive}
+            />
+          ) : chartStyle === "south" ? (
+            <SouthIndianChart
+              chartData={
+                selectedVarga === "D1"
+                  ? chartData.chart_data
+                  : selectedVarga === "D9"
+                    ? chartData.navamsa_chart || {}
+                    : chartData.divisional_charts?.[selectedVarga] || {}
+              }
+              ascendantSign={
+                selectedVarga === "D1"
+                  ? chartData.ascendant.sign
+                  : selectedVarga === "D9"
+                    ? chartData.navamsa_chart?.house_1?.sign || chartData.ascendant.sign
+                    : chartData.divisional_charts?.[selectedVarga]?.house_1?.sign ||
+                      chartData.ascendant.sign
+              }
+              title={VARGA_INFO[selectedVarga]?.title}
+              onSelectHouse={handleSelectHouse}
+              onSelectPlanet={handleSelectPlanet}
+              transitData={transitData}
+              isTransitActive={isTransitActive}
+            />
+          ) : (
+            <EastIndianChart
+              chartData={
+                selectedVarga === "D1"
+                  ? chartData.chart_data
+                  : selectedVarga === "D9"
+                    ? chartData.navamsa_chart || {}
+                    : chartData.divisional_charts?.[selectedVarga] || {}
+              }
+              ascendantSign={
+                selectedVarga === "D1"
+                  ? chartData.ascendant.sign
+                  : selectedVarga === "D9"
+                    ? chartData.navamsa_chart?.house_1?.sign || chartData.ascendant.sign
+                    : chartData.divisional_charts?.[selectedVarga]?.house_1?.sign ||
+                      chartData.ascendant.sign
+              }
+              title={VARGA_INFO[selectedVarga]?.title}
+              onSelectHouse={handleSelectHouse}
+              onSelectPlanet={handleSelectPlanet}
+              transitData={transitData}
+              isTransitActive={isTransitActive}
+            />
+          )}
 
           <div className="mt-6 text-center px-4 py-3 bg-primary/5 border border-primary/10 rounded-xl">
             <p className="font-serif italic text-xs text-foreground/80 leading-relaxed">
