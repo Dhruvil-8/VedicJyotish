@@ -693,10 +693,11 @@ export default function PanchangaView() {
           </div>
 
           {/* Calendar Control Bar */}
-          <div className="glass-parchment p-4 sm:p-6 rounded-2xl vedic-border shadow-xl space-y-3 sm:space-y-4">
-            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 sm:gap-4">
+          <div className="glass-parchment p-4 sm:p-5 rounded-2xl vedic-border shadow-xl space-y-3.5">
+            {/* Top Tier: Month Navigation on Left, Layout Switcher on Right */}
+            <div className="flex flex-col lg:flex-row items-center justify-between gap-3 pb-3 border-b border-primary/10">
               {/* Month Navigation & Heading */}
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 sm:gap-3 w-full lg:w-auto justify-between lg:justify-start min-w-0">
                 <button
                   type="button"
                   onClick={handlePrevMonth}
@@ -707,8 +708,8 @@ export default function PanchangaView() {
                   <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
 
-                <div className="text-center md:text-left min-w-0 flex-1 px-1">
-                  <h2 className="text-base sm:text-2xl font-heading text-primary font-bold truncate">
+                <div className="text-center lg:text-left min-w-0 flex-1">
+                  <h2 className="text-base sm:text-xl md:text-2xl font-heading text-primary font-bold truncate">
                     {currentMonthHeading}
                   </h2>
                   {calendarData && (
@@ -730,138 +731,134 @@ export default function PanchangaView() {
                 </button>
               </div>
 
-              {/* Quick Selectors & View Modes */}
-              <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2 border-t md:border-t-0 border-border/20 pt-2.5 md:pt-0">
-                {/* Jump Dropdowns */}
-                <div className="flex items-center gap-1.5">
-                  {traditionView === "english" ? (
-                    <select
-                      value={calGregMonth}
-                      onChange={(e) => {
-                        const m = parseInt(e.target.value, 10);
-                        setCalGregMonth(m);
-                        fetchMonthCalendar(traditionView, selectedMasaIdx, m, calYear, selectedPanchangCity);
-                      }}
-                      className="bg-card/60 border border-border/40 text-foreground font-heading text-xs rounded-lg px-2 py-1.5 focus:border-primary outline-none cursor-pointer max-w-[110px] sm:max-w-none"
-                    >
-                      {GREGORIAN_MONTHS.map((name, idx) => (
-                        <option key={idx} value={idx + 1}>
-                          {name}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <select
-                      value={selectedMasaIdx}
-                      onChange={(e) => {
-                        const m = parseInt(e.target.value, 10);
-                        setSelectedMasaIdx(m);
-                        fetchMonthCalendar(traditionView, m, calGregMonth, calYear, selectedPanchangCity);
-                      }}
-                      className="bg-card/60 border border-border/40 text-foreground font-heading text-xs rounded-lg px-2 py-1.5 focus:border-primary outline-none cursor-pointer max-w-[120px] sm:max-w-none"
-                    >
-                      {activeMonthList.map((m) => (
-                        <option key={m.idx} value={m.idx}>
-                          {traditionView === "gujarat"
-                            ? `${m.gu} (${m.sa})`
-                            : traditionView === "north"
-                            ? `${m.hi} (${m.sa})`
-                            : `${m.sa} Masa`}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-
-                  <input
-                    type="number"
-                    value={calYear}
-                    onChange={(e) => {
-                      const y = parseInt(e.target.value, 10);
-                      if (!isNaN(y)) {
-                        setCalYear(y);
-                        fetchMonthCalendar(traditionView, selectedMasaIdx, calGregMonth, y, selectedPanchangCity);
-                      }
-                    }}
-                    className="w-16 sm:w-20 bg-card/60 border border-border/40 text-foreground font-heading text-xs rounded-lg px-2 py-1.5 focus:border-primary outline-none text-center"
-                    placeholder="Year"
-                  />
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const curY = now.getFullYear();
-                      const curM = now.getMonth() + 1;
-                      setCalYear(curY);
-                      setCalGregMonth(curM);
-                      const defaultMasa = traditionView === "north" ? 5 : 4;
-                      setSelectedMasaIdx(defaultMasa);
-                      fetchMonthCalendar(traditionView, defaultMasa, curM, curY, selectedPanchangCity);
-                    }}
-                    className="px-2 py-1.5 bg-card/40 border border-border/40 hover:bg-primary/10 text-primary text-xs font-heading rounded-lg transition-all cursor-pointer whitespace-nowrap"
-                  >
-                    Current
-                  </button>
-                </div>
-
-                {/* Layout Switcher (Grid vs Paksha vs Agenda List) */}
-                <div className="flex items-center bg-card/50 p-1 rounded-xl border border-border/30 text-xs font-heading">
-                  <button
-                    type="button"
-                    onClick={() => setCalendarLayout("grid")}
-                    className={`p-1.5 px-2.5 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
-                      calendarLayout === "grid"
-                        ? "bg-primary text-primary-foreground font-bold shadow-sm"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                    title="7-Day Grid View"
-                  >
-                    <LayoutGrid className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">7-Day</span> Grid
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setCalendarLayout("paksha")}
-                    className={`p-1.5 px-2.5 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
-                      calendarLayout === "paksha"
-                        ? "bg-primary text-primary-foreground font-bold shadow-sm"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                    title="Paksha View"
-                  >
-                    <Columns className="w-3.5 h-3.5" />
-                    <span>Paksha</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setCalendarLayout("agenda")}
-                    className={`p-1.5 px-2.5 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
-                      calendarLayout === "agenda"
-                        ? "bg-primary text-primary-foreground font-bold shadow-sm"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                    title="Agenda List View"
-                  >
-                    <List className="w-3.5 h-3.5" />
-                    <span>List</span>
-                  </button>
-                </div>
+              {/* Layout Switcher (Grid vs Paksha vs Agenda List) - Fixed position & width */}
+              <div className="w-full lg:w-auto flex items-center justify-center bg-card/50 p-1 rounded-xl border border-border/30 text-xs font-heading shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setCalendarLayout("grid")}
+                  className={`flex-1 lg:flex-initial py-1.5 px-3 rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap ${
+                    calendarLayout === "grid"
+                      ? "bg-primary text-primary-foreground font-bold shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                  title="7-Day Grid View"
+                >
+                  <LayoutGrid className="w-3.5 h-3.5 shrink-0" />
+                  <span>7-Day Grid</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCalendarLayout("paksha")}
+                  className={`flex-1 lg:flex-initial py-1.5 px-3 rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap ${
+                    calendarLayout === "paksha"
+                      ? "bg-primary text-primary-foreground font-bold shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                  title="Paksha View"
+                >
+                  <Columns className="w-3.5 h-3.5 shrink-0" />
+                  <span>Paksha</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCalendarLayout("agenda")}
+                  className={`flex-1 lg:flex-initial py-1.5 px-3 rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap ${
+                    calendarLayout === "agenda"
+                      ? "bg-primary text-primary-foreground font-bold shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                  title="Agenda List View"
+                >
+                  <List className="w-3.5 h-3.5 shrink-0" />
+                  <span>List</span>
+                </button>
               </div>
             </div>
 
-            {/* Location Bar with System-wide Cache Indicator */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-t border-primary/10 pt-2.5 gap-1.5">
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-serif truncate">
-                <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
-                <span className="truncate">
-                  Ref: <strong className="text-foreground">{selectedPanchangCity?.name || "New Delhi, India"}</strong>
-                </span>
-                <span className="text-[8px] bg-primary/10 text-primary px-1.5 py-0.2 rounded-full font-heading shrink-0">
-                  Cached
+            {/* Bottom Tier: Reference Location on Left, Quick Jump Controls on Right */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+              {/* Location Bar with System-wide Cache Indicator */}
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-serif w-full sm:w-auto justify-between sm:justify-start">
+                <div className="flex items-center gap-1.5 truncate">
+                  <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
+                  <span className="truncate">
+                    Ref: <strong className="text-foreground">{selectedPanchangCity?.name || "New Delhi, India"}</strong>
+                  </span>
+                </div>
+                <span className="text-[8px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-heading shrink-0">
+                  Cached System-wide
                 </span>
               </div>
 
-              <div className="text-[10px] text-muted-foreground font-serif hidden sm:block">
-                Click on any day cell to inspect detailed Panchang and Muhurtas.
+              {/* Quick Jump Dropdowns & Inputs */}
+              <div className="flex items-center gap-1.5 w-full sm:w-auto justify-end">
+                {traditionView === "english" ? (
+                  <select
+                    value={calGregMonth}
+                    onChange={(e) => {
+                      const m = parseInt(e.target.value, 10);
+                      setCalGregMonth(m);
+                      fetchMonthCalendar(traditionView, selectedMasaIdx, m, calYear, selectedPanchangCity);
+                    }}
+                    className="flex-1 sm:flex-initial bg-card/60 border border-border/40 text-foreground font-heading text-xs rounded-lg px-2.5 py-1.5 focus:border-primary outline-none cursor-pointer min-w-[120px]"
+                  >
+                    {GREGORIAN_MONTHS.map((name, idx) => (
+                      <option key={idx} value={idx + 1}>
+                        {name}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <select
+                    value={selectedMasaIdx}
+                    onChange={(e) => {
+                      const m = parseInt(e.target.value, 10);
+                      setSelectedMasaIdx(m);
+                      fetchMonthCalendar(traditionView, m, calGregMonth, calYear, selectedPanchangCity);
+                    }}
+                    className="flex-1 sm:flex-initial bg-card/60 border border-border/40 text-foreground font-heading text-xs rounded-lg px-2.5 py-1.5 focus:border-primary outline-none cursor-pointer min-w-[140px]"
+                  >
+                    {activeMonthList.map((m) => (
+                      <option key={m.idx} value={m.idx}>
+                        {traditionView === "gujarat"
+                          ? `${m.gu} (${m.sa})`
+                          : traditionView === "north"
+                          ? `${m.hi} (${m.sa})`
+                          : `${m.sa} Masa`}
+                      </option>
+                    ))}
+                  </select>
+                )}
+
+                <input
+                  type="number"
+                  value={calYear}
+                  onChange={(e) => {
+                    const y = parseInt(e.target.value, 10);
+                    if (!isNaN(y)) {
+                      setCalYear(y);
+                      fetchMonthCalendar(traditionView, selectedMasaIdx, calGregMonth, y, selectedPanchangCity);
+                    }
+                  }}
+                  className="w-16 sm:w-20 bg-card/60 border border-border/40 text-foreground font-heading text-xs rounded-lg px-2 py-1.5 focus:border-primary outline-none text-center"
+                  placeholder="Year"
+                />
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const curY = now.getFullYear();
+                    const curM = now.getMonth() + 1;
+                    setCalYear(curY);
+                    setCalGregMonth(curM);
+                    const defaultMasa = traditionView === "north" ? 5 : 4;
+                    setSelectedMasaIdx(defaultMasa);
+                    fetchMonthCalendar(traditionView, defaultMasa, curM, curY, selectedPanchangCity);
+                  }}
+                  className="px-2.5 py-1.5 bg-card/40 border border-border/40 hover:bg-primary/10 text-primary text-xs font-heading rounded-lg transition-all cursor-pointer whitespace-nowrap"
+                >
+                  Current
+                </button>
               </div>
             </div>
           </div>
