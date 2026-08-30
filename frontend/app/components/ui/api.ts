@@ -177,4 +177,26 @@ export const calculateTransits = async (payload: {
   return res.json();
 };
 
+export const calculateCalendar = async (payload: {
+  year: number;
+  month: number;
+  lat: number;
+  lon: number;
+  timezone: number;
+  tradition?: string;
+}) => {
+  const res = await fetch(`${API_BASE}/calculate_calendar`, {
+    method: "POST",
+    headers: getHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err: any = new Error("Calendar calculation failed");
+    err.response = res;
+    throw err;
+  }
+  return res.json();
+};
+
+
 

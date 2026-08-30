@@ -236,9 +236,105 @@ pub struct Panchanga {
     pub horas_day: Option<Vec<HoraSlot>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub horas_night: Option<Vec<HoraSlot>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub masa: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub masa_amanta: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub masa_purnimanta: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_adhika_masa: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub vikram_samvat: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shaka_samvat: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub kali_samvat: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub samvatsara_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ritu: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ayana: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub vedic_time: Option<VedicTime>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VedicTime {
+    pub ishta_ghati: f64,
+    pub ghati: u32,
+    pub vighati: u32,
+    pub vipal: u32,
+    pub prahar_num: u8,
+    pub prahar_name: String,
+    pub prahar_sanskrit: String,
+    pub muhurta_num: u8,
+    pub muhurta_name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MonthCalendarRequest {
+    pub year: i32,
+    pub month: u32,
+    pub lat: f64,
+    pub lon: f64,
+    pub timezone: f64,
+    #[serde(default = "default_tradition")]
+    pub tradition: String,
+}
+
+fn default_tradition() -> String {
+    "purnimanta".to_string()
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CalendarDayData {
+    pub date: String,
+    pub day_of_month: u32,
+    pub day_of_week: String,
+    pub vara_sanskrit: String,
+    pub tithi_name: String,
+    pub tithi_index: u8,
+    pub paksha: String,
+    pub nakshatra_name: String,
+    pub yoga_name: String,
+    pub karana_name: String,
+    pub masa_amanta: String,
+    pub masa_purnimanta: String,
+    pub is_adhika: bool,
+    pub ritu: String,
+    pub ayana: String,
+    pub vikram_samvat: u32,
+    pub shaka_samvat: u32,
+    pub sunrise: String,
+    pub sunset: String,
+    pub rahu_kaal: String,
+    pub abhijit_muhurat: String,
+    pub vrats: Vec<String>,
+    pub is_ekadashi: bool,
+    pub is_pradosh: bool,
+    pub is_purnima: bool,
+    pub is_amavasya: bool,
+    pub is_sankranti: bool,
+    pub festival: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MonthCalendarResponse {
+    pub requested_year: i32,
+    pub requested_month: u32,
+    pub tradition: String,
+    pub primary_masa: String,
+    pub primary_vikram_samvat: u32,
+    pub primary_shaka_samvat: u32,
+    pub primary_samvatsara: String,
+    pub primary_ritu: String,
+    pub primary_ayana: String,
+    pub days: Vec<CalendarDayData>,
+}
+
+#[derive(Debug, Clone, Serialize)]
 pub struct ChoghadiyaSlot {
     pub name: String,
     pub start: String,

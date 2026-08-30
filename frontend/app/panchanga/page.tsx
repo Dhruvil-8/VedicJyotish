@@ -3,9 +3,9 @@ import AppShell from "../components/layout/AppShell";
 import PanchangaView from "./PanchangaView";
 
 export const metadata = {
-  title: "Daily Vedic Panchang | Vedic Jyotish",
+  title: "Vedic Panchangam | Vedic Jyotish",
   description:
-    "Calculate the five vital cosmic limbs of time (Vara, Tithi, Nakshatra, Yoga, Karana), planetary horas, and choghadiya muhurats for any location.",
+    "Comprehensive Vedic Panchangam and Traditional Hindu Calendar. Calculate the cosmic limbs of time (Vara, Tithi, Nakshatra, Yoga, Karana), Masa, Samvat, Ritu, Ayana, and live traditional Vedic Time.",
 };
 
 export default function PanchangaPage() {

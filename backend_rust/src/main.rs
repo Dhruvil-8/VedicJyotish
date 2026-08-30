@@ -158,6 +158,11 @@ async fn main() {
             "/calculate_chart",
             post(calculate_chart).layer(middleware::from_fn(ratelimit::limit_chart)),
         )
+        // Calendar batch calculation (10/min)
+        .route(
+            "/calculate_calendar",
+            post(calculate_calendar).layer(middleware::from_fn(ratelimit::limit_chart)),
+        )
         // Transit calculation (10/min)
         .route(
             "/calculate_transits",
@@ -515,6 +520,16 @@ async fn chart_panchanga(
     validate_api_key(&state, &headers)?;
     let chart = engine::compute_chart_with_profile(request.birth_data, request.profile).await?;
     Ok(Json(chart.panchanga))
+}
+
+async fn calculate_calendar(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(request): Json<models::MonthCalendarRequest>,
+) -> Result<Json<models::MonthCalendarResponse>, ApiError> {
+    validate_api_key(&state, &headers)?;
+    let result = panchanga::calculate_month_calendar(request)?;
+    Ok(Json(result))
 }
 
 async fn chart_ashtakavarga(

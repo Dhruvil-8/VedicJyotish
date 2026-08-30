@@ -33,7 +33,7 @@ export default function AppShell({ children }: AppShellProps) {
   const navItems = [
     { href: "/", label: "Birth Chart & Kundali", icon: User },
     { href: "/matching", label: "Kundali Milan & Matching", icon: Heart },
-    { href: "/panchanga", label: "Daily Vedic Panchang", icon: Clock },
+    { href: "/panchanga", label: "Vedic Panchangam", icon: Clock },
     { href: "/related-sites", label: "Our Related Sites", icon: BookOpen },
   ];
 
