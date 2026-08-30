@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { Star, Moon, Sun, Sparkles, Compass, Clock, Calendar, AlertTriangle, User, Radio, RefreshCw, Layers, Printer, FastForward, Rewind, Play, ChevronLeft, ChevronRight } from "lucide-react";
+import { Star, Moon, Sun, Sparkles, Compass, Clock, Calendar, AlertTriangle, User, Radio, RefreshCw, Layers } from "lucide-react";
 import NorthIndianChart from "../NorthIndianChart";
 import SouthIndianChart from "../SouthIndianChart";
 import EastIndianChart from "../EastIndianChart";
@@ -93,14 +93,23 @@ export default function ChartTab({ chartData }: ChartTabProps) {
     });
   };
 
-  const [transitDateObj, setTransitDateObj] = useState<Date>(new Date());
+  const handleToggleTransits = async () => {
+    if (isTransitActive) {
+      setIsTransitActive(false);
+      return;
+    }
 
-  const fetchTransitsForDate = async (targetDate: Date) => {
+    if (transitData) {
+      setIsTransitActive(true);
+      return;
+    }
+
     setIsTransitLoading(true);
     try {
+      const now = new Date();
       const pad = (n: number) => n.toString().padStart(2, "0");
-      const transitDate = `${pad(targetDate.getDate())}/${pad(targetDate.getMonth() + 1)}/${targetDate.getFullYear()}`;
-      const transitTime = `${pad(targetDate.getHours())}:${pad(targetDate.getMinutes())}`;
+      const transitDate = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()}`;
+      const transitTime = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
 
       const res = await calculateTransits({
         birth_data: {
@@ -122,35 +131,14 @@ export default function ChartTab({ chartData }: ChartTabProps) {
           transitsByHouse[hKey].push(tp);
         });
         setTransitData(transitsByHouse);
-        setTransitDateObj(targetDate);
         setIsTransitActive(true);
-        showToast(`Transits calculated for ${transitDate}.`, "success");
+        showToast("Live celestial transit (Gochara) overlay activated.", "success");
       }
     } catch (e) {
-      showToast("Could not calculate transits for chosen date.", "error");
+      showToast("Could not load real-time transits. Please try again.", "error");
     } finally {
       setIsTransitLoading(false);
     }
-  };
-
-  const handleToggleTransits = () => {
-    if (isTransitActive) {
-      setIsTransitActive(false);
-      return;
-    }
-    fetchTransitsForDate(transitDateObj);
-  };
-
-  const stepTransit = (daysDelta: number, monthsDelta: number, yearsDelta: number) => {
-    const next = new Date(transitDateObj);
-    if (daysDelta) next.setDate(next.getDate() + daysDelta);
-    if (monthsDelta) next.setMonth(next.getMonth() + monthsDelta);
-    if (yearsDelta) next.setFullYear(next.getFullYear() + yearsDelta);
-    fetchTransitsForDate(next);
-  };
-
-  const handlePrintKundli = () => {
-    window.print();
   };
 
   // Tithi Category Helper
@@ -177,23 +165,6 @@ export default function ChartTab({ chartData }: ChartTabProps) {
 
   return (
     <div className="space-y-8 animate-fadeIn">
-      {/* Print-Only Janmapatrika Header */}
-      <div className="hidden print:block text-center border-b-2 border-amber-600 pb-4 mb-6">
-        <div className="text-sm font-heading font-bold text-amber-700">॥ श्री गणेशाय नमः ॥</div>
-        <h1 className="text-2xl font-heading font-extrabold text-foreground mt-1">सम्पूर्ण जन्मपत्रिका (Janmapatrika)</h1>
-        <div className="grid grid-cols-3 gap-2 text-xs font-serif mt-3 text-left bg-amber-500/10 p-3 rounded-lg border border-amber-600/30">
-          <div><strong>Date of Birth:</strong> {chartData.birth_date || "N/A"}</div>
-          <div><strong>Time of Birth:</strong> {chartData.birth_time || "N/A"}</div>
-          <div><strong>Place:</strong> {chartData.city || "N/A"}</div>
-          <div><strong>Lagna:</strong> {chartData.ascendant.sign}</div>
-          <div><strong>Rasi:</strong> {chartData.moon_intelligence.sign}</div>
-          <div><strong>Nakshatra:</strong> {chartData.moon_intelligence.nakshatra}</div>
-          <div><strong>Tithi:</strong> {chartData.panchanga?.tithi?.name || "N/A"}</div>
-          <div><strong>Paksha & Masa:</strong> {chartData.panchanga?.paksha || ""} {chartData.panchanga?.masa || ""}</div>
-          <div><strong>Samvat:</strong> VS {chartData.panchanga?.vikram_samvat || "--"} | SS {chartData.panchanga?.shaka_samvat || "--"}</div>
-        </div>
-      </div>
-
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Ascendant */}
@@ -260,7 +231,7 @@ export default function ChartTab({ chartData }: ChartTabProps) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Interactive Divisional Kundli Chart */}
         <div className="glass-parchment p-6 rounded-2xl vedic-border shadow-xl">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div>
               <h3 className="text-secondary font-heading mb-0.5 gold-glow">Divisional Kundli</h3>
               <p className="text-xs text-muted-foreground font-serif">
@@ -268,17 +239,6 @@ export default function ChartTab({ chartData }: ChartTabProps) {
               </p>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              {/* Print / Export Button */}
-              <button
-                type="button"
-                onClick={handlePrintKundli}
-                className="px-3 py-1.5 rounded-lg border border-primary/30 bg-primary/10 text-primary font-heading text-xs hover:bg-primary/20 transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
-                title="Print or Save Janmapatrika as PDF"
-              >
-                <Printer className="w-3.5 h-3.5" />
-                <span>Print / PDF</span>
-              </button>
-
               <button
                 type="button"
                 onClick={handleToggleTransits}
@@ -324,90 +284,6 @@ export default function ChartTab({ chartData }: ChartTabProps) {
               </select>
             </div>
           </div>
-
-          {/* Interactive Gochara Transit Time-Travel Stepper Bar */}
-          {isTransitActive && (
-            <div className="bg-emerald-500/10 border border-emerald-500/30 p-3 rounded-xl space-y-2 mb-4 animate-fadeIn">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <Radio className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
-                  <span className="font-heading text-xs font-bold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider">
-                    Gochara Transits For:
-                  </span>
-                  <span className="font-mono text-xs font-bold text-foreground bg-card/60 px-2 py-0.5 rounded border border-border/20">
-                    {transitDateObj.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
-                  </span>
-                </div>
-
-                {/* Time Travel Stepper Controls */}
-                <div className="flex flex-wrap items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => stepTransit(0, 0, -1)}
-                    disabled={isTransitLoading}
-                    className="px-2 py-1 bg-card border border-border/40 text-[10px] font-heading rounded hover:bg-primary/10 transition-all cursor-pointer disabled:opacity-50"
-                    title="Jump -1 Year"
-                  >
-                    -1 Yr
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => stepTransit(0, -1, 0)}
-                    disabled={isTransitLoading}
-                    className="px-2 py-1 bg-card border border-border/40 text-[10px] font-heading rounded hover:bg-primary/10 transition-all cursor-pointer disabled:opacity-50"
-                    title="Jump -1 Month"
-                  >
-                    -1 Mo
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => stepTransit(-1, 0, 0)}
-                    disabled={isTransitLoading}
-                    className="px-2 py-1 bg-card border border-border/40 text-[10px] font-heading rounded hover:bg-primary/10 transition-all cursor-pointer disabled:opacity-50"
-                    title="Jump -1 Day"
-                  >
-                    -1 Day
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => fetchTransitsForDate(new Date())}
-                    disabled={isTransitLoading}
-                    className="px-2 py-1 bg-emerald-600 text-white text-[10px] font-heading font-bold rounded shadow-sm hover:bg-emerald-700 transition-all cursor-pointer disabled:opacity-50"
-                    title="Jump to Today's Live Transits"
-                  >
-                    Live / Today
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => stepTransit(1, 0, 0)}
-                    disabled={isTransitLoading}
-                    className="px-2 py-1 bg-card border border-border/40 text-[10px] font-heading rounded hover:bg-primary/10 transition-all cursor-pointer disabled:opacity-50"
-                    title="Jump +1 Day"
-                  >
-                    +1 Day
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => stepTransit(0, 1, 0)}
-                    disabled={isTransitLoading}
-                    className="px-2 py-1 bg-card border border-border/40 text-[10px] font-heading rounded hover:bg-primary/10 transition-all cursor-pointer disabled:opacity-50"
-                    title="Jump +1 Month"
-                  >
-                    +1 Mo
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => stepTransit(0, 0, 1)}
-                    disabled={isTransitLoading}
-                    className="px-2 py-1 bg-card border border-border/40 text-[10px] font-heading rounded hover:bg-primary/10 transition-all cursor-pointer disabled:opacity-50"
-                    title="Jump +1 Year"
-                  >
-                    +1 Yr
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
 
           {chartStyle === "north" ? (
             <NorthIndianChart

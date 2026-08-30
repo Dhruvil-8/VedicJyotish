@@ -30,55 +30,17 @@ export default function AppShell({ children }: AppShellProps) {
     }
   };
 
-  const [uiLang, setUiLang] = useState<"en" | "gu" | "hi">("en");
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const savedLang = localStorage.getItem("vedic_ui_lang") as "en" | "gu" | "hi";
-      if (savedLang) setUiLang(savedLang);
-    }
-  }, []);
-
-  const changeLanguage = (lang: "en" | "gu" | "hi") => {
-    setUiLang(lang);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("vedic_ui_lang", lang);
-      window.dispatchEvent(new CustomEvent("vedic_lang_changed", { detail: lang }));
-    }
-  };
-
-  const navLabels = {
-    en: {
-      birth: "Birth Chart & Kundali",
-      matching: "Kundali Milan & Matching",
-      panchang: "Vedic Panchangam",
-      related: "Our Related Sites",
-    },
-    gu: {
-      birth: "જન્મ કુંડળી (Kundali)",
-      matching: "કુંડળી મિલન (Matching)",
-      panchang: "વૈદિક પંચાંગ (Panchangam)",
-      related: "અન્ય આધ્યાત્મિક સાઇટ્સ",
-    },
-    hi: {
-      birth: "जन्म कुण्डली (Kundali)",
-      matching: "कुण्डली मिलान (Matching)",
-      panchang: "वैदिक पंचांग (Panchangam)",
-      related: "अन्य आध्यात्मिक साइट्स",
-    },
-  };
-
   const navItems = [
-    { href: "/", label: navLabels[uiLang].birth, icon: User },
-    { href: "/matching", label: navLabels[uiLang].matching, icon: Heart },
-    { href: "/panchanga", label: navLabels[uiLang].panchang, icon: Clock },
-    { href: "/related-sites", label: navLabels[uiLang].related, icon: BookOpen },
+    { href: "/", label: "Birth Chart & Kundali", icon: User },
+    { href: "/matching", label: "Kundali Milan & Matching", icon: Heart },
+    { href: "/panchanga", label: "Vedic Panchangam", icon: Clock },
+    { href: "/related-sites", label: "Our Related Sites", icon: BookOpen },
   ];
 
   return (
     <main className="min-h-screen selection:bg-primary/30 selection:text-primary pb-20">
-      {/* Top Floating Controls: Sidebar Trigger & Language Selector */}
-      <div className="fixed top-4 left-4 z-40 flex items-center gap-2">
+      {/* Sidebar Drawer Hamburger Trigger */}
+      <div className="fixed top-4 left-4 z-40">
         <button
           onClick={() => setIsNavOpen(true)}
           className="p-3 rounded-full bg-background/80 backdrop-blur-md border border-primary/20 shadow-md text-primary hover:bg-primary/10 transition-all flex items-center justify-center cursor-pointer"
@@ -86,37 +48,6 @@ export default function AppShell({ children }: AppShellProps) {
         >
           <Menu className="w-5 h-5" />
         </button>
-
-        {/* Language Switcher Pill */}
-        <div className="bg-background/80 backdrop-blur-md border border-primary/20 shadow-md rounded-full p-1 flex items-center text-[10px] font-heading">
-          <button
-            type="button"
-            onClick={() => changeLanguage("en")}
-            className={`px-2 py-1 rounded-full transition-all cursor-pointer ${
-              uiLang === "en" ? "bg-primary text-primary-foreground font-bold" : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            EN
-          </button>
-          <button
-            type="button"
-            onClick={() => changeLanguage("gu")}
-            className={`px-2 py-1 rounded-full transition-all cursor-pointer ${
-              uiLang === "gu" ? "bg-primary text-primary-foreground font-bold" : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            ગુજ
-          </button>
-          <button
-            type="button"
-            onClick={() => changeLanguage("hi")}
-            className={`px-2 py-1 rounded-full transition-all cursor-pointer ${
-              uiLang === "hi" ? "bg-primary text-primary-foreground font-bold" : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            हिन्दी
-          </button>
-        </div>
       </div>
 
       {/* Sidebar Navigation Drawer */}
