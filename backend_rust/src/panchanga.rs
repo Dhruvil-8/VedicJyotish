@@ -985,3 +985,58 @@ fn karana_index(half_tithi_index: usize) -> usize {
 fn round4(value: f64) -> f64 {
     (value * 10_000.0).round() / 10_000.0
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_calculate_month_calendar_lunar_amanta() {
+        let req = crate::models::MonthCalendarRequest {
+            year: 2026,
+            month: 8,
+            lat: 28.6139,
+            lon: 77.209,
+            timezone: 5.5,
+            tradition: "amanta".to_string(),
+            view_mode: "lunar".to_string(),
+            lunar_masa: Some(4), // Shravana
+        };
+        let res = calculate_month_calendar(req).expect("Failed to calculate lunar calendar");
+        assert_eq!(res.days.len(), 30);
+        assert_eq!(res.primary_masa, "Shravana");
+    }
+
+    #[test]
+    fn test_calculate_month_calendar_lunar_purnimanta() {
+        let req = crate::models::MonthCalendarRequest {
+            year: 2026,
+            month: 8,
+            lat: 28.6139,
+            lon: 77.209,
+            timezone: 5.5,
+            tradition: "purnimanta".to_string(),
+            view_mode: "lunar".to_string(),
+            lunar_masa: Some(5), // Bhadrapada
+        };
+        let res = calculate_month_calendar(req).expect("Failed to calculate purnimanta calendar");
+        assert_eq!(res.days.len(), 30);
+        assert_eq!(res.primary_masa, "Bhadrapada");
+    }
+
+    #[test]
+    fn test_calculate_month_calendar_gregorian() {
+        let req = crate::models::MonthCalendarRequest {
+            year: 2026,
+            month: 8,
+            lat: 28.6139,
+            lon: 77.209,
+            timezone: 5.5,
+            tradition: "purnimanta".to_string(),
+            view_mode: "gregorian".to_string(),
+            lunar_masa: None,
+        };
+        let res = calculate_month_calendar(req).expect("Failed to calculate gregorian calendar");
+        assert_eq!(res.days.len(), 31);
+    }
+}
