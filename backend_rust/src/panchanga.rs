@@ -596,6 +596,80 @@ pub fn calculate(
     })
 }
 
+fn find_lunar_month_start(
+    year: i32,
+    target_masa: u8,
+    tradition: &str,
+    lat: f64,
+    lon: f64,
+    tz: f64,
+) -> Result<(chrono::NaiveDate, u8, u32, u32), ApiError> {
+    let approx_greg_month = match target_masa {
+        0 => (year, 4, 5),
+        1 => (year, 5, 5),
+        2 => (year, 6, 5),
+        3 => (year, 7, 5),
+        4 => (year, 8, 5),
+        5 => (year, 9, 5),
+        6 => (year, 10, 5),
+        7 => (year, 11, 5),
+        8 => (year, 12, 5),
+        9 => (year + 1, 1, 5),
+        10 => (year + 1, 2, 5),
+        11 => (year + 1, 3, 5),
+        _ => (year, 8, 5),
+    };
+
+    let start_date = chrono::NaiveDate::from_ymd_opt(approx_greg_month.0, approx_greg_month.1, approx_greg_month.2)
+        .unwrap_or_else(|| chrono::NaiveDate::from_ymd_opt(year, 8, 5).unwrap());
+
+    let scan_start = start_date - chrono::Duration::days(35);
+    let mut found_date = None;
+    let mut vikram_y = year as u32 + 57;
+    let mut shaka_y = year as u32 - 78;
+
+    for d_offset in 0..70 {
+        let cur_date = scan_start + chrono::Duration::days(d_offset);
+        let jd = unsafe {
+            swiss_eph::swe_julday(
+                cur_date.year(),
+                cur_date.month() as i32,
+                cur_date.day() as i32,
+                12.0 - tz,
+                swiss_eph::SE_GREG_CAL,
+            )
+        };
+        if let Ok(snap) = swiss::calculate_snapshot(jd, lat, lon) {
+            let sun_deg = snap.planets.iter().find(|p| p.name == "Sun").map(|p| p.longitude).unwrap_or(0.0);
+            let moon_deg = snap.planets.iter().find(|p| p.name == "Moon").map(|p| p.longitude).unwrap_or(0.0);
+            let moon_sun = swiss::normalize_degree(moon_deg - sun_deg);
+            let tithi_idx = (moon_sun / 12.0).floor() as usize;
+            let days_since_nm = moon_sun / 12.190749;
+            let sun_nm = swiss::normalize_degree(sun_deg - (days_since_nm * 0.9856));
+            let rashi_nm = (sun_nm / 30.0).floor() as usize;
+            let amanta_m = (rashi_nm + 1) % 12;
+
+            let is_start_day = if tradition == "purnimanta" {
+                let purnimanta_m = if tithi_idx < 15 { amanta_m } else { (amanta_m + 1) % 12 };
+                tithi_idx == 15 && purnimanta_m == target_masa as usize
+            } else {
+                tithi_idx == 0 && amanta_m == target_masa as usize
+            };
+
+            if is_start_day {
+                found_date = Some(cur_date);
+                let is_after_chaitra = cur_date.month() > 3 || (cur_date.month() == 3 && amanta_m == 0 && tithi_idx < 15);
+                vikram_y = if is_after_chaitra { (cur_date.year() + 57) as u32 } else { (cur_date.year() + 56) as u32 };
+                shaka_y = if is_after_chaitra { (cur_date.year() - 78) as u32 } else { (cur_date.year() - 79) as u32 };
+                break;
+            }
+        }
+    }
+
+    let start = found_date.unwrap_or(start_date);
+    Ok((start, target_masa, vikram_y, shaka_y))
+}
+
 pub fn calculate_month_calendar(
     req: crate::models::MonthCalendarRequest,
 ) -> Result<crate::models::MonthCalendarResponse, ApiError> {
@@ -605,26 +679,78 @@ pub fn calculate_month_calendar(
     let lon = req.lon;
     let tz = req.timezone;
     let tradition = req.tradition.to_lowercase();
+    let is_lunar_view = req.view_mode.to_lowercase() == "lunar";
 
-    let days_in_month = match month {
-        1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
-        4 | 6 | 9 | 11 => 30,
-        2 => {
-            if (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0) {
-                29
+    let (dates_to_calculate, primary_masa_idx, calc_start_date, calc_end_date): (Vec<chrono::NaiveDate>, u8, String, String) = if is_lunar_view {
+        // Determine target masa index
+        let target_masa = if let Some(m) = req.lunar_masa {
+            m % 12
+        } else {
+            // Find active masa for (year, month, 15)
+            let ref_d = chrono::NaiveDate::from_ymd_opt(year, month.min(12), 15)
+                .unwrap_or_else(|| chrono::NaiveDate::from_ymd_opt(year, 8, 15).unwrap());
+            let jd = unsafe {
+                swiss_eph::swe_julday(
+                    ref_d.year(),
+                    ref_d.month() as i32,
+                    ref_d.day() as i32,
+                    12.0 - tz,
+                    swiss_eph::SE_GREG_CAL,
+                )
+            };
+            if let Ok(snap) = swiss::calculate_snapshot(jd, lat, lon) {
+                let s_deg = snap.planets.iter().find(|p| p.name == "Sun").map(|p| p.longitude).unwrap_or(0.0);
+                let m_deg = snap.planets.iter().find(|p| p.name == "Moon").map(|p| p.longitude).unwrap_or(0.0);
+                let m_s = swiss::normalize_degree(m_deg - s_deg);
+                let t_idx = (m_s / 12.0).floor() as usize;
+                let d_nm = m_s / 12.190749;
+                let s_nm = swiss::normalize_degree(s_deg - (d_nm * 0.9856));
+                let r_nm = (s_nm / 30.0).floor() as usize;
+                let amanta_m = (r_nm + 1) % 12;
+                if tradition == "purnimanta" {
+                    (if t_idx < 15 { amanta_m } else { (amanta_m + 1) % 12 }) as u8
+                } else {
+                    amanta_m as u8
+                }
             } else {
-                28
+                ((month + 7) % 12) as u8
+            }
+        };
+
+        let (start_d, m_idx, _, _) = find_lunar_month_start(year, target_masa, &tradition, lat, lon, tz)?;
+        let mut d_vec = Vec::with_capacity(30);
+        for i in 0..30 {
+            d_vec.push(start_d + chrono::Duration::days(i));
+        }
+        let s_str = format!("{:02}/{:02}/{}", start_d.day(), start_d.month(), start_d.year());
+        let end_d = start_d + chrono::Duration::days(29);
+        let e_str = format!("{:02}/{:02}/{}", end_d.day(), end_d.month(), end_d.year());
+        (d_vec, m_idx, s_str, e_str)
+    } else {
+        let days_in_month = match month {
+            1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
+            4 | 6 | 9 | 11 => 30,
+            2 => {
+                if (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0) {
+                    29
+                } else {
+                    28
+                }
+            }
+            _ => 30,
+        };
+        let mut d_vec = Vec::with_capacity(days_in_month as usize);
+        for d in 1..=days_in_month {
+            if let Some(nd) = chrono::NaiveDate::from_ymd_opt(year, month, d) {
+                d_vec.push(nd);
             }
         }
-        _ => {
-            return Err(ApiError::new(
-                StatusCode::BAD_REQUEST,
-                "Invalid month specified (must be 1-12).",
-            ));
-        }
+        let s_str = format!("01/{:02}/{}", month, year);
+        let e_str = format!("{:02}/{:02}/{}", days_in_month, month, year);
+        (d_vec, ((month + 7) % 12) as u8, s_str, e_str)
     };
 
-    let mut days = Vec::with_capacity(days_in_month as usize);
+    let mut days = Vec::with_capacity(dates_to_calculate.len());
     let mut primary_masa = String::new();
     let mut primary_vikram = 0u32;
     let mut primary_shaka = 0u32;
@@ -632,27 +758,24 @@ pub fn calculate_month_calendar(
     let mut primary_ritu = String::new();
     let mut primary_ayana = String::new();
 
-    for day in 1..=days_in_month {
-        let naive_date = chrono::NaiveDate::from_ymd_opt(year, month, day).ok_or_else(|| {
-            ApiError::new(StatusCode::BAD_REQUEST, "Invalid calendar date calculation.")
-        })?;
-        let local_dt = naive_date.and_hms_opt(12, 0, 0).unwrap();
+    let lords = [
+        "Ketu", "Venus", "Sun", "Moon", "Mars", "Rahu", "Jupiter", "Saturn", "Mercury",
+    ];
 
+    for (day_idx, naive_date) in dates_to_calculate.iter().enumerate() {
+        let local_dt = naive_date.and_hms_opt(12, 0, 0).unwrap();
         let utc_hour = 12.0 - tz;
         let jd_ut = unsafe {
             swiss_eph::swe_julday(
-                year,
-                month as i32,
-                day as i32,
+                naive_date.year(),
+                naive_date.month() as i32,
+                naive_date.day() as i32,
                 utc_hour,
                 swiss_eph::SE_GREG_CAL,
             )
         };
 
         let snapshot = swiss::calculate_snapshot(jd_ut, lat, lon)?;
-        let lords = [
-            "Ketu", "Venus", "Sun", "Moon", "Mars", "Rahu", "Jupiter", "Saturn", "Mercury",
-        ];
         let planets: Vec<PlanetData> = snapshot
             .planets
             .into_iter()
@@ -720,8 +843,14 @@ pub fn calculate_month_calendar(
 
         let weekday_sanskrit = VARA_SANSKRIT[(naive_date.weekday().num_days_from_monday() as usize).min(6)];
 
-        if day == 15 || primary_masa.is_empty() {
-            primary_masa = if tradition == "amanta" { m_amanta.clone() } else { m_purnimanta.clone() };
+        if day_idx == 14 || primary_masa.is_empty() {
+            primary_masa = if is_lunar_view {
+                MASA_NAMES[primary_masa_idx as usize].to_string()
+            } else if tradition == "amanta" {
+                m_amanta.clone()
+            } else {
+                m_purnimanta.clone()
+            };
             primary_vikram = panchang.vikram_samvat.unwrap_or(0);
             primary_shaka = panchang.shaka_samvat.unwrap_or(0);
             primary_samvatsara = panchang.samvatsara_name.clone().unwrap_or_default();
@@ -730,8 +859,9 @@ pub fn calculate_month_calendar(
         }
 
         days.push(crate::models::CalendarDayData {
-            date: format!("{:02}/{:02}/{}", day, month, year),
-            day_of_month: day,
+            date: format!("{:02}/{:02}/{}", naive_date.day(), naive_date.month(), naive_date.year()),
+            day_of_month: naive_date.day(),
+            tithi_day_number: (day_idx + 1) as u8,
             day_of_week: naive_date.weekday().to_string(),
             vara_sanskrit: weekday_sanskrit.to_string(),
             tithi_name: panchang.tithi.name,
@@ -765,12 +895,16 @@ pub fn calculate_month_calendar(
         requested_year: year,
         requested_month: month,
         tradition: if tradition == "amanta" { "Amanta".to_string() } else { "Purnimanta".to_string() },
+        view_mode: if is_lunar_view { "lunar".to_string() } else { "gregorian".to_string() },
         primary_masa,
+        primary_masa_index: primary_masa_idx,
         primary_vikram_samvat: primary_vikram,
         primary_shaka_samvat: primary_shaka,
         primary_samvatsara,
         primary_ritu,
         primary_ayana,
+        start_date: calc_start_date,
+        end_date: calc_end_date,
         days,
     })
 }

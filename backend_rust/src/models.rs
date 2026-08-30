@@ -282,16 +282,24 @@ pub struct MonthCalendarRequest {
     pub timezone: f64,
     #[serde(default = "default_tradition")]
     pub tradition: String,
+    #[serde(default = "default_view_mode")]
+    pub view_mode: String,
+    pub lunar_masa: Option<u8>,
 }
 
 fn default_tradition() -> String {
     "purnimanta".to_string()
 }
 
+fn default_view_mode() -> String {
+    "lunar".to_string()
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CalendarDayData {
     pub date: String,
     pub day_of_month: u32,
+    pub tithi_day_number: u8,
     pub day_of_week: String,
     pub vara_sanskrit: String,
     pub tithi_name: String,
@@ -325,12 +333,16 @@ pub struct MonthCalendarResponse {
     pub requested_year: i32,
     pub requested_month: u32,
     pub tradition: String,
+    pub view_mode: String,
     pub primary_masa: String,
+    pub primary_masa_index: u8,
     pub primary_vikram_samvat: u32,
     pub primary_shaka_samvat: u32,
     pub primary_samvatsara: String,
     pub primary_ritu: String,
     pub primary_ayana: String,
+    pub start_date: String,
+    pub end_date: String,
     pub days: Vec<CalendarDayData>,
 }
 
