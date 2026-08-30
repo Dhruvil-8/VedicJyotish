@@ -253,7 +253,7 @@ export default function PanchangaView() {
     targetYear: number,
     cityObj: any
   ) => {
-    if (!cityObj) return;
+    if (!cityObj || typeof cityObj.lat !== "number" || typeof cityObj.lon !== "number") return;
     setCalendarLoading(true);
     try {
       const isEnglish = targetTradition === "english";
@@ -265,19 +265,18 @@ export default function PanchangaView() {
         month: targetGregMonth,
         lat: cityObj.lat,
         lon: cityObj.lon,
-        timezone: cityObj.timezone,
+        timezone: typeof cityObj.timezone === "number" ? cityObj.timezone : 5.5,
         tradition: traditionParam,
         view_mode: viewModeParam,
         lunar_masa: isEnglish ? undefined : targetMasa,
       };
 
       const res = await calculateCalendar(payload);
-      if (res) {
+      if (res && res.days && res.days.length > 0) {
         setCalendarData(res);
       }
     } catch (err) {
-      console.error("Failed to fetch calendar:", err);
-      showToast("Error updating Vedic Calendar.", "error");
+      console.warn("Calendar update background fetch warning:", err);
     } finally {
       setCalendarLoading(false);
     }

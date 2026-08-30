@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { Star, Moon, Sparkles, Compass, Clock, Calendar, AlertTriangle, User, Radio, RefreshCw } from "lucide-react";
+import { Star, Moon, Sun, Sparkles, Compass, Clock, Calendar, AlertTriangle, User, Radio, RefreshCw } from "lucide-react";
 import NorthIndianChart from "../NorthIndianChart";
 import PlanetaryTable from "../PlanetaryTable";
 import DashaTimeline from "../DashaTimeline";
@@ -136,44 +136,87 @@ export default function ChartTab({ chartData }: ChartTabProps) {
     }
   };
 
+  // Tithi Category Helper
+  const tithiMeta = useMemo(() => {
+    const tName = chartData.panchanga?.tithi?.name || "";
+    const lower = tName.toLowerCase();
+    if (lower.includes("pratipada") || lower.includes("shashthi") || lower.includes("ekadashi")) {
+      return { category: "Nanda (नन्दा)", nature: "Joy & Prosperity", deity: "Agni / Fire" };
+    }
+    if (lower.includes("dwitiya") || lower.includes("saptami") || lower.includes("dwadashi")) {
+      return { category: "Bhadra (भद्रा)", nature: "Auspicious & Fortunate", deity: "Brahma / Creation" };
+    }
+    if (lower.includes("tritiya") || lower.includes("ashtami") || lower.includes("trayodashi")) {
+      return { category: "Jaya (जया)", nature: "Victory & Success", deity: "Ganesha / Shiva" };
+    }
+    if (lower.includes("chaturthi") || lower.includes("navami") || lower.includes("chaturdashi")) {
+      return { category: "Rikta (रिक्ता)", nature: "Power & Elimination", deity: "Kali / Transformation" };
+    }
+    if (lower.includes("panchami") || lower.includes("dashami") || lower.includes("purnima") || lower.includes("amavasya")) {
+      return { category: "Poorna (पूर्णा)", nature: "Abundance & Fullness", deity: "Moon / Sun / Lakshmi" };
+    }
+    return { category: "Vedic Tithi", nature: "Lunisolar Vibration", deity: "Graha Lord" };
+  }, [chartData]);
+
   return (
     <div className="space-y-8 animate-fadeIn">
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Ascendant */}
         <div className="glass-parchment p-4 rounded-xl border-l-4 border-l-primary flex items-center gap-4">
           <div className="p-2 bg-primary/10 rounded-full text-primary">
             <Star className="w-5 h-5" />
           </div>
           <div>
             <div className="text-xs text-muted-foreground font-heading uppercase tracking-tighter">
-              Ascendant
+              Ascendant (लग्न)
             </div>
-            <div className="font-heading text-lg">{chartData.ascendant.sign}</div>
+            <div className="font-heading text-lg font-bold">{chartData.ascendant.sign}</div>
           </div>
         </div>
 
+        {/* Moon Sign */}
         <div className="glass-parchment p-4 rounded-xl border-l-4 border-l-secondary flex items-center gap-4">
           <div className="p-2 bg-secondary/10 rounded-full text-secondary">
             <Moon className="w-5 h-5" />
           </div>
           <div>
             <div className="text-xs text-muted-foreground font-heading uppercase tracking-tighter">
-              Moon Sign
+              Moon Sign (राशि)
             </div>
-            <div className="font-heading text-lg">{chartData.moon_intelligence.sign}</div>
+            <div className="font-heading text-lg font-bold">{chartData.moon_intelligence.sign}</div>
           </div>
         </div>
 
+        {/* Nakshatra */}
         <div className="glass-parchment p-4 rounded-xl border-l-4 border-l-accent flex items-center gap-4">
           <div className="p-2 bg-accent/10 rounded-full text-accent">
             <Sparkles className="w-5 h-5" />
           </div>
           <div>
             <div className="text-xs text-muted-foreground font-heading uppercase tracking-tighter">
-              Nakshatra
+              Nakshatra (नक्षत्र)
             </div>
-            <div className="font-heading text-lg leading-tight">
+            <div className="font-heading text-lg leading-tight font-bold">
               {chartData.moon_intelligence.nakshatra}
+            </div>
+          </div>
+        </div>
+
+        {/* Janma Tithi */}
+        <div className="glass-parchment p-4 rounded-xl border-l-4 border-l-amber-500 flex items-center gap-4">
+          <div className="p-2 bg-amber-500/10 rounded-full text-amber-600 dark:text-amber-400">
+            <Sun className="w-5 h-5" />
+          </div>
+          <div className="truncate">
+            <div className="text-xs text-muted-foreground font-heading uppercase tracking-tighter">
+              Janma Tithi (जन्म तिथि)
+            </div>
+            <div className="font-heading text-base leading-tight font-bold text-foreground truncate">
+              {chartData.panchanga?.tithi?.name || "Tithi"}
+            </div>
+            <div className="text-[10px] text-muted-foreground font-serif truncate">
+              {chartData.panchanga?.paksha || ""} Paksha {chartData.panchanga?.masa ? `| ${chartData.panchanga.masa}` : ""}
             </div>
           </div>
         </div>
@@ -274,60 +317,113 @@ export default function ChartTab({ chartData }: ChartTabProps) {
         {/* Panchanga */}
         <Accordion
           id="panchanga"
-          title="Panchanga Elements"
-          explanation="The five vital daily cosmic components representing divine time at birth."
+          title="Janma Panchanga Elements (जन्म पञ्चाङ्ग)"
+          explanation="The five vital cosmic components representing divine time and lunisolar alignment at birth."
           icon={Clock}
           isOpen={expandedAccordions.panchanga || false}
           onToggle={() => toggleAccordion("panchanga")}
         >
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-            {[
-              { label: "Vara (Day)", val: chartData.panchanga.vara, icon: "✦" },
-              {
-                label: "Tithi (Lunar)",
-                val: chartData.panchanga.tithi.name,
-                pct: chartData.panchanga.tithi.progress,
-              },
-              {
-                label: "Nakshatra",
-                val: chartData.panchanga.nakshatra.name,
-                pct: chartData.panchanga.nakshatra.progress,
-              },
-              {
-                label: "Yoga (Angle)",
-                val: chartData.panchanga.yoga.name,
-                pct: chartData.panchanga.yoga.progress,
-              },
-              {
-                label: "Karana",
-                val: chartData.panchanga.karana.name,
-                pct: chartData.panchanga.karana.progress,
-              },
-            ].map((item, i) => (
-              <div
-                key={i}
-                className="bg-card/40 p-4 rounded-xl border border-border/20 flex flex-col justify-between"
-              >
-                <div className="text-[9px] text-muted-foreground font-heading uppercase tracking-widest">
-                  {item.label}
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+              {[
+                {
+                  label: "Vara (Day of Birth)",
+                  val: chartData.panchanga.vara,
+                  sub: `Lord: ${chartData.panchanga.vara_lord || "Graha"}`,
+                },
+                {
+                  label: "Janma Tithi (Lunar)",
+                  val: chartData.panchanga.tithi.name,
+                  pct: chartData.panchanga.tithi.progress,
+                  sub: `${tithiMeta.category} | ${tithiMeta.deity}`,
+                },
+                {
+                  label: "Nakshatra",
+                  val: chartData.panchanga.nakshatra.name,
+                  pct: chartData.panchanga.nakshatra.progress,
+                  sub: `Lord: ${chartData.panchanga.nakshatra_lord || "Graha"}`,
+                },
+                {
+                  label: "Yoga (Angle)",
+                  val: chartData.panchanga.yoga.name,
+                  pct: chartData.panchanga.yoga.progress,
+                  sub: `Lord: ${chartData.panchanga.yoga_lord || "Graha"}`,
+                },
+                {
+                  label: "Karana (Half Tithi)",
+                  val: chartData.panchanga.karana.name,
+                  pct: chartData.panchanga.karana.progress,
+                  sub: `Lord: ${chartData.panchanga.karana_lord || "Graha"}`,
+                },
+              ].map((item, i) => (
+                <div
+                  key={i}
+                  className="bg-card/40 p-4 rounded-xl border border-border/20 flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="text-[9px] text-muted-foreground font-heading uppercase tracking-widest">
+                      {item.label}
+                    </div>
+                    <div className="font-heading text-sm text-primary mt-1 font-bold">{item.val}</div>
+                    {item.sub && (
+                      <div className="text-[9px] text-muted-foreground font-serif mt-0.5 truncate">
+                        {item.sub}
+                      </div>
+                    )}
+                  </div>
+                  {item.pct !== undefined ? (
+                    <div className="mt-3">
+                      <div className="w-full h-1 bg-border/40 rounded-full overflow-hidden">
+                        <div className="h-full bg-primary" style={{ width: `${item.pct * 100}%` }} />
+                      </div>
+                      <div className="text-[8px] text-muted-foreground mt-1 text-right">
+                        {Math.round(item.pct * 100)}% elapsed at birth
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-[8px] text-muted-foreground mt-3 italic">
+                      Natal solar alignment
+                    </div>
+                  )}
                 </div>
-                <div className="font-heading text-sm text-primary mt-1 font-bold">{item.val}</div>
-                {item.pct !== undefined ? (
-                  <div className="mt-3">
-                    <div className="w-full h-1 bg-border/40 rounded-full overflow-hidden">
-                      <div className="h-full bg-primary" style={{ width: `${item.pct * 100}%` }} />
-                    </div>
-                    <div className="text-[8px] text-muted-foreground mt-1 text-right">
-                      {Math.round(item.pct * 100)}% progress
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-[8px] text-muted-foreground mt-3 italic">
-                    Natal solar alignment
-                  </div>
-                )}
+              ))}
+            </div>
+
+            {/* Birth Cosmic Context (Masa, Samvat, Ritu, Ayana) */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-card/30 p-3.5 rounded-xl border border-border/20 text-center text-xs">
+              <div>
+                <span className="text-[9px] text-muted-foreground font-heading uppercase block">
+                  Janma Masa
+                </span>
+                <span className="font-heading font-bold text-foreground">
+                  {chartData.panchanga.masa || "Shravana"} Masa
+                </span>
               </div>
-            ))}
+              <div>
+                <span className="text-[9px] text-muted-foreground font-heading uppercase block">
+                  Vikram / Shaka Samvat
+                </span>
+                <span className="font-heading font-bold text-foreground">
+                  VS {chartData.panchanga.vikram_samvat || "--"} | SS {chartData.panchanga.shaka_samvat || "--"}
+                </span>
+              </div>
+              <div>
+                <span className="text-[9px] text-muted-foreground font-heading uppercase block">
+                  Ritu / Season
+                </span>
+                <span className="font-heading font-bold text-primary">
+                  {chartData.panchanga.ritu || "Varsha"}
+                </span>
+              </div>
+              <div>
+                <span className="text-[9px] text-muted-foreground font-heading uppercase block">
+                  Ayana
+                </span>
+                <span className="font-heading font-bold text-foreground">
+                  {chartData.panchanga.ayana || "Dakshinayana"}
+                </span>
+              </div>
+            </div>
           </div>
         </Accordion>
 
