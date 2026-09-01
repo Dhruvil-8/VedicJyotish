@@ -10,9 +10,10 @@ import {
 
 interface AppShellProps {
   children: React.ReactNode;
+  isDashboard?: boolean;
 }
 
-export default function AppShell({ children }: AppShellProps) {
+export default function AppShell({ children, isDashboard = false }: AppShellProps) {
   const pathname = usePathname();
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [showDisclaimer, setShowDisclaimer] = useState(true);
@@ -50,6 +51,17 @@ export default function AppShell({ children }: AppShellProps) {
           <Menu className="w-5 h-5" />
         </button>
       </div>
+
+      {/* Mobile Top-Right Branding Badge (Shifted to corner on Dashboard for maximum view room) */}
+      {isDashboard && (
+        <div className="fixed top-4 right-4 z-40 md:hidden">
+          <div className="px-3 py-2 rounded-full bg-background/85 backdrop-blur-md border border-primary/20 shadow-md">
+            <span className="font-heading text-xs font-bold text-primary gold-glow tracking-tight">
+              Vedic Jyotish
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Sidebar Navigation Drawer */}
       <AnimatePresence>
@@ -210,9 +222,9 @@ export default function AppShell({ children }: AppShellProps) {
         )}
       </AnimatePresence>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 md:pt-12 pb-8 md:pb-12">
+      <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8 md:pb-12 ${isDashboard ? "pt-16 md:pt-12" : "pt-20 md:pt-12"}`}>
         {/* Header */}
-        <header className="mb-12 text-center">
+        <header className={`text-center ${isDashboard ? "hidden md:block mb-8 md:mb-12" : "mb-12"}`}>
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}

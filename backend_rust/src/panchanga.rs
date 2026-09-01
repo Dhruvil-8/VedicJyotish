@@ -251,8 +251,8 @@ pub fn calculate(
     };
 
     let rahu_slots = [2, 7, 5, 6, 4, 3, 8];
-    let yama_slots = [5, 4, 3, 2, 1, 8, 7];
-    let gulika_slots = [6, 5, 4, 3, 2, 1, 8];
+    let yama_slots = [4, 3, 2, 1, 7, 6, 5];
+    let gulika_slots = [6, 5, 4, 3, 2, 1, 7];
 
     let r_slot = rahu_slots[weekday_idx % 7];
     let y_slot = yama_slots[weekday_idx % 7];
@@ -872,14 +872,15 @@ pub fn calculate_month_calendar(
             .iter()
             .filter(|c| {
                 c.start_date.year() == year
-                    || (c.start_date.year() == year - 1 && c.masa_index >= 9 && is_purnimanta)
-                    || (c.start_date.year() == year - 1 && c.masa_index >= 7 && is_gujarat)
+                    || (c.start_date.year() == year - 1 && c.masa_index >= 10 && is_purnimanta)
             })
             .collect();
 
-        let mut avail: Vec<crate::models::AvailableMasaInfo> = year_cycles
-            .iter()
-            .map(|c| {
+        let mut seen = std::collections::HashSet::new();
+        let mut avail: Vec<crate::models::AvailableMasaInfo> = Vec::new();
+        for c in &year_cycles {
+            let key = (c.masa_index, c.is_adhik);
+            if seen.insert(key) {
                 let m_name = MASA_NAMES[c.masa_index as usize].to_string();
                 let m_type = if c.is_adhik {
                     "adhik"
@@ -888,15 +889,15 @@ pub fn calculate_month_calendar(
                 } else {
                     "regular"
                 };
-                crate::models::AvailableMasaInfo {
+                avail.push(crate::models::AvailableMasaInfo {
                     index: c.masa_index,
                     name: m_name.clone(),
                     is_adhik: c.is_adhik,
                     masa_type: m_type.to_string(),
                     masa_id: format!("{}_{}_{}", year, m_name.to_lowercase(), m_type),
-                }
-            })
-            .collect();
+                });
+            }
+        }
 
         // Sort available masas according to tradition sequence
         if is_gujarat {
@@ -925,9 +926,14 @@ pub fn calculate_month_calendar(
             .find(|c| {
                 c.masa_index == target_masa
                     && (if is_adhik_target { c.is_adhik } else { !c.is_adhik })
-                    && (c.start_date.year() == year
-                        || (is_gujarat && c.start_date.year() == year - 1 && target_masa >= 7)
-                        || (c.start_date.year() == year + 1 && target_masa < 2))
+                    && c.start_date.year() == year
+            })
+            .or_else(|| {
+                cycles.iter().find(|c| {
+                    c.masa_index == target_masa
+                        && (if is_adhik_target { c.is_adhik } else { !c.is_adhik })
+                        && (c.start_date.year() == year || c.start_date.year() == year + 1)
+                })
             })
             .or_else(|| {
                 cycles.iter().find(|c| {
@@ -1527,4 +1533,44 @@ mod tests {
         assert_eq!(m_7, 4, "2026-09-01 Amanta month must be Shravana (0-indexed 4)");
         assert!(!is_adhik_7, "2026-09-01 is regular month, not Adhik");
     }
+
+    #[test]
+    fn test_calculate_month_calendar_gujarat() {
+        let req = crate::models::MonthCalendarRequest {
+            year: 2026,
+            month: 8,
+            lat: 23.0225,
+            lon: 72.5714,
+            timezone: 5.5,
+            tradition: "gujarat".to_string(),
+            view_mode: "lunar".to_string(),
+            lunar_masa: Some(4), // Shravana
+            masa_type: None,
+            is_adhik: None,
+        };
+        let res = calculate_month_calendar(req).expect("Failed to calculate Gujarat calendar");
+        assert!(res.days.len() == 29 || res.days.len() == 30);
+        assert_eq!(res.primary_masa, "Shravana");
+        assert!(res.days[0].date.contains("2026"), "Shravana 2026 must be in 2026");
+    }
+
+    #[test]
+    fn test_calculate_month_calendar_south() {
+        let req = crate::models::MonthCalendarRequest {
+            year: 2026,
+            month: 8,
+            lat: 12.9716,
+            lon: 77.5946,
+            timezone: 5.5,
+            tradition: "south".to_string(),
+            view_mode: "lunar".to_string(),
+            lunar_masa: Some(4), // Shravana
+            masa_type: None,
+            is_adhik: None,
+        };
+        let res = calculate_month_calendar(req).expect("Failed to calculate South Indian calendar");
+        assert!(res.days.len() == 29 || res.days.len() == 30);
+        assert_eq!(res.primary_masa, "Shravana");
+    }
 }
+

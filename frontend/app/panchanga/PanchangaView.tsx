@@ -94,6 +94,16 @@ const SOUTH_WEEKDAYS = [
   { short: "Shan", full: "Shanivara", en: "Sat" },
 ];
 
+const ENGLISH_WEEKDAYS = [
+  { short: "Sun", full: "Sunday", en: "Sun" },
+  { short: "Mon", full: "Monday", en: "Mon" },
+  { short: "Tue", full: "Tuesday", en: "Tue" },
+  { short: "Wed", full: "Wednesday", en: "Wed" },
+  { short: "Thu", full: "Thursday", en: "Thu" },
+  { short: "Fri", full: "Friday", en: "Fri" },
+  { short: "Sat", full: "Saturday", en: "Sat" },
+];
+
 const GUJARATI_NAKSHATRAS: Record<string, string> = {
   Ashvini: "અશ્વિની",
   Ashwini: "અશ્વિની",
@@ -211,6 +221,32 @@ export function getDayTithiDisplay(day: any, tradition: TraditionType) {
 
     return {
       badge: `${pLabel} ${hiNums[tNum]}`,
+      title: specialName,
+      full: `${pLabel} ${specialName}`,
+    };
+  }
+
+  if (tradition === "south") {
+    const pLabel = isShukla ? "Śukla" : "Bahula";
+    let specialName = "";
+    if (tNum === 1) specialName = "Pāḍyami";
+    else if (tNum === 2) specialName = "Vidiya";
+    else if (tNum === 3) specialName = "Tadiya";
+    else if (tNum === 4) specialName = "Chaviti";
+    else if (tNum === 5) specialName = "Pañchami";
+    else if (tNum === 6) specialName = "Ṣaṣṭhī";
+    else if (tNum === 7) specialName = "Saptamī";
+    else if (tNum === 8) specialName = "Aṣṭamī";
+    else if (tNum === 9) specialName = "Navamī";
+    else if (tNum === 10) specialName = "Daśamī";
+    else if (tNum === 11) specialName = "Ekādaśī";
+    else if (tNum === 12) specialName = "Dvādaśī";
+    else if (tNum === 13) specialName = "Trayodaśī";
+    else if (tNum === 14) specialName = "Chaturdaśī";
+    else if (tNum === 15) specialName = isShukla ? "Pourṇamī" : "Amāvāsyā";
+
+    return {
+      badge: `${pLabel.slice(0, 3)} ${tNum}`,
       title: specialName,
       full: `${pLabel} ${specialName}`,
     };
@@ -1129,7 +1165,9 @@ export default function PanchangaView() {
                       ? GUJARATI_WEEKDAYS
                       : traditionView === "north"
                       ? HINDI_WEEKDAYS
-                      : SOUTH_WEEKDAYS
+                      : traditionView === "south"
+                      ? SOUTH_WEEKDAYS
+                      : ENGLISH_WEEKDAYS
                     ).map((d, i) => (
                       <div key={i} className="space-y-0.5">
                         <div className="font-heading text-[10px] sm:text-xs text-primary font-bold uppercase tracking-wider">
@@ -1466,7 +1504,7 @@ export default function PanchangaView() {
                                     </span>
                                   ) : day.is_purnima ? (
                                     <span className="font-heading text-[10px] font-bold text-amber-800 block">
-                                      {traditionView === "gujarat" ? "પૂનમ વ્રત" : traditionView === "north" ? "पूर्णिमा व्रत" : "Purnima Vrat"}
+                                      {traditionView === "gujarat" ? "પૂનમ વ્રત" : traditionView === "north" ? "पूर्णिमा व्रत" : traditionView === "south" ? "Pourṇamī Vratam" : "Purnima Vrat"}
                                     </span>
                                   ) : day.is_ekadashi ? (
                                     <span className="font-heading text-[10px] font-bold text-purple-800 block">
@@ -1493,6 +1531,8 @@ export default function PanchangaView() {
                             ? "વદ પક્ષ (કૃષ્ણ પક્ષ)"
                             : traditionView === "north"
                             ? "कृष्ण पक्ष (बदी)"
+                            : traditionView === "south"
+                            ? "Bahula Pakṣa (Krishna)"
                             : "Krishna Paksha (Waning)"}
                         </h3>
                         <span className="text-[9px] sm:text-[10px] text-muted-foreground font-serif">
@@ -1500,6 +1540,8 @@ export default function PanchangaView() {
                             ? "વદ ૧ થી અમાસ"
                             : traditionView === "north"
                             ? "कृष्ण १ से अमावस्या"
+                            : traditionView === "south"
+                            ? "Bahula 1 to Amāvāsyā"
                             : "Tithi 16 to 30"}
                         </span>
                       </div>
@@ -1551,7 +1593,7 @@ export default function PanchangaView() {
                                     </span>
                                   ) : day.is_amavasya ? (
                                     <span className="font-heading text-[10px] font-bold text-slate-800 block">
-                                      {traditionView === "gujarat" ? "અમાસ / પિતૃ" : traditionView === "north" ? "अमावस्या / पितृ" : "Amavasya"}
+                                      {traditionView === "gujarat" ? "અમાસ / પિતૃ" : traditionView === "north" ? "अमावस्या / पितृ" : traditionView === "south" ? "Amāvāsyā / Tarpanam" : "Amavasya"}
                                     </span>
                                   ) : day.is_ekadashi ? (
                                     <span className="font-heading text-[10px] font-bold text-purple-800 block">

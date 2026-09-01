@@ -3,9 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import dynamic from "next/dynamic";
-import { Compass, MessageSquare, BookOpen, Heart, Globe, Star, ChevronLeft } from "lucide-react";
+import { Compass, MessageSquare, BookOpen, ChevronLeft } from "lucide-react";
 import AppShell from "./components/layout/AppShell";
-import { LANGUAGES } from "./lib/constants";
 
 // --- Dynamic Imports for Dashboard Tabs to optimize bundle size ---
 const BirthForm = dynamic(() => import("./components/kundli/BirthForm"), {
@@ -54,20 +53,6 @@ export default function Home() {
   const [mountedTabs, setMountedTabs] = useState<Set<string>>(new Set(["chart"]));
   const [selectedLanguage, setSelectedLanguage] = useState<string>("English");
 
-  // PWA Install State
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [isInstallable, setIsInstallable] = useState(false);
-
-  useEffect(() => {
-    const handleBeforeInstallPrompt = (e: any) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      setIsInstallable(true);
-    };
-    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-    return () => window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-  }, []);
-
   // Stagger the mounting of hidden background tabs to prevent UI freeze
   useEffect(() => {
     if (step === "dashboard") {
@@ -77,16 +62,6 @@ export default function Home() {
       return () => clearTimeout(timer);
     }
   }, [step]);
-
-  const handleInstall = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === "accepted") {
-      setIsInstallable(false);
-    }
-    setDeferredPrompt(null);
-  };
 
   const handleCalculate = (data: {
     chartData: any;
@@ -109,7 +84,7 @@ export default function Home() {
   };
 
   return (
-    <AppShell>
+    <AppShell isDashboard={step === "dashboard"}>
       <AnimatePresence mode="wait">
         {step === "form" ? (
           <BirthForm
@@ -124,50 +99,18 @@ export default function Home() {
             key="dashboard"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="space-y-8"
+            className="space-y-6 sm:space-y-8"
           >
             {/* Dashboard Actions */}
-            <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center justify-between gap-4">
               <button
                 type="button"
                 onClick={() => setStep("form")}
-                className="text-primary font-heading text-xs tracking-widest uppercase hover:underline flex items-center gap-2 group cursor-pointer"
+                className="text-primary font-heading text-xs tracking-widest uppercase hover:underline flex items-center gap-1.5 group cursor-pointer"
               >
-                <ChevronLeft className="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform" />
-                Change Birth Details
+                <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                <span>Change Birth Details</span>
               </button>
-
-              <div className="flex items-center gap-3 flex-wrap">
-                {/* Dashboard Language Selector */}
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/5 border border-primary/20 rounded-full">
-                  <Globe className="w-3 h-3 text-primary" />
-                  <select
-                    value={selectedLanguage}
-                    onChange={(e) => setSelectedLanguage(e.target.value)}
-                    className="bg-transparent text-primary font-heading text-[10px] outline-none cursor-pointer pr-1 uppercase tracking-wider font-semibold"
-                  >
-                    {LANGUAGES.map((lang) => (
-                      <option
-                        key={lang.code}
-                        value={lang.code}
-                        className="bg-background text-foreground normal-case font-serif"
-                      >
-                        {lang.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {isInstallable && (
-                  <button
-                    type="button"
-                    onClick={handleInstall}
-                    className="flex items-center gap-2 px-4 py-2 bg-secondary/10 border border-secondary/30 text-secondary font-heading text-[10px] rounded-full hover:bg-secondary/20 transition-all cursor-pointer"
-                  >
-                    <Star className="w-3 h-3" /> Install App
-                  </button>
-                )}
-              </div>
             </div>
 
             {/* Shimmering Tab Navigation */}
@@ -175,35 +118,38 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => { setActiveTab("chart"); setMountedTabs(prev => new Set([...prev, "chart"])); }}
-                className={`flex items-center gap-2 px-6 py-4 font-heading text-xs md:text-sm tracking-widest uppercase border-b-2 transition-all flex-shrink-0 cursor-pointer ${
+                className={`flex items-center gap-2 px-3 sm:px-6 py-3 sm:py-4 font-heading text-xs sm:text-sm tracking-wider sm:tracking-widest uppercase border-b-2 transition-all flex-shrink-0 cursor-pointer ${
                   activeTab === "chart"
                     ? "border-primary text-primary font-bold"
                     : "border-transparent text-muted-foreground hover:text-foreground"
                 }`}
               >
-                <Compass className="w-4 h-4 flex-shrink-0" /> Vedic Calculations
+                <Compass className="w-4 h-4 flex-shrink-0" />
+                <span><span className="hidden sm:inline">Vedic </span>Calculations</span>
               </button>
               <button
                 type="button"
                 onClick={() => { setActiveTab("chat"); setMountedTabs(prev => new Set([...prev, "chat"])); }}
-                className={`flex items-center gap-2 px-6 py-4 font-heading text-xs md:text-sm tracking-widest uppercase border-b-2 transition-all flex-shrink-0 cursor-pointer ${
+                className={`flex items-center gap-2 px-3 sm:px-6 py-3 sm:py-4 font-heading text-xs sm:text-sm tracking-wider sm:tracking-widest uppercase border-b-2 transition-all flex-shrink-0 cursor-pointer ${
                   activeTab === "chat"
                     ? "border-primary text-primary font-bold"
                     : "border-transparent text-muted-foreground hover:text-foreground"
                 }`}
               >
-                <MessageSquare className="w-4 h-4 flex-shrink-0" /> Ask AI Rishi
+                <MessageSquare className="w-4 h-4 flex-shrink-0" />
+                <span>Ask AI<span className="hidden sm:inline"> Rishi</span></span>
               </button>
               <button
                 type="button"
                 onClick={() => { setActiveTab("report"); setMountedTabs(prev => new Set([...prev, "report"])); }}
-                className={`flex items-center gap-2 px-6 py-4 font-heading text-xs md:text-sm tracking-widest uppercase border-b-2 transition-all flex-shrink-0 cursor-pointer ${
+                className={`flex items-center gap-2 px-3 sm:px-6 py-3 sm:py-4 font-heading text-xs sm:text-sm tracking-wider sm:tracking-widest uppercase border-b-2 transition-all flex-shrink-0 cursor-pointer ${
                   activeTab === "report"
                     ? "border-primary text-primary font-bold"
                     : "border-transparent text-muted-foreground hover:text-foreground"
                 }`}
               >
-                <BookOpen className="w-4 h-4 flex-shrink-0" /> Celestial Report
+                <BookOpen className="w-4 h-4 flex-shrink-0" />
+                <span><span className="hidden sm:inline">Celestial </span>Report</span>
               </button>
             </div>
 
