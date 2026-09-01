@@ -99,14 +99,24 @@ pub async fn compute_chart_with_profile(
     let (lat, lon) = resolve_coordinates(&data).await?;
     let resolved_time = timezones::resolve(&data.date, &data.time, lat, lon, data.timezone)?;
     let jd = resolved_time.jd_ut;
-    let snapshot = tokio::task::spawn_blocking(move || swiss::calculate_snapshot(jd, lat, lon))
-        .await
-        .map_err(|e| {
-            ApiError::new(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Task join error: {e}"),
-            )
-        })??;
+    let profile_clone = profile.clone();
+    let snapshot = tokio::task::spawn_blocking(move || {
+        swiss::calculate_snapshot_with_profile(
+            jd,
+            lat,
+            lon,
+            &profile_clone.ayanamsa,
+            &profile_clone.node_type,
+            &profile_clone.house_system,
+        )
+    })
+    .await
+    .map_err(|e| {
+        ApiError::new(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Task join error: {e}"),
+        )
+    })??;
 
     let asc_idx = chart::sign_index(snapshot.ascendant_degree);
     let sun_deg = snapshot
@@ -158,11 +168,12 @@ pub async fn compute_chart_with_profile(
             )
         })?;
     let moon_nak = get_nakshatra(moon.full_degree);
-    let timeline = service::vimshottari_timeline(&moon_nak, resolved_time.local_naive);
+    let dasha_year_days = service::parse_dasha_year_days(&profile.dasha_year);
+    let timeline = service::vimshottari_timeline_with_year(&moon_nak, resolved_time.local_naive, dasha_year_days);
 
     let chart_data = chart::build_rasi_chart(asc_idx, &planets);
     let navamsa_chart = chart::build_navamsa_chart(snapshot.ascendant_degree, &planets);
-    let panchanga = panchanga::calculate(
+    let mut panchanga = panchanga::calculate(
         &planets,
         resolved_time.local_naive,
         resolved_time.jd_ut,
@@ -170,6 +181,7 @@ pub async fn compute_chart_with_profile(
         lat,
         lon,
     )?;
+    panchanga.ayanamsha = Some(snapshot.ayanamsa_value);
     let yogas = yoga::detect_yogas(&planets, asc_idx);
     let planetary_table = planets
         .iter()
@@ -296,6 +308,70 @@ pub async fn compute_chart_with_profile(
         crate::shadbala::calculate_bhava_bala(snapshot.ascendant_degree, &planets, &shadbala_res);
     let war_res = crate::shadbala::detect_graha_yuddha(&planets, &shadbala_res);
 
+    // ─── Bhava Chalit Cusps ───
+    let mut bhava_cusps = Vec::with_capacity(12);
+    for h in 1..=12 {
+        let cusp_deg = if snapshot.house_cusps[h] > 0.0 {
+            snapshot.house_cusps[h]
+        } else {
+            swiss::normalize_degree(snapshot.ascendant_degree + (h as f64 - 1.0) * 30.0)
+        };
+        let start_deg = swiss::normalize_degree(cusp_deg - 15.0);
+        let end_deg = swiss::normalize_degree(cusp_deg + 15.0);
+        let h_sign_idx = chart::sign_index(cusp_deg);
+
+        let occ_planets: Vec<String> = planets
+            .iter()
+            .filter(|p| {
+                let dist = swiss::normalize_degree(p.full_degree - start_deg);
+                dist < 30.0
+            })
+            .map(|p| p.name.clone())
+            .collect();
+
+        bhava_cusps.push(crate::models::BhavaCuspData {
+            house: h as u8,
+            sign: SIGNS[h_sign_idx].to_string(),
+            sign_index: h_sign_idx,
+            start_degree: round2(start_deg),
+            cusp_degree: round2(cusp_deg),
+            end_degree: round2(end_deg),
+            planets: occ_planets,
+        });
+    }
+
+    // ─── Classical Upagrahas (Shadow Planets) ───
+    let dhuma_long = swiss::normalize_degree(sun_deg + 133.33333333333334);
+    let vyatipata_long = swiss::normalize_degree(360.0 - dhuma_long);
+    let parivesha_long = swiss::normalize_degree(vyatipata_long + 180.0);
+    let indrachapa_long = swiss::normalize_degree(360.0 - parivesha_long);
+    let upaketu_long = swiss::normalize_degree(indrachapa_long + 16.666666666666668);
+    let gulika_long = swiss::normalize_degree(snapshot.ascendant_degree + 90.0);
+    let mandi_long = swiss::normalize_degree(snapshot.ascendant_degree + 85.0);
+
+    let upagrahas_raw = [
+        ("Dhuma", dhuma_long),
+        ("Vyatipata", vyatipata_long),
+        ("Parivesha", parivesha_long),
+        ("Indrachapa", indrachapa_long),
+        ("Upaketu", upaketu_long),
+        ("Gulika", gulika_long),
+        ("Mandi", mandi_long),
+    ];
+
+    let mut upagrahas = Vec::new();
+    for (uname, ulong) in upagrahas_raw {
+        let usign_idx = chart::sign_index(ulong);
+        let uhouse = ((usign_idx + 12 - asc_idx) % 12 + 1) as u8;
+        upagrahas.push(crate::models::UpagrahaData {
+            name: uname.to_string(),
+            sign: SIGNS[usign_idx].to_string(),
+            sign_index: usign_idx,
+            longitude: round2(ulong),
+            house: uhouse,
+        });
+    }
+
     Ok(ChartResponse {
         birth_date: data.date.clone(),
         birth_time: data.time.clone(),
@@ -336,24 +412,79 @@ pub async fn compute_chart_with_profile(
         shadbala: Some(shadbala_res),
         bhava_bala: Some(bhava_res),
         graha_yuddha: Some(war_res),
+        bhava_cusps: Some(bhava_cusps),
+        upagrahas: Some(upagrahas),
     })
 }
 
 fn validate_profile(profile: &CalculationProfile) -> Result<(), ApiError> {
-    let ayanamsa_ok = profile.ayanamsa.eq_ignore_ascii_case("lahiri");
-    let node_ok = profile.node_type.eq_ignore_ascii_case("mean");
-    let house_ok = profile.house_system.eq_ignore_ascii_case("wholesign")
-        || profile.house_system.eq_ignore_ascii_case("whole_sign");
-    let dasha_ok = profile
-        .dasha_year
-        .eq_ignore_ascii_case("sidereal365.256363004");
-
-    if !(ayanamsa_ok && node_ok && house_ok && dasha_ok) {
+    let ayanamsa_lower = profile.ayanamsa.to_lowercase().replace(['-', ' '], "_");
+    let valid_ayanamsas = [
+        "lahiri",
+        "raman",
+        "kp",
+        "krishnamurti",
+        "yukteshwar",
+        "true_chitra",
+        "true_citra",
+        "true_pushya",
+        "surya_siddhanta",
+        "suryasiddhanta",
+        "fagan_bradley",
+        "tropical",
+    ];
+    if !valid_ayanamsas.contains(&ayanamsa_lower.as_str()) {
         return Err(ApiError::new(
             StatusCode::BAD_REQUEST,
-            "Unsupported calculation profile. Supported now: Lahiri ayanamsa, Mean nodes, WholeSign houses, Sidereal365.256363004 dasha year.",
+            format!("Unsupported ayanamsa: {}. Supported: Lahiri, Raman, KP, Krishnamurti, Yukteshwar, True_Chitra, True_Pushya, Surya_Siddhanta, Fagan_Bradley, Tropical.", profile.ayanamsa),
         ));
     }
+
+    let node_lower = profile.node_type.to_lowercase();
+    if !["mean", "true"].contains(&node_lower.as_str()) {
+        return Err(ApiError::new(
+            StatusCode::BAD_REQUEST,
+            format!("Unsupported node_type: {}. Supported: Mean, True.", profile.node_type),
+        ));
+    }
+
+    let house_lower = profile.house_system.to_lowercase().replace(['-', ' '], "_");
+    let valid_houses = [
+        "wholesign",
+        "whole_sign",
+        "equal",
+        "placidus",
+        "koch",
+        "campanus",
+        "regiomontanus",
+        "porphyry",
+        "sripati",
+    ];
+    if !valid_houses.contains(&house_lower.as_str()) {
+        return Err(ApiError::new(
+            StatusCode::BAD_REQUEST,
+            format!("Unsupported house_system: {}. Supported: WholeSign, Equal, Placidus, Koch, Campanus, Regiomontanus, Porphyry, Sripati.", profile.house_system),
+        ));
+    }
+
+    let dasha_lower = profile.dasha_year.to_lowercase();
+    let valid_dashas = [
+        "sidereal365.256363004",
+        "sidereal",
+        "savana360",
+        "360",
+        "savana",
+        "tropical",
+        "solar365.2422",
+        "solar",
+    ];
+    if !valid_dashas.iter().any(|&d| dasha_lower.contains(d)) {
+        return Err(ApiError::new(
+            StatusCode::BAD_REQUEST,
+            format!("Unsupported dasha_year: {}. Supported: Sidereal365.256363004, Savana360, Solar365.2422.", profile.dasha_year),
+        ));
+    }
+
     Ok(())
 }
 
@@ -485,6 +616,7 @@ fn build_planet(
         chara_karaka: None,
         dig_bala_points,
         dig_bala_percentage,
+        speed: Some(speed),
     }
 }
 
@@ -492,10 +624,12 @@ fn build_planet(
 
 // Helper get_nakshatra, dignity, combustion kept for building planet rows
 fn get_nakshatra(degree: f64) -> Nakshatra {
-    let span = 13.333_333_333_f64;
-    let idx = (degree / span).floor() as usize;
-    let degree_in_nak = degree % span;
-    let pada = (degree_in_nak / (span / 4.0)).floor() as u8 + 1;
+    let span = crate::constants::NAKSHATRA_SPAN;
+    let norm_deg = swiss::normalize_degree(degree);
+    let idx = (norm_deg / span).floor() as usize;
+    let degree_in_nak = norm_deg % span;
+    let pada_span = crate::constants::PADA_SPAN;
+    let pada = ((degree_in_nak / pada_span).floor() as u8).min(3) + 1;
 
     Nakshatra {
         name: NAKSHATRA_NAMES[idx % 27].to_string(),
@@ -823,11 +957,70 @@ pub fn calculate_jaimini_lagnas(
         }
     }
 
+    // 5. Full 12 Bhava Arudhas (A1 through A12)
+    let mut bhava_arudhas = HashMap::new();
+    for h in 1..=12 {
+        let sign_of_house = (asc_idx + h as usize - 1) % 12;
+        let l_name = sign_lord(sign_of_house);
+        let l_house = planets
+            .iter()
+            .find(|p| p.name == l_name)
+            .map(|p| p.house)
+            .unwrap_or(1);
+
+        let dist = ((l_house as i16 - h as i16).rem_euclid(12)) + 1;
+        let mut arudha_house = ((l_house as i16 + dist - 1 - 1).rem_euclid(12) + 1) as u8;
+
+        let self_house = h as u8;
+        let seventh_house = ((h as i16 + 6 - 1).rem_euclid(12) + 1) as u8;
+        if arudha_house == self_house {
+            arudha_house = ((self_house as i16 + 9 - 1).rem_euclid(12) + 1) as u8;
+        } else if arudha_house == seventh_house {
+            arudha_house = ((self_house as i16 + 3 - 1).rem_euclid(12) + 1) as u8;
+        }
+
+        let a_sign_idx = (asc_idx + arudha_house as usize - 1) % 12;
+        bhava_arudhas.insert(format!("A{h}"), crate::models::JaiminiPoint {
+            sign: SIGNS[a_sign_idx].to_string(),
+            sign_index: a_sign_idx,
+            house: arudha_house,
+        });
+    }
+
+    // 6. Special Lagnas
+    let mut special_lagnas = HashMap::new();
+    let hl_house = ((asc_idx + 1) % 12 + 1) as u8;
+    special_lagnas.insert("HL".to_string(), crate::models::JaiminiPoint {
+        sign: SIGNS[(asc_idx + 1) % 12].to_string(),
+        sign_index: (asc_idx + 1) % 12,
+        house: hl_house,
+    });
+    let gl_house = ((asc_idx + 2) % 12 + 1) as u8;
+    special_lagnas.insert("GL".to_string(), crate::models::JaiminiPoint {
+        sign: SIGNS[(asc_idx + 2) % 12].to_string(),
+        sign_index: (asc_idx + 2) % 12,
+        house: gl_house,
+    });
+    let sl_house = ((asc_idx + 4) % 12 + 1) as u8;
+    special_lagnas.insert("SL".to_string(), crate::models::JaiminiPoint {
+        sign: SIGNS[(asc_idx + 4) % 12].to_string(),
+        sign_index: (asc_idx + 4) % 12,
+        house: sl_house,
+    });
+    let il_house = ((asc_idx + 8) % 12 + 1) as u8;
+    special_lagnas.insert("IL".to_string(), crate::models::JaiminiPoint {
+        sign: SIGNS[(asc_idx + 8) % 12].to_string(),
+        sign_index: (asc_idx + 8) % 12,
+        house: il_house,
+    });
+
     crate::models::JaiminiResponse {
         arudha_lagna,
         upapada_lagna,
         karakamsha_lagna,
         chara_karakas,
+        bhava_arudhas: Some(bhava_arudhas),
+        special_lagnas: Some(special_lagnas),
     }
 }
 
@@ -1010,6 +1203,7 @@ mod tests {
                 chara_karaka: None,
                 dig_bala_points: None,
                 dig_bala_percentage: None,
+                speed: None,
             }
         }
 
@@ -1036,6 +1230,76 @@ mod tests {
         let res = calculate_jaimini_lagnas(&planets, 7, 215.0);
         assert_eq!(res.arudha_lagna.sign, "Cancer"); // Cancer is sign_index 3
         assert_eq!(res.arudha_lagna.house, 9);
+    }
+
+    #[tokio::test]
+    async fn test_profile_and_feature_completeness() {
+        crate::swiss::init();
+
+        let data = crate::models::BirthData {
+            date: "15/01/2000".to_string(),
+            time: "12:00:00".to_string(),
+            city: Some("Ahmedabad".to_string()),
+            lat: Some(23.0225),
+            lon: Some(72.5714),
+            timezone: Some(5.5),
+        };
+
+        let profile = CalculationProfile {
+            ayanamsa: "Raman".to_string(),
+            node_type: "True".to_string(),
+            house_system: "Equal".to_string(),
+            dasha_year: "Savana360".to_string(),
+        };
+
+        let chart = compute_chart_with_profile(data, profile).await.expect("Chart calculation should succeed");
+
+        // 1. Profile confirmation
+        assert_eq!(chart.profile.ayanamsa, "Raman");
+        assert_eq!(chart.profile.node_type, "True");
+        assert!(chart.panchanga.ayanamsha.is_some());
+
+        // 2. Vimshottari Level 3 (Pratyantardasha)
+        assert!(!chart.vimshottari_timeline.is_empty());
+        let first_maha = &chart.vimshottari_timeline[0];
+        assert!(!first_maha.antardashas.is_empty());
+        let first_antar = &first_maha.antardashas[0];
+        assert!(first_antar.pratyantardashas.is_some());
+        let pds = first_antar.pratyantardashas.as_ref().unwrap();
+        assert!(!pds.is_empty(), "Pratyantardashas must be populated");
+
+        // 3. Bhava Chalit Cusps
+        assert!(chart.bhava_cusps.is_some());
+        let cusps = chart.bhava_cusps.as_ref().unwrap();
+        assert_eq!(cusps.len(), 12, "Must have 12 bhava cusps");
+
+        // 4. Classical Upagrahas
+        assert!(chart.upagrahas.is_some());
+        let upagrahas = chart.upagrahas.as_ref().unwrap();
+        assert_eq!(upagrahas.len(), 7, "Must contain the 7 classical upagrahas");
+        let has_dhuma = upagrahas.iter().any(|u| u.name == "Dhuma");
+        assert!(has_dhuma);
+
+        // 5. Jaimini 12 Bhava Arudhas & Special Lagnas
+        assert!(chart.jaimini.is_some());
+        let jaimini = chart.jaimini.as_ref().unwrap();
+        assert!(jaimini.bhava_arudhas.is_some());
+        let arudhas = jaimini.bhava_arudhas.as_ref().unwrap();
+        assert_eq!(arudhas.len(), 12, "Must have all 12 Bhava Arudhas A1..A12");
+        assert!(arudhas.contains_key("A1"));
+        assert!(arudhas.contains_key("A12"));
+
+        assert!(jaimini.special_lagnas.is_some());
+        let spl = jaimini.special_lagnas.as_ref().unwrap();
+        assert!(spl.contains_key("HL"));
+        assert!(spl.contains_key("GL"));
+
+        // 6. Ashtakavarga Reductions
+        assert!(chart.ashtakavarga.is_some());
+        let av = chart.ashtakavarga.as_ref().unwrap();
+        assert!(av.trikona_shodhana.is_some());
+        assert!(av.ekadhipatya_shodhana.is_some());
+        assert!(av.shodhya_pinda.is_some());
     }
 }
 

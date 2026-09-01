@@ -279,8 +279,8 @@ pub fn calculate_shadbala(
         let kaala_bala = nathonnatha + paksha_bala + tribhaga + dina_bala + hora_bala + ayana_bala;
 
         // ─── 4. Cheshta Bala (Motional Strength) ───
-        // Per BV Raman: Sun's cheshta = ayana bala, Moon's cheshta = paksha bala (doubled already)
-        // Retrograde planets get max 60. Direct planets use speed-ratio against mean daily motion.
+        // Per classical principles: Sun's cheshta = ayana bala, Moon's cheshta = paksha bala
+        // Retrograde planets get max 60 Shashtiamsas. Direct planets use true apparent daily speed vs mean motion.
         let cheshta_bala = if p.retrograde {
             60.0
         } else {
@@ -288,8 +288,6 @@ pub fn calculate_shadbala(
                 "Sun" => ayana_bala,
                 "Moon" => paksha_bala,
                 _ => {
-                    // Speed-ratio based cheshta bala: slower motion = higher strength
-                    // Mean daily motions from Surya Siddhanta (degrees/day)
                     let avg_speed = match name {
                         "Mars" => 0.524,
                         "Mercury" => 4.092,
@@ -298,11 +296,14 @@ pub fn calculate_shadbala(
                         "Saturn" => 0.033,
                         _ => 1.0,
                     };
-                    // Use deg_in_sign as a proxy for apparent speed variation
-                    // When planet's actual speed < mean speed, it's slowing (higher cheshta)
-                    let speed_ratio = (deg_in_sign / 30.0).min(1.0);
-                    let cheshta = 60.0 * (1.0 - speed_ratio * avg_speed / (avg_speed + 0.5));
-                    cheshta.max(0.0).min(60.0)
+                    let actual_speed = p.speed.unwrap_or_else(|| {
+                        let speed_ratio = (deg_in_sign / 30.0).min(1.0);
+                        avg_speed * (1.0 - speed_ratio * 0.5)
+                    }).abs();
+
+                    let speed_ratio = (actual_speed / (avg_speed * 1.5)).clamp(0.0, 1.0);
+                    let cheshta = 60.0 * (1.0 - speed_ratio * 0.7);
+                    cheshta.clamp(15.0, 60.0)
                 }
             }
         };
@@ -876,6 +877,7 @@ mod tests {
             chara_karaka: None,
             dig_bala_points: None,
             dig_bala_percentage: None,
+            speed: None,
         }
     }
 

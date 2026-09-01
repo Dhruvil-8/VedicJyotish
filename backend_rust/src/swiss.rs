@@ -29,27 +29,84 @@ pub struct RawPlanet {
     pub speed: f64,
 }
 
+#[allow(dead_code)]
 pub struct SwissSnapshot {
     pub ascendant_degree: f64,
+    pub mc_degree: f64,
+    pub armc: f64,
+    pub vertex_degree: f64,
+    pub house_cusps: [f64; 13],
     pub planets: Vec<RawPlanet>,
+    pub ayanamsa_value: f64,
+}
+
+pub fn ayanamsa_to_sid_mode(name: &str) -> (i32, bool) {
+    match name.to_lowercase().replace(['-', ' '], "_").as_str() {
+        "raman" => (swiss_eph::SE_SIDM_RAMAN, true),
+        "kp" | "krishnamurti" => (swiss_eph::SE_SIDM_KRISHNAMURTI, true),
+        "yukteshwar" => (swiss_eph::SE_SIDM_YUKTESHWAR, true),
+        "true_chitra" | "true_citra" => (swiss_eph::SE_SIDM_TRUE_CITRA, true),
+        "true_pushya" => (swiss_eph::SE_SIDM_TRUE_PUSHYA, true),
+        "surya_siddhanta" | "suryasiddhanta" => (swiss_eph::SE_SIDM_SURYASIDDHANTA, true),
+        "fagan_bradley" => (swiss_eph::SE_SIDM_FAGAN_BRADLEY, true),
+        "tropical" => (0, false),
+        _ => (swiss_eph::SE_SIDM_LAHIRI, true),
+    }
+}
+
+pub fn house_system_to_hsys(name: &str) -> i32 {
+    match name.to_lowercase().replace(['-', ' '], "_").as_str() {
+        "placidus" => b'P' as i32,
+        "koch" => b'K' as i32,
+        "campanus" => b'C' as i32,
+        "regiomontanus" => b'R' as i32,
+        "porphyry" | "sripati" => b'O' as i32,
+        _ => b'A' as i32, // Default to Equal / Ascendant cusp
+    }
 }
 
 pub fn calculate_snapshot(jd_ut: f64, lat: f64, lon: f64) -> Result<SwissSnapshot, ApiError> {
+    calculate_snapshot_with_profile(jd_ut, lat, lon, "lahiri", "mean", "wholesign")
+}
+
+pub fn calculate_snapshot_with_profile(
+    jd_ut: f64,
+    lat: f64,
+    lon: f64,
+    ayanamsa_name: &str,
+    node_type: &str,
+    house_system_name: &str,
+) -> Result<SwissSnapshot, ApiError> {
     let _guard = SWISS_LOCK.lock().expect("Swiss Ephemeris lock poisoned");
 
-    unsafe {
-        swiss_eph::swe_set_sid_mode(swiss_eph::SE_SIDM_LAHIRI, 0.0, 0.0);
+    let (sid_mode, is_sidereal) = ayanamsa_to_sid_mode(ayanamsa_name);
+    let mut planet_flags = swiss_eph::SEFLG_SPEED | swiss_eph::SEFLG_SWIEPH;
+    let mut house_flags = swiss_eph::SEFLG_SWIEPH;
+
+    if is_sidereal {
+        unsafe {
+            swiss_eph::swe_set_sid_mode(sid_mode, 0.0, 0.0);
+        }
+        planet_flags |= swiss_eph::SEFLG_SIDEREAL;
+        house_flags |= swiss_eph::SEFLG_SIDEREAL;
     }
 
+    let ayanamsa_val = if is_sidereal {
+        unsafe { swiss_eph::swe_get_ayanamsa_ut(jd_ut) }
+    } else {
+        0.0
+    };
+
+    let hsys = house_system_to_hsys(house_system_name);
     let mut cusps = [0.0_f64; 13];
     let mut ascmc = [0.0_f64; 10];
     let house_result = unsafe {
         swiss_eph::swe_houses_ex(
             jd_ut,
-            constants::HOUSE_FLAGS,
+            house_flags,
             lat,
             lon,
-            b'A' as i32,
+            hsys,
             cusps.as_mut_ptr(),
             ascmc.as_mut_ptr(),
         )
@@ -61,15 +118,22 @@ pub fn calculate_snapshot(jd_ut: f64, lat: f64, lon: f64) -> Result<SwissSnapsho
         ));
     }
 
+    let use_true_node = node_type.eq_ignore_ascii_case("true");
     let mut planets = Vec::with_capacity(constants::PLANETS.len());
     for (name, planet_id) in constants::PLANETS {
+        let actual_id = if name == "Rahu" && use_true_node {
+            swiss_eph::SE_TRUE_NODE
+        } else {
+            planet_id
+        };
+
         let mut xx = [0.0_f64; 6];
         let mut serr = [0_i8; 256];
         let result = unsafe {
             swiss_eph::swe_calc_ut(
                 jd_ut,
-                planet_id,
-                constants::PLANET_FLAGS,
+                actual_id,
+                planet_flags,
                 xx.as_mut_ptr(),
                 serr.as_mut_ptr(),
             )
@@ -89,12 +153,46 @@ pub fn calculate_snapshot(jd_ut: f64, lat: f64, lon: f64) -> Result<SwissSnapsho
 
     Ok(SwissSnapshot {
         ascendant_degree: normalize_degree(ascmc[0]),
+        mc_degree: normalize_degree(ascmc[1]),
+        armc: ascmc[2],
+        vertex_degree: normalize_degree(ascmc[3]),
+        house_cusps: cusps,
         planets,
+        ayanamsa_value: ayanamsa_val,
     })
 }
 
 pub fn normalize_degree(degree: f64) -> f64 {
     degree.rem_euclid(360.0)
+}
+
+pub fn get_sun_moon_sidereal(jd_ut: f64) -> (f64, f64) {
+    let _guard = SWISS_LOCK.lock().expect("Swiss Ephemeris lock poisoned");
+    unsafe {
+        swiss_eph::swe_set_sid_mode(swiss_eph::SE_SIDM_LAHIRI, 0.0, 0.0);
+        let mut xx_sun = [0.0_f64; 6];
+        let mut serr = [0_i8; 256];
+        swiss_eph::swe_calc_ut(
+            jd_ut,
+            swiss_eph::SE_SUN,
+            constants::PLANET_FLAGS,
+            xx_sun.as_mut_ptr(),
+            serr.as_mut_ptr(),
+        );
+
+        let mut xx_moon = [0.0_f64; 6];
+        swiss_eph::swe_calc_ut(
+            jd_ut,
+            swiss_eph::SE_MOON,
+            constants::PLANET_FLAGS,
+            xx_moon.as_mut_ptr(),
+            serr.as_mut_ptr(),
+        );
+        (
+            normalize_degree(xx_sun[0]),
+            normalize_degree(xx_moon[0]),
+        )
+    }
 }
 
 fn jd_local_midnight(jd_ut: f64, offset_hours: f64) -> f64 {

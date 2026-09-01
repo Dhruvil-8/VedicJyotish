@@ -1,4 +1,5 @@
 import React from "react";
+import { redirect } from "next/navigation";
 import AppShell from "../components/layout/AppShell";
 import MatchingTab from "../components/kundli/MatchingTab";
 
@@ -9,6 +10,11 @@ export const metadata = {
 };
 
 export default function MatchingPage() {
+  // Temporarily hidden from UI - redirects to home.
+  // To re-enable in UI, simply comment out redirect("/") and uncomment the return block below.
+  redirect("/");
+
+  /*
   return (
     <AppShell>
       <div className="max-w-5xl mx-auto space-y-6 pt-4">
@@ -24,4 +30,5 @@ export default function MatchingPage() {
       </div>
     </AppShell>
   );
+  */
 }

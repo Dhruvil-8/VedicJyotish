@@ -152,6 +152,7 @@ mod tests {
             chara_karaka: None,
             dig_bala_points: None,
             dig_bala_percentage: None,
+            speed: None,
         }
     }
 
@@ -234,6 +235,7 @@ mod tests {
                 chara_karaka: None,
                 dig_bala_points: None,
                 dig_bala_percentage: None,
+                speed: None,
             }
         }
 

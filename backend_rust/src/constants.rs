@@ -177,6 +177,35 @@ pub static COMBUSTION_DEGREES: Lazy<HashMap<&'static str, f64>> = Lazy::new(|| {
     ])
 });
 
+pub const NAKSHATRA_SPAN: f64 = 360.0 / 27.0;
+pub const PADA_SPAN: f64 = 360.0 / 108.0;
+pub const SAVANA_YEAR: f64 = 360.0;
+pub const TROPICAL_YEAR: f64 = 365.24219;
+
 pub const FIRE_SIGNS: [usize; 3] = [0, 4, 8];
 pub const WATER_SIGNS: [usize; 3] = [3, 7, 11];
 pub const AIR_SIGNS: [usize; 3] = [2, 6, 10];
+
+pub static DEEP_EXALTATION_DEGREES: Lazy<HashMap<&'static str, f64>> = Lazy::new(|| {
+    HashMap::from([
+        ("Sun", 10.0),      // Aries 10°
+        ("Moon", 33.0),     // Taurus 3°
+        ("Mars", 298.0),    // Capricorn 28°
+        ("Mercury", 165.0), // Virgo 15°
+        ("Jupiter", 95.0),  // Cancer 5°
+        ("Venus", 357.0),   // Pisces 27°
+        ("Saturn", 200.0),  // Libra 20°
+    ])
+});
+
+pub static DEEP_DEBILITATION_DEGREES: Lazy<HashMap<&'static str, f64>> = Lazy::new(|| {
+    HashMap::from([
+        ("Sun", 190.0),     // Libra 10°
+        ("Moon", 213.0),    // Scorpio 3°
+        ("Mars", 118.0),    // Cancer 28°
+        ("Mercury", 345.0), // Pisces 15°
+        ("Jupiter", 275.0), // Capricorn 5°
+        ("Venus", 177.0),   // Virgo 27°
+        ("Saturn", 20.0),   // Aries 20°
+    ])
+});

@@ -184,6 +184,10 @@ export const calculateCalendar = async (payload: {
   lon: number;
   timezone: number;
   tradition?: string;
+  view_mode?: string;
+  lunar_masa?: number;
+  masa_type?: string;
+  is_adhik?: boolean;
 }) => {
   const res = await fetch(`${API_BASE}/calculate_calendar`, {
     method: "POST",

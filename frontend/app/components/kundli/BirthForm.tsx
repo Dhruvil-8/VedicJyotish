@@ -145,20 +145,25 @@ export default function BirthForm({
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
                   placeholder="DD/MM/YYYY"
-                  className="w-full bg-muted/30 border border-border/50 rounded-lg p-3 pr-10 font-serif focus:border-primary focus:ring-1 focus:ring-primary/50 outline-none transition-all text-foreground"
+                  className="w-full bg-muted/30 border border-border/50 rounded-lg p-3 pr-12 font-serif focus:border-primary focus:ring-1 focus:ring-primary/50 outline-none transition-all text-foreground"
                 />
-                <input
-                  type="date"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 opacity-0 cursor-pointer z-10"
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (val) {
-                      const [y, m, d] = val.split("-");
-                      if (y && m && d) setDate(`${d}/${m}/${y}`);
-                    }
-                  }}
-                />
-                <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary pointer-events-none" />
+                <label
+                  className="absolute right-0 top-0 bottom-0 w-11 min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer hover:bg-primary/10 rounded-r-lg transition-colors group"
+                  title="Open Calendar Date Picker"
+                >
+                  <input
+                    type="date"
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val) {
+                        const [y, m, d] = val.split("-");
+                        if (y && m && d) setDate(`${d}/${m}/${y}`);
+                      }
+                    }}
+                  />
+                  <Calendar className="w-4 h-4 text-primary group-hover:scale-110 transition-transform pointer-events-none" />
+                </label>
               </div>
             </div>
 
@@ -173,17 +178,22 @@ export default function BirthForm({
                   value={time}
                   onChange={(e) => setTime(e.target.value)}
                   placeholder="HH:MM"
-                  className="w-full bg-muted/30 border border-border/50 rounded-lg p-3 pr-10 font-serif focus:border-primary focus:ring-1 focus:ring-primary/50 outline-none transition-all text-foreground"
+                  className="w-full bg-muted/30 border border-border/50 rounded-lg p-3 pr-12 font-serif focus:border-primary focus:ring-1 focus:ring-primary/50 outline-none transition-all text-foreground"
                 />
-                <input
-                  type="time"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 opacity-0 cursor-pointer z-10"
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (val) setTime(val);
-                  }}
-                />
-                <Clock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary pointer-events-none" />
+                <label
+                  className="absolute right-0 top-0 bottom-0 w-11 min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer hover:bg-primary/10 rounded-r-lg transition-colors group"
+                  title="Open Time Picker"
+                >
+                  <input
+                    type="time"
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val) setTime(val);
+                    }}
+                  />
+                  <Clock className="w-4 h-4 text-primary group-hover:scale-110 transition-transform pointer-events-none" />
+                </label>
               </div>
             </div>
           </div>

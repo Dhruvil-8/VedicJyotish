@@ -2,8 +2,8 @@
   "openapi": "3.0.0",
   "info": {
     "title": "VedicJyotish Rust Backend API",
-    "description": "High-performance modular Vedic Astrology Engine built using Rust, Axum, and Swiss Ephemeris. Computes birth charts, divisional vargas, friendships, transits, dasha sequences, and formats dynamic contexts for AI interpretation.",
-    "version": "0.1.0"
+    "description": "High-performance modular Vedic Astrology Engine built using Rust, Axum, and Swiss Ephemeris. Computes birth charts, divisional vargas, friendships, transits, Ashtakavarga reductions, Bhava Chalit cusps, Upagrahas, Jaimini Arudhas, dasha sequences, and formats dynamic contexts for AI interpretation.",
+    "version": "0.2.0"
   },
   "servers": [
     {
@@ -27,7 +27,7 @@
                     "message": { "type": "string", "example": "Vedic Astrology API is running" },
                     "status": { "type": "string", "example": "online" },
                     "engine": { "type": "string", "example": "rust-swiss-eph" },
-                    "version": { "type": "string", "example": "0.1.0" }
+                    "version": { "type": "string", "example": "0.2.0" }
                   }
                 }
               }
@@ -89,7 +89,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/ChartResponse"
                 }
               }
             }
@@ -97,10 +97,120 @@
         }
       }
     },
+    "/calculate_transits": {
+      "post": {
+        "summary": "Planetary Transit (Gochara) Calculation",
+        "description": "Calculates real-time planetary transits relative to the natal Lagna and natal Moon positions.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["birth_data", "transit_date", "transit_time"],
+                "properties": {
+                  "birth_data": { "$ref": "#/components/schemas/BirthData" },
+                  "transit_date": { "type": "string", "example": "01/09/2026" },
+                  "transit_time": { "type": "string", "example": "12:00" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Transit planetary coordinates and houses"
+          }
+        }
+      }
+    },
+    "/calculate_calendar": {
+      "post": {
+        "summary": "Monthly Vedic Panchangam Calendar",
+        "description": "Calculates monthly calendars across Gregorian, Amanta, and Purnimanta lunar systems with Adhik/Nija masa detection.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["year", "lat", "lon"],
+                "properties": {
+                  "year": { "type": "integer", "example": 2026 },
+                  "month": { "type": "integer", "example": 9 },
+                  "lat": { "type": "number", "example": 23.0225 },
+                  "lon": { "type": "number", "example": 72.5714 },
+                  "calendar_type": { "type": "string", "enum": ["gregorian", "amanta", "purnimanta"], "default": "amanta" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Monthly calendar days and festival markings"
+          }
+        }
+      }
+    },
+    "/generate_report": {
+      "post": {
+        "summary": "AI Astrological Report (SSE Stream)",
+        "description": "Streams a comprehensive 3-page celestial analysis report from Gemini via Server-Sent Events.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "description": "Chart response object with optional language specification"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Server-Sent Events streaming real-time tokens"
+          }
+        }
+      }
+    },
+    "/chat_with_astrologer": {
+      "post": {
+        "summary": "Conversational AI Astrologer (SSE Stream)",
+        "description": "Streams an interactive consultation from Gemini incorporating multi-turn chat history and dynamic topic filters.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Server-Sent Events streaming astrologer answer tokens"
+          }
+        }
+      }
+    },
+    "/api/v1/capabilities": {
+      "get": {
+        "summary": "Engine Capabilities & Metadata",
+        "description": "Returns supported Ayanamsas, House Systems, Dasha Year conventions, and active modules.",
+        "responses": {
+          "200": {
+            "description": "Engine feature matrix"
+          }
+        }
+      }
+    },
     "/api/v1/chart/full": {
       "post": {
         "summary": "Enterprise Chart Calculation",
-        "description": "Calculates complete Vedic parameters including Five-fold friendships, Vaisheshikamsa varga counts, and active Sade Sati transits with customizable calculation profiles.",
+        "description": "Calculates complete Vedic parameters including Five-fold friendships, Vaisheshikamsa counts, Bhava Chalit cusps, Upagrahas, full Ashtakavarga with Trikona/Ekadhipatya reductions and Shodhya Pindas, and all 12 Bhava Arudhas.",
         "requestBody": {
           "required": true,
           "content": {
@@ -113,11 +223,11 @@
         },
         "responses": {
           "200": {
-            "description": "Enterprise-grade birth chart structure",
+            "description": "Complete birth chart structure",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "$ref": "#/components/schemas/ChartResponse"
                 }
               }
             }
@@ -149,7 +259,7 @@
     "/api/v1/chart/dasha/chara": {
       "post": {
         "summary": "Jaimini Chara Dasha Timeline",
-        "description": "Computes the exact chronological Chara Dasha sign timeline, applying lord strengths and modality constraints.",
+        "description": "Computes the chronological Chara Dasha sign timeline applying dual-lord strength rules.",
         "requestBody": {
           "required": true,
           "content": {
@@ -163,6 +273,53 @@
         "responses": {
           "200": {
             "description": "Sign-based timing timeline"
+          }
+        }
+      }
+    },
+    "/api/v1/chart/ashtakavarga": {
+      "post": {
+        "summary": "Ashtakavarga with Classical Reductions",
+        "description": "Calculates BAV, SAV, Trikona Shodhana, Ekadhipatya Shodhana, and Shodhya Pindas.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChartCalculationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ashtakavarga grids and Shodhya Pinda totals"
+          }
+        }
+      }
+    },
+    "/api/v1/match/compatibility": {
+      "post": {
+        "summary": "Kundali Milan / Relationship Compatibility",
+        "description": "Computes 36-point Ashta Koota matching with Mahendra, Stree Deergha, and dosha exceptions.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["boy", "girl"],
+                "properties": {
+                  "boy": { "$ref": "#/components/schemas/BirthData" },
+                  "girl": { "$ref": "#/components/schemas/BirthData" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ashta Koota score and dosha compatibility breakdown"
           }
         }
       }
@@ -189,10 +346,50 @@
       "CalculationProfile": {
         "type": "object",
         "properties": {
-          "ayanamsa": { "type": "string", "default": "Lahiri", "enum": ["Lahiri", "Raman", "KP", "FaganBradley", "Yukteshwar"] },
-          "node_type": { "type": "string", "default": "Mean", "enum": ["Mean", "True"] },
-          "house_system": { "type": "string", "default": "WholeSign", "enum": ["WholeSign", "Sripati", "Placidus", "Campanus"] },
-          "dasha_year": { "type": "string", "default": "Sidereal365.256363004" }
+          "ayanamsa": {
+            "type": "string",
+            "default": "Lahiri",
+            "enum": [
+              "Lahiri",
+              "Raman",
+              "KP",
+              "Krishnamurti",
+              "Yukteshwar",
+              "TrueChitra",
+              "TruePushya",
+              "SuryaSiddhanta",
+              "FaganBradley",
+              "Tropical"
+            ]
+          },
+          "node_type": {
+            "type": "string",
+            "default": "Mean",
+            "enum": ["Mean", "True"]
+          },
+          "house_system": {
+            "type": "string",
+            "default": "WholeSign",
+            "enum": [
+              "WholeSign",
+              "Equal",
+              "Sripati",
+              "Placidus",
+              "Koch",
+              "Campanus",
+              "Regiomontanus",
+              "Porphyry"
+            ]
+          },
+          "dasha_year": {
+            "type": "string",
+            "default": "Sidereal365.256363004",
+            "enum": [
+              "Sidereal365.256363004",
+              "Savana360",
+              "Tropical365.24219"
+            ]
+          }
         }
       },
       "ChartCalculationRequest": {
@@ -211,6 +408,60 @@
           "name": { "type": "string", "example": "Mumbai, MH, IN" },
           "lat": { "type": "number", "example": 19.076 },
           "lon": { "type": "number", "example": 72.877 }
+        }
+      },
+      "ChatMessage": {
+        "type": "object",
+        "required": ["role", "text"],
+        "properties": {
+          "role": { "type": "string", "enum": ["user", "model"] },
+          "text": { "type": "string" }
+        }
+      },
+      "ChatRequest": {
+        "type": "object",
+        "required": ["chart_data", "question"],
+        "properties": {
+          "chart_data": { "type": "object" },
+          "question": { "type": "string", "maxLength": 500 },
+          "history": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ChatMessage" },
+            "default": []
+          }
+        }
+      },
+      "ChartResponse": {
+        "type": "object",
+        "properties": {
+          "birth_date": { "type": "string" },
+          "birth_time": { "type": "string" },
+          "profile": { "$ref": "#/components/schemas/CalculationProfile" },
+          "ascendant": {
+            "type": "object",
+            "properties": {
+              "sign": { "type": "string" },
+              "degree": { "type": "number" }
+            }
+          },
+          "planetary_table": { "type": "array" },
+          "vimshottari_timeline": { "type": "array" },
+          "bhava_cusps": {
+            "type": "array",
+            "description": "12 Bhava Chalit houses with start, cusp, end, and planets"
+          },
+          "upagrahas": {
+            "type": "array",
+            "description": "Classical shadow planets (Dhuma, Vyatipata, Parivesha, Indrachapa, Upaketu, Gulika, Mandi)"
+          },
+          "ashtakavarga": {
+            "type": "object",
+            "description": "BAV, SAV, Trikona Shodhana, Ekadhipatya Shodhana, and Shodhya Pindas"
+          },
+          "jaimini": {
+            "type": "object",
+            "description": "Chara Karakas, Arudha Lagna, Upapada Lagna, all 12 Bhava Arudhas, and Special Lagnas"
+          }
         }
       }
     }

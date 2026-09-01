@@ -61,8 +61,181 @@ const HINDU_MONTHS_KARTIKADI = [
   { idx: 3, sa: "Ashadha", hi: "आषाढ़", gu: "અષાઢ" },
   { idx: 4, sa: "Shravana", hi: "श्रावण", gu: "શ્રાવણ" },
   { idx: 5, sa: "Bhadrapada", hi: "भाद्रपद", gu: "ભાદરવો" },
-  { idx: 6, sa: "Ashvina", hi: "અશ્વિન", gu: "આસો" },
+  { idx: 6, sa: "Ashvina", hi: "अश्विन", gu: "આસો" },
 ];
+
+const GUJARATI_WEEKDAYS = [
+  { short: "રવિ", full: "રવિવાર", en: "Sun" },
+  { short: "સોમ", full: "સોમવાર", en: "Mon" },
+  { short: "મંગળ", full: "મંગળવાર", en: "Tue" },
+  { short: "બુધ", full: "બુધવાર", en: "Wed" },
+  { short: "ગુરુ", full: "ગુરુવાર", en: "Thu" },
+  { short: "શુક્ર", full: "શુક્રવાર", en: "Fri" },
+  { short: "શનિ", full: "શનિવાર", en: "Sat" },
+];
+
+const HINDI_WEEKDAYS = [
+  { short: "रवि", full: "रविवार", en: "Sun" },
+  { short: "सोम", full: "सोमवार", en: "Mon" },
+  { short: "मंगल", full: "मंगलवार", en: "Tue" },
+  { short: "बुध", full: "बुधवार", en: "Wed" },
+  { short: "गुरु", full: "गुरुवार", en: "Thu" },
+  { short: "शुक्र", full: "शुक्रवार", en: "Fri" },
+  { short: "शनि", full: "शनिवार", en: "Sat" },
+];
+
+const SOUTH_WEEKDAYS = [
+  { short: "Ravi", full: "Ravivara", en: "Sun" },
+  { short: "Soma", full: "Somavara", en: "Mon" },
+  { short: "Mang", full: "Mangalavara", en: "Tue" },
+  { short: "Budh", full: "Budhavara", en: "Wed" },
+  { short: "Guru", full: "Guruvara", en: "Thu" },
+  { short: "Shuk", full: "Shukravara", en: "Fri" },
+  { short: "Shan", full: "Shanivara", en: "Sat" },
+];
+
+const GUJARATI_NAKSHATRAS: Record<string, string> = {
+  Ashvini: "અશ્વિની",
+  Ashwini: "અશ્વિની",
+  Bharani: "ભરણી",
+  Krittika: "કૃતિકા",
+  Rohini: "રોહિણી",
+  Mrigashirsha: "મૃગશીર્ષ",
+  Ardra: "આર્દ્રા",
+  Punarvasu: "પુનર્વસુ",
+  Pushya: "પુષ્ય",
+  Ashlesha: "આશ્લેષા",
+  Magha: "મઘા",
+  "Purva Phalguni": "પૂર્વા ફાલ્ગુની",
+  "Uttara Phalguni": "ઉત્તરા ફાલ્ગુની",
+  Hasta: "હસ્ત",
+  Chitra: "ચિત્રા",
+  Svati: "સ્વાતિ",
+  Vishakha: "વિશાખા",
+  Anuradha: "અનુરાધા",
+  Jyeshtha: "જ્યેષ્ઠા",
+  Mula: "મૂળ",
+  "Purva Ashadha": "પૂર્વાષાઢા",
+  "Uttara Ashadha": "ઉત્તરાષાઢા",
+  Shravana: "શ્રાવણ",
+  Dhanishtha: "ધનિષ્ઠા",
+  Shatabhisha: "શતભિષા",
+  "Purva Bhadrapada": "પૂર્વા ભાદ્રપદ",
+  "Uttara Bhadrapada": "ઉત્તરા ભાદ્રપદ",
+  Revati: "રેવતી",
+};
+
+const HINDI_NAKSHATRAS: Record<string, string> = {
+  Ashvini: "अश्विनी",
+  Ashwini: "अश्विनी",
+  Bharani: "भरणी",
+  Krittika: "कृत्तिका",
+  Rohini: "रोहिणी",
+  Mrigashirsha: "मृगशिरा",
+  Ardra: "आर्द्रा",
+  Punarvasu: "पुनर्वसु",
+  Pushya: "पुष्य",
+  Ashlesha: "आश्लेषा",
+  Magha: "मघा",
+  "Purva Phalguni": "पूर्वाफाल्गुनी",
+  "Uttara Phalguni": "उत्तराफाल्गुनी",
+  Hasta: "हस्त",
+  Chitra: "चित्रा",
+  Svati: "स्वाति",
+  Vishakha: "विशाखा",
+  Anuradha: "अनुराधा",
+  Jyeshtha: "ज्येष्ठा",
+  Mula: "मूल",
+  "Purva Ashadha": "पूर्वाषाढ़ा",
+  "Uttara Ashadha": "उत्तराषाढ़ा",
+  Shravana: "श्रवण",
+  Dhanishtha: "धनिष्ठा",
+  Shatabhisha: "शतभिषा",
+  "Purva Bhadrapada": "पूर्वाभाद्रपद",
+  "Uttara Bhadrapada": "उत्तराभाद्रपद",
+  Revati: "रेवती",
+};
+
+export type TraditionType = "gujarat" | "north" | "south" | "english";
+
+export function getDayTithiDisplay(day: any, tradition: TraditionType) {
+  const tNum = ((day.tithi_index - 1) % 15) + 1;
+  const isShukla = day.paksha === "Shukla";
+
+  if (tradition === "gujarat") {
+    const guNums = ["૦", "૧", "૨", "૩", "૪", "૫", "૬", "૭", "૮", "૯", "૧૦", "૧૧", "૧૨", "૧૩", "૧૪", "૧૫"];
+    const pLabel = isShukla ? "સુદ" : "વદ";
+    let specialName = "";
+    if (tNum === 1) specialName = "એકમ";
+    else if (tNum === 2) specialName = "બીજ";
+    else if (tNum === 3) specialName = "ત્રીજ";
+    else if (tNum === 4) specialName = "ચોથ";
+    else if (tNum === 5) specialName = "પાંચમ";
+    else if (tNum === 6) specialName = "છઠ";
+    else if (tNum === 7) specialName = "સાતમ";
+    else if (tNum === 8) specialName = "આઠમ";
+    else if (tNum === 9) specialName = "નોમ";
+    else if (tNum === 10) specialName = "દસમ";
+    else if (tNum === 11) specialName = "અગિયારસ";
+    else if (tNum === 12) specialName = "બારસ";
+    else if (tNum === 13) specialName = "તેરસ";
+    else if (tNum === 14) specialName = "ચૌદસ";
+    else if (tNum === 15) specialName = isShukla ? "પૂનમ" : "અમાસ";
+
+    return {
+      badge: `${pLabel} ${guNums[tNum]}`,
+      title: specialName,
+      full: `${pLabel} ${specialName}`,
+    };
+  }
+
+  if (tradition === "north") {
+    const hiNums = ["०", "१", "२", "३", "४", "५", "६", "७", "८", "९", "१०", "११", "१२", "१३", "१४", "१५"];
+    const pLabel = isShukla ? "शुक्ल" : "कृष्ण";
+    let specialName = "";
+    if (tNum === 1) specialName = "प्रतिपदा";
+    else if (tNum === 2) specialName = "द्वितीया";
+    else if (tNum === 3) specialName = "तृतीया";
+    else if (tNum === 4) specialName = "चतुर्थी";
+    else if (tNum === 5) specialName = "पंचमी";
+    else if (tNum === 6) specialName = "षष्ठी";
+    else if (tNum === 7) specialName = "सप्तमी";
+    else if (tNum === 8) specialName = "अष्टमी";
+    else if (tNum === 9) specialName = "नवमी";
+    else if (tNum === 10) specialName = "दशमी";
+    else if (tNum === 11) specialName = "एकादशी";
+    else if (tNum === 12) specialName = "द्वादशी";
+    else if (tNum === 13) specialName = "त्रयोदशी";
+    else if (tNum === 14) specialName = "चतुर्दशी";
+    else if (tNum === 15) specialName = isShukla ? "पूर्णिमा" : "अमावस्या";
+
+    return {
+      badge: `${pLabel} ${hiNums[tNum]}`,
+      title: specialName,
+      full: `${pLabel} ${specialName}`,
+    };
+  }
+
+  const pLabel = isShukla ? "Shukla" : "Krishna";
+  let sName = day.tithi_name || `${pLabel} ${tNum}`;
+  if (tNum === 15) sName = isShukla ? "Purnima" : "Amavasya";
+  return {
+    badge: `${pLabel} ${tNum}`,
+    title: sName,
+    full: sName,
+  };
+}
+
+export function getDayNakshatraDisplay(name: string, tradition: TraditionType) {
+  if (!name) return "";
+  if (tradition === "gujarat") {
+    return GUJARATI_NAKSHATRAS[name] || name;
+  }
+  if (tradition === "north") {
+    return HINDI_NAKSHATRAS[name] || name;
+  }
+  return name;
+}
 
 const GREGORIAN_MONTHS = [
   "January",
@@ -78,41 +251,6 @@ const GREGORIAN_MONTHS = [
   "November",
   "December",
 ];
-
-const TITHI_NAMES_SANSKRIT = [
-  "१. प्रतिपदा (Pratipada)",
-  "२. द्वितीया (Dwitiya)",
-  "३. तृतीया (Tritiya)",
-  "४. चतुर्थी (Chaturthi)",
-  "५. पंचमी (Panchami)",
-  "६. षष्ठी (Shashthi)",
-  "७. सप्तमी (Saptami)",
-  "८. अष्टमी (Ashtami)",
-  "९. नवमी (Navami)",
-  "१०. दशमी (Dashami)",
-  "११. एकादशी (Ekadashi)",
-  "१२. द्वादशी (Dwadashi)",
-  "१३. त्रयोदशी (Trayodashi)",
-  "१४. चतुर्दशी (Chaturdashi)",
-  "१५. पूर्णिमा (Purnima)",
-  "१. प्रतिपदा (Pratipada)",
-  "२. द्वितीया (Dwitiya)",
-  "३. तृतीया (Tritiya)",
-  "४. चतुर्थी (Chaturthi)",
-  "५. पंचमी (Panchami)",
-  "६. षष्ठी (Shashthi)",
-  "७. सप्तमी (Saptami)",
-  "८. अष्टमी (Ashtami)",
-  "९. नवमी (Navami)",
-  "१०. दशमी (Dashami)",
-  "११. एकादशी (Ekadashi)",
-  "१२. द्वादशी (Dwadashi)",
-  "१३. त्रयोदशी (Trayodashi)",
-  "१४. चतुर्दशी (Chaturdashi)",
-  "३०. अमावस्या (Amavasya)",
-];
-
-export type TraditionType = "gujarat" | "north" | "south" | "english";
 
 export default function PanchangaView() {
   const { showToast } = useToast();
@@ -144,6 +282,8 @@ export default function PanchangaView() {
 
   const [calYear, setCalYear] = useState<number>(now.getFullYear());
   const [selectedMasaIdx, setSelectedMasaIdx] = useState<number>(4); // 4 = Shravana
+  const [selectedMasaType, setSelectedMasaType] = useState<string>("regular");
+  const [isAdhikSelected, setIsAdhikSelected] = useState<boolean>(false);
   const [calGregMonth, setCalGregMonth] = useState<number>(now.getMonth() + 1);
 
   // Month Calendar Data
@@ -217,7 +357,7 @@ export default function PanchangaView() {
       }
     };
 
-    // Initial Fetch Monthly Calendar (Gujarat Shravana view default)
+    // Initial Fetch Monthly Calendar (automatically detects current Hindu month)
     const fetchInitialCalendar = async () => {
       setCalendarLoading(true);
       try {
@@ -227,13 +367,17 @@ export default function PanchangaView() {
           lat: cachedCity.lat,
           lon: cachedCity.lon,
           timezone: cachedCity.timezone,
-          tradition: "amanta",
+          tradition: "gujarat",
           view_mode: "lunar",
-          lunar_masa: 4, // Shravana
         };
         const res = await calculateCalendar(payload);
         if (res) {
           setCalendarData(res);
+          if (typeof res.primary_masa_index === "number") {
+            setSelectedMasaIdx(res.primary_masa_index);
+          }
+          setIsAdhikSelected(res.is_adhika || false);
+          setSelectedMasaType(res.masa_type || "regular");
           // Set preview day to today or first day
           if (res.days && res.days.length > 0) {
             const todayDay = res.days.find((d: any) => d.date === formattedDate);
@@ -265,16 +409,25 @@ export default function PanchangaView() {
   // Fetch Month Calendar according to Selected Tradition
   const fetchMonthCalendar = async (
     targetTradition: TraditionType,
-    targetMasa: number,
-    targetGregMonth: number,
-    targetYear: number,
-    cityObj: any
+    targetMasa?: number,
+    targetGregMonth: number = calGregMonth,
+    targetYear: number = calYear,
+    cityObj: any = selectedPanchangCity,
+    targetMasaType: string = "regular",
+    targetIsAdhik: boolean = false
   ) => {
     if (!cityObj || typeof cityObj.lat !== "number" || typeof cityObj.lon !== "number") return;
     setCalendarLoading(true);
     try {
       const isEnglish = targetTradition === "english";
-      const traditionParam = targetTradition === "north" ? "purnimanta" : "amanta";
+      const traditionParam =
+        targetTradition === "north"
+          ? "north"
+          : targetTradition === "gujarat"
+          ? "gujarat"
+          : targetTradition === "south"
+          ? "south"
+          : "amanta";
       const viewModeParam = isEnglish ? "gregorian" : "lunar";
 
       const payload = {
@@ -286,11 +439,18 @@ export default function PanchangaView() {
         tradition: traditionParam,
         view_mode: viewModeParam,
         lunar_masa: isEnglish ? undefined : targetMasa,
+        masa_type: isEnglish ? undefined : targetMasaType,
+        is_adhik: isEnglish ? undefined : targetIsAdhik,
       };
 
       const res = await calculateCalendar(payload);
       if (res && res.days && res.days.length > 0) {
         setCalendarData(res);
+        if (typeof res.primary_masa_index === "number") {
+          setSelectedMasaIdx(res.primary_masa_index);
+        }
+        setIsAdhikSelected(res.is_adhika || false);
+        setSelectedMasaType(res.masa_type || "regular");
         const todayDay = res.days.find((d: any) => d.date === todayFormatted);
         setSelectedDayPreview(todayDay || res.days[0]);
       }
@@ -304,15 +464,12 @@ export default function PanchangaView() {
   // Switch Tradition View
   const handleTraditionViewChange = (newTradition: TraditionType) => {
     setTraditionView(newTradition);
-    let newMasa = selectedMasaIdx;
-    if (newTradition === "north" && selectedMasaIdx === 4) {
-      newMasa = 5; // Bhadrapada
-      setSelectedMasaIdx(5);
-    } else if (newTradition === "gujarat" && selectedMasaIdx === 5) {
-      newMasa = 4; // Shravana
-      setSelectedMasaIdx(4);
+    if (newTradition === "english") {
+      fetchMonthCalendar("english", undefined, calGregMonth, calYear, selectedPanchangCity);
+    } else {
+      // Find the Hindu month corresponding to the currently viewed Gregorian date
+      fetchMonthCalendar(newTradition, undefined, calGregMonth, calYear, selectedPanchangCity, "regular", false);
     }
-    fetchMonthCalendar(newTradition, newMasa, calGregMonth, calYear, selectedPanchangCity);
   };
 
   const handlePrevMonth = () => {
@@ -327,15 +484,37 @@ export default function PanchangaView() {
       setCalYear(newY);
       fetchMonthCalendar(traditionView, selectedMasaIdx, newM, newY, selectedPanchangCity);
     } else {
-      let newMasa = selectedMasaIdx - 1;
-      let newY = calYear;
-      if (newMasa < 0) {
-        newMasa = 11;
-        newY -= 1;
+      const available = calendarData?.available_masas;
+      if (available && available.length > 0) {
+        const currentIdx = available.findIndex(
+          (m: any) => m.index === selectedMasaIdx && (isAdhikSelected ? m.is_adhik : !m.is_adhik)
+        );
+        if (currentIdx > 0) {
+          const prev = available[currentIdx - 1];
+          setSelectedMasaIdx(prev.index);
+          setIsAdhikSelected(prev.is_adhik);
+          setSelectedMasaType(prev.masa_type);
+          fetchMonthCalendar(traditionView, prev.index, calGregMonth, calYear, selectedPanchangCity, prev.masa_type, prev.is_adhik);
+        } else {
+          const newY = calYear - 1;
+          setCalYear(newY);
+          const lastMasa = 11;
+          setSelectedMasaIdx(lastMasa);
+          setIsAdhikSelected(false);
+          setSelectedMasaType("regular");
+          fetchMonthCalendar(traditionView, lastMasa, calGregMonth, newY, selectedPanchangCity, "regular", false);
+        }
+      } else {
+        let newMasa = selectedMasaIdx - 1;
+        let newY = calYear;
+        if (newMasa < 0) {
+          newMasa = 11;
+          newY -= 1;
+        }
+        setSelectedMasaIdx(newMasa);
+        setCalYear(newY);
+        fetchMonthCalendar(traditionView, newMasa, calGregMonth, newY, selectedPanchangCity, "regular", false);
       }
-      setSelectedMasaIdx(newMasa);
-      setCalYear(newY);
-      fetchMonthCalendar(traditionView, newMasa, calGregMonth, newY, selectedPanchangCity);
     }
   };
 
@@ -351,15 +530,37 @@ export default function PanchangaView() {
       setCalYear(newY);
       fetchMonthCalendar(traditionView, selectedMasaIdx, newM, newY, selectedPanchangCity);
     } else {
-      let newMasa = selectedMasaIdx + 1;
-      let newY = calYear;
-      if (newMasa > 11) {
-        newMasa = 0;
-        newY += 1;
+      const available = calendarData?.available_masas;
+      if (available && available.length > 0) {
+        const currentIdx = available.findIndex(
+          (m: any) => m.index === selectedMasaIdx && (isAdhikSelected ? m.is_adhik : !m.is_adhik)
+        );
+        if (currentIdx >= 0 && currentIdx < available.length - 1) {
+          const next = available[currentIdx + 1];
+          setSelectedMasaIdx(next.index);
+          setIsAdhikSelected(next.is_adhik);
+          setSelectedMasaType(next.masa_type);
+          fetchMonthCalendar(traditionView, next.index, calGregMonth, calYear, selectedPanchangCity, next.masa_type, next.is_adhik);
+        } else {
+          const newY = calYear + 1;
+          setCalYear(newY);
+          const firstMasa = 0;
+          setSelectedMasaIdx(firstMasa);
+          setIsAdhikSelected(false);
+          setSelectedMasaType("regular");
+          fetchMonthCalendar(traditionView, firstMasa, calGregMonth, newY, selectedPanchangCity, "regular", false);
+        }
+      } else {
+        let newMasa = selectedMasaIdx + 1;
+        let newY = calYear;
+        if (newMasa > 11) {
+          newMasa = 0;
+          newY += 1;
+        }
+        setSelectedMasaIdx(newMasa);
+        setCalYear(newY);
+        fetchMonthCalendar(traditionView, newMasa, calGregMonth, newY, selectedPanchangCity, "regular", false);
       }
-      setSelectedMasaIdx(newMasa);
-      setCalYear(newY);
-      fetchMonthCalendar(traditionView, newMasa, calGregMonth, newY, selectedPanchangCity);
     }
   };
 
@@ -483,36 +684,42 @@ export default function PanchangaView() {
     return nowMins >= sMins && nowMins < eMins;
   };
 
-  // Heading Calculation based on Tradition
-  const currentMonthHeading = useMemo(() => {
-    if (!calendarData) return "Vedic Calendar";
-    if (traditionView === "english") {
-      return `${GREGORIAN_MONTHS[calGregMonth - 1]} ${calYear}`;
-    }
-    const masa = calendarData.primary_masa || HINDU_MONTHS_CHAITRADI[selectedMasaIdx].sa;
-    const vs = calendarData.primary_vikram_samvat || calYear + 57;
-    const ss = calendarData.primary_shaka_samvat || calYear - 78;
-
-    if (traditionView === "gujarat") {
-      const guMasa = HINDU_MONTHS_CHAITRADI[selectedMasaIdx]?.gu || masa;
-      return `${guMasa} માસ (${masa} Masa) - વિ.સં. ${vs}`;
-    }
-    if (traditionView === "north") {
-      const hiMasa = HINDU_MONTHS_CHAITRADI[selectedMasaIdx]?.hi || masa;
-      return `${hiMasa} मास (${masa} Masa) - वि.सं. ${vs}`;
-    }
-    if (traditionView === "south") {
-      return `${masa} Masa - शालिवाहन शक ${ss} (${calendarData.primary_samvatsara || ""})`;
-    }
-    return `${masa} Masa ${vs} Vikram Samvat`;
-  }, [calendarData, traditionView, selectedMasaIdx, calGregMonth, calYear]);
-
   // Current Month list based on Tradition
   const activeMonthList = useMemo(() => {
     if (traditionView === "gujarat") return HINDU_MONTHS_KARTIKADI;
     if (traditionView === "north" || traditionView === "south") return HINDU_MONTHS_CHAITRADI;
     return [];
   }, [traditionView]);
+
+  // Heading Calculation based on Tradition
+  const currentMonthHeading = useMemo(() => {
+    if (!calendarData) return "Vedic Calendar";
+    if (traditionView === "english") {
+      return `${GREGORIAN_MONTHS[calGregMonth - 1]} ${calYear}`;
+    }
+    const vs = calendarData.primary_vikram_samvat || calYear + 57;
+    const ss = calendarData.primary_shaka_samvat || calYear - 78;
+    const isAdhik = calendarData.is_adhika || false;
+    const curInfo = activeMonthList.find((b: any) => b.idx === selectedMasaIdx) || {
+      gu: calendarData.primary_masa || "માસ",
+      hi: calendarData.primary_masa || "मास",
+      sa: calendarData.primary_masa || "Masa",
+    };
+
+    if (traditionView === "gujarat") {
+      const guMasa = isAdhik ? `અધિક ${curInfo.gu}` : curInfo.gu;
+      return `${guMasa} માસ (વિ.સં. ${vs})`;
+    }
+    if (traditionView === "north") {
+      const hiMasa = isAdhik ? `अधिक ${curInfo.hi}` : curInfo.hi;
+      return `${hiMasa} मास (वि.सं. ${vs})`;
+    }
+    if (traditionView === "south") {
+      const saMasa = isAdhik ? `Adhika ${curInfo.sa}` : curInfo.sa;
+      return `${saMasa} Masa (शालिवाहन शक ${ss})`;
+    }
+    return `${curInfo.sa} Masa ${vs} Vikram Samvat`;
+  }, [calendarData, traditionView, selectedMasaIdx, calGregMonth, calYear, activeMonthList]);
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-fadeIn text-foreground max-w-6xl mx-auto px-3 sm:px-6 pb-12">
@@ -810,23 +1017,63 @@ export default function PanchangaView() {
                   </select>
                 ) : (
                   <select
-                    value={selectedMasaIdx}
+                    value={`${selectedMasaIdx}_${isAdhikSelected ? "adhik" : (selectedMasaType === "nija" ? "nija" : "regular")}`}
                     onChange={(e) => {
-                      const m = parseInt(e.target.value, 10);
+                      const [mStr, typeStr] = e.target.value.split("_");
+                      const m = parseInt(mStr, 10);
+                      const isAdhik = typeStr === "adhik";
                       setSelectedMasaIdx(m);
-                      fetchMonthCalendar(traditionView, m, calGregMonth, calYear, selectedPanchangCity);
+                      setIsAdhikSelected(isAdhik);
+                      setSelectedMasaType(typeStr);
+                      fetchMonthCalendar(traditionView, m, calGregMonth, calYear, selectedPanchangCity, typeStr, isAdhik);
                     }}
-                    className="flex-1 sm:flex-initial bg-card/60 border border-border/40 text-foreground font-heading text-xs rounded-lg px-2.5 py-1.5 focus:border-primary outline-none cursor-pointer min-w-[140px]"
+                    className="flex-1 sm:flex-initial bg-card/60 border border-border/40 text-foreground font-heading text-xs rounded-lg px-2.5 py-1.5 focus:border-primary outline-none cursor-pointer min-w-[150px]"
                   >
-                    {activeMonthList.map((m) => (
-                      <option key={m.idx} value={m.idx}>
-                        {traditionView === "gujarat"
-                          ? `${m.gu} (${m.sa})`
-                          : traditionView === "north"
-                          ? `${m.hi} (${m.sa})`
-                          : `${m.sa} Masa`}
-                      </option>
-                    ))}
+                    {calendarData?.available_masas && calendarData.available_masas.length > 0 ? (
+                      calendarData.available_masas.map((m: any, idx: number) => {
+                        const optVal = `${m.index}_${m.is_adhik ? "adhik" : (m.masa_type === "nija" ? "nija" : "regular")}`;
+                        const baseInfo = activeMonthList.find((b: any) => b.idx === m.index) || {
+                          gu: m.name,
+                          hi: m.name,
+                          sa: m.name,
+                        };
+                        let label = "";
+                        if (traditionView === "gujarat") {
+                          label = m.is_adhik
+                            ? `અધિક ${baseInfo.gu}`
+                            : m.masa_type === "nija"
+                            ? `નિજ ${baseInfo.gu}`
+                            : baseInfo.gu;
+                        } else if (traditionView === "north") {
+                          label = m.is_adhik
+                            ? `अधिक ${baseInfo.hi}`
+                            : m.masa_type === "nija"
+                            ? `शुद्ध ${baseInfo.hi}`
+                            : baseInfo.hi;
+                        } else {
+                          label = m.is_adhik
+                            ? `Adhika ${baseInfo.sa} Masa`
+                            : m.masa_type === "nija"
+                            ? `Nija ${baseInfo.sa} Masa`
+                            : `${baseInfo.sa} Masa`;
+                        }
+                        return (
+                          <option key={idx} value={optVal}>
+                            {label}
+                          </option>
+                        );
+                      })
+                    ) : (
+                      activeMonthList.map((m) => (
+                        <option key={m.idx} value={`${m.idx}_regular`}>
+                          {traditionView === "gujarat"
+                            ? m.gu
+                            : traditionView === "north"
+                            ? m.hi
+                            : `${m.sa} Masa`}
+                        </option>
+                      ))
+                    )}
                   </select>
                 )}
 
@@ -878,19 +1125,16 @@ export default function PanchangaView() {
                 <>
                   {/* Day of Week Headers */}
                   <div className="grid grid-cols-7 gap-1 sm:gap-2 text-center border-b border-primary/10 pb-2">
-                    {[
-                      { en: "Sun", sa: "Ravi", fullSa: "Ravivara" },
-                      { en: "Mon", sa: "Soma", fullSa: "Somavara" },
-                      { en: "Tue", sa: "Mang", fullSa: "Mangalavara" },
-                      { en: "Wed", sa: "Budh", fullSa: "Budhavara" },
-                      { en: "Thu", sa: "Guru", fullSa: "Guruvara" },
-                      { en: "Fri", sa: "Shuk", fullSa: "Shukravara" },
-                      { en: "Sat", sa: "Shan", fullSa: "Shanivara" },
-                    ].map((d, i) => (
+                    {(traditionView === "gujarat"
+                      ? GUJARATI_WEEKDAYS
+                      : traditionView === "north"
+                      ? HINDI_WEEKDAYS
+                      : SOUTH_WEEKDAYS
+                    ).map((d, i) => (
                       <div key={i} className="space-y-0.5">
                         <div className="font-heading text-[10px] sm:text-xs text-primary font-bold uppercase tracking-wider">
-                          <span className="hidden sm:inline">{d.fullSa}</span>
-                          <span className="sm:hidden">{d.sa}</span>
+                          <span className="hidden sm:inline">{d.full}</span>
+                          <span className="sm:hidden">{d.short}</span>
                         </div>
                         <div className="text-[8px] sm:text-[9px] text-muted-foreground font-serif">{d.en}</div>
                       </div>
@@ -917,9 +1161,13 @@ export default function PanchangaView() {
                     {/* Day Cards with Current Date Highlighting & Responsive Design */}
                     {calendarData.days.map((day: any, idx: number) => {
                       const isEnglish = traditionView === "english";
-                      const tithiSanskritLabel = TITHI_NAMES_SANSKRIT[(day.tithi_index - 1) % 30] || day.tithi_name;
+                      const tithiDisplay = getDayTithiDisplay(day, traditionView);
                       const isToday = day.date === todayFormatted;
                       const isSelectedPreview = selectedDayPreview?.date === day.date;
+                      const [dStr, mStr] = (day.date || "").split("/");
+                      const gDayNum = parseInt(dStr, 10);
+                      const gMonNum = parseInt(mStr, 10);
+                      const gMonName = GREGORIAN_MONTHS[gMonNum - 1]?.slice(0, 3) || "";
 
                       return (
                         <motion.div
@@ -940,7 +1188,7 @@ export default function PanchangaView() {
                               : "bg-card/40 hover:bg-card/80 border-border/30 hover:border-primary/40 shadow-sm"
                           }`}
                         >
-                          {/* Top Row: Primary Header, Today Badge */}
+                          {/* Top Row: Left side = Hindu Tithi badge (or English day num), Right side = Gregorian Date in corner */}
                           <div className="flex items-start justify-between">
                             <div className="flex items-center gap-1">
                               {isEnglish ? (
@@ -959,15 +1207,15 @@ export default function PanchangaView() {
                                       isToday ? "text-primary font-extrabold" : "text-foreground"
                                     }`}
                                   >
-                                    {((day.tithi_index - 1) % 15) + 1}
+                                    {tithiDisplay.badge}
                                   </span>
-                                  {/* Desktop: Sanskrit Label */}
+                                  {/* Desktop: Sanskrit / Regional Label */}
                                   <span
                                     className={`hidden sm:inline font-heading text-xs truncate max-w-[85px] ${
                                       isToday ? "text-primary font-extrabold" : "text-foreground font-bold"
                                     }`}
                                   >
-                                    {tithiSanskritLabel.split(" ")[0]}
+                                    {tithiDisplay.badge}
                                   </span>
                                 </>
                               )}
@@ -978,36 +1226,50 @@ export default function PanchangaView() {
                               )}
                             </div>
 
-                            {/* Paksha Indicator: Desktop Badge, Mobile Mini Dot */}
-                            <span
-                              className={`hidden sm:inline text-[8px] font-heading px-1.5 py-0.5 rounded-md uppercase tracking-wider ${
-                                day.paksha === "Shukla"
-                                  ? "bg-amber-500/10 text-amber-700 border border-amber-500/20"
-                                  : "bg-indigo-500/10 text-indigo-700 border border-indigo-500/20"
-                              }`}
-                            >
-                              {day.paksha}
-                            </span>
-                            <span
-                              className={`sm:hidden w-1.5 h-1.5 rounded-full ${
-                                day.paksha === "Shukla" ? "bg-amber-500" : "bg-indigo-500"
-                              }`}
-                              title={`${day.paksha} Paksha`}
-                            />
+                            {/* In Hindu view: show Gregorian Date in corner so solar day is clear */}
+                            {!isEnglish ? (
+                              <div className="text-right">
+                                <span className="text-[9px] sm:text-[10px] font-mono text-muted-foreground font-semibold">
+                                  {gDayNum}
+                                  {gDayNum === 1 || idx === 0 ? ` ${gMonName}` : ""}
+                                </span>
+                              </div>
+                            ) : (
+                              /* Paksha Indicator: Desktop Badge, Mobile Mini Dot */
+                              <span
+                                className={`hidden sm:inline text-[8px] font-heading px-1.5 py-0.5 rounded-md uppercase tracking-wider ${
+                                  day.paksha === "Shukla"
+                                    ? "bg-amber-500/10 text-amber-700 border border-amber-500/20"
+                                    : "bg-indigo-500/10 text-indigo-700 border border-indigo-500/20"
+                                }`}
+                              >
+                                {day.paksha}
+                              </span>
+                            )}
                           </div>
 
                           {/* Desktop Middle: Tithi Name & Nakshatra */}
                           <div className="hidden sm:block space-y-0.5 my-1">
                             <div className="font-heading text-[11px] text-foreground font-semibold truncate">
-                              {day.tithi_name}
+                              {isEnglish ? day.tithi_name : tithiDisplay.title}
                             </div>
                             <div className="text-[9px] text-muted-foreground font-serif truncate">
-                              {day.nakshatra_name}
+                              {getDayNakshatraDisplay(day.nakshatra_name, traditionView)}
                             </div>
                           </div>
 
                           {/* Desktop Bottom Badges */}
                           <div className="hidden sm:block space-y-1">
+                            {day.is_adhika && (
+                              <span className="block text-[8px] font-heading font-bold px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-800 dark:text-rose-300 border border-rose-500/30 truncate">
+                                Adhik
+                              </span>
+                            )}
+                            {day.is_sankranti && (
+                              <span className="block text-[8px] font-heading font-bold px-1.5 py-0.5 rounded bg-amber-600/20 text-amber-900 dark:text-amber-200 border border-amber-600/30 truncate">
+                                ☀️ Sankranti
+                              </span>
+                            )}
                             {day.is_purnima && (
                               <span className="block text-[8px] font-heading font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-800 border border-amber-500/30 truncate">
                                 Purnima
@@ -1037,6 +1299,12 @@ export default function PanchangaView() {
 
                           {/* Mobile Bottom Indicator Dots */}
                           <div className="flex sm:hidden items-center gap-1 justify-end pt-1">
+                            {day.is_adhika && (
+                              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 ring-1 ring-rose-600" title="Adhik Masa" />
+                            )}
+                            {day.is_sankranti && (
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-600 ring-1 ring-amber-700" title="Sankranti" />
+                            )}
                             {day.festival && (
                               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" title={day.festival} />
                             )}
@@ -1135,10 +1403,19 @@ export default function PanchangaView() {
                     >
                       <div className="flex items-center justify-between border-b border-amber-500/20 pb-2">
                         <h3 className="font-heading text-xs sm:text-sm text-amber-700 font-bold uppercase tracking-wider flex items-center gap-1.5">
-                          <Sun className="w-3.5 h-3.5" /> Shukla Paksha (शुक्ल पक्ष)
+                          <Sun className="w-3.5 h-3.5" />
+                          {traditionView === "gujarat"
+                            ? "સુદ પક્ષ (શુક્લ પક્ષ)"
+                            : traditionView === "north"
+                            ? "शुक्ल पक्ष (सुदी)"
+                            : "Shukla Paksha (Waxing)"}
                         </h3>
                         <span className="text-[9px] sm:text-[10px] text-muted-foreground font-serif">
-                          Tithi 1 to 15 (Waxing)
+                          {traditionView === "gujarat"
+                            ? "સુદ ૧ થી પૂનમ"
+                            : traditionView === "north"
+                            ? "शुक्ल १ से पूर्णिमा"
+                            : "Tithi 1 to 15"}
                         </span>
                       </div>
 
@@ -1147,9 +1424,15 @@ export default function PanchangaView() {
                           .filter((d: any) => d.paksha === "Shukla")
                           .map((day: any, i: number) => {
                             const isEnglish = traditionView === "english";
+                            const tithiDisplay = getDayTithiDisplay(day, traditionView);
+                            const [dStr, mStr] = (day.date || "").split("/");
+                            const gDayNum = parseInt(dStr, 10);
+                            const gMonNum = parseInt(mStr, 10);
+                            const gMonName = GREGORIAN_MONTHS[gMonNum - 1]?.slice(0, 3) || "";
+
                             const tLabel = isEnglish
-                              ? `${day.day_of_month} ${GREGORIAN_MONTHS[calGregMonth - 1].slice(0, 3)} - ${day.tithi_name}`
-                              : TITHI_NAMES_SANSKRIT[(day.tithi_index - 1) % 30] || day.tithi_name;
+                              ? `${day.day_of_month} ${gMonName} - ${day.tithi_name}`
+                              : `${tithiDisplay.full} (${gDayNum} ${gMonName})`;
                             const isToday = day.date === todayFormatted;
                             return (
                               <div
@@ -1173,7 +1456,7 @@ export default function PanchangaView() {
                                     )}
                                   </div>
                                   <span className="text-[10px] text-muted-foreground font-serif block truncate">
-                                    {day.nakshatra_name} | {day.vara_sanskrit}
+                                    {getDayNakshatraDisplay(day.nakshatra_name, traditionView)} | {day.vara_sanskrit}
                                   </span>
                                 </div>
                                 <div className="text-right shrink-0">
@@ -1183,11 +1466,11 @@ export default function PanchangaView() {
                                     </span>
                                   ) : day.is_purnima ? (
                                     <span className="font-heading text-[10px] font-bold text-amber-800 block">
-                                      Purnima Vrat
+                                      {traditionView === "gujarat" ? "પૂનમ વ્રત" : traditionView === "north" ? "पूर्णिमा व्रत" : "Purnima Vrat"}
                                     </span>
                                   ) : day.is_ekadashi ? (
                                     <span className="font-heading text-[10px] font-bold text-purple-800 block">
-                                      Ekadashi Vrat
+                                      {traditionView === "gujarat" ? "અગિયારસ વ્રત" : traditionView === "north" ? "एकादशी व्रत" : "Ekadashi Vrat"}
                                     </span>
                                   ) : null}
                                 </div>
@@ -1205,10 +1488,19 @@ export default function PanchangaView() {
                     >
                       <div className="flex items-center justify-between border-b border-indigo-500/20 pb-2">
                         <h3 className="font-heading text-xs sm:text-sm text-indigo-700 font-bold uppercase tracking-wider flex items-center gap-1.5">
-                          <Moon className="w-3.5 h-3.5" /> Krishna Paksha (कृष्ण पक्ष)
+                          <Moon className="w-3.5 h-3.5" />
+                          {traditionView === "gujarat"
+                            ? "વદ પક્ષ (કૃષ્ણ પક્ષ)"
+                            : traditionView === "north"
+                            ? "कृष्ण पक्ष (बदी)"
+                            : "Krishna Paksha (Waning)"}
                         </h3>
                         <span className="text-[9px] sm:text-[10px] text-muted-foreground font-serif">
-                          Tithi 16 to 30 (Waning)
+                          {traditionView === "gujarat"
+                            ? "વદ ૧ થી અમાસ"
+                            : traditionView === "north"
+                            ? "कृष्ण १ से अमावस्या"
+                            : "Tithi 16 to 30"}
                         </span>
                       </div>
 
@@ -1217,9 +1509,15 @@ export default function PanchangaView() {
                           .filter((d: any) => d.paksha === "Krishna")
                           .map((day: any, i: number) => {
                             const isEnglish = traditionView === "english";
+                            const tithiDisplay = getDayTithiDisplay(day, traditionView);
+                            const [dStr, mStr] = (day.date || "").split("/");
+                            const gDayNum = parseInt(dStr, 10);
+                            const gMonNum = parseInt(mStr, 10);
+                            const gMonName = GREGORIAN_MONTHS[gMonNum - 1]?.slice(0, 3) || "";
+
                             const tLabel = isEnglish
-                              ? `${day.day_of_month} ${GREGORIAN_MONTHS[calGregMonth - 1].slice(0, 3)} - ${day.tithi_name}`
-                              : TITHI_NAMES_SANSKRIT[(day.tithi_index - 1) % 30] || day.tithi_name;
+                              ? `${day.day_of_month} ${gMonName} - ${day.tithi_name}`
+                              : `${tithiDisplay.full} (${gDayNum} ${gMonName})`;
                             const isToday = day.date === todayFormatted;
                             return (
                               <div
@@ -1243,7 +1541,7 @@ export default function PanchangaView() {
                                     )}
                                   </div>
                                   <span className="text-[10px] text-muted-foreground font-serif block truncate">
-                                    {day.nakshatra_name} | {day.vara_sanskrit}
+                                    {getDayNakshatraDisplay(day.nakshatra_name, traditionView)} | {day.vara_sanskrit}
                                   </span>
                                 </div>
                                 <div className="text-right shrink-0">
@@ -1253,11 +1551,11 @@ export default function PanchangaView() {
                                     </span>
                                   ) : day.is_amavasya ? (
                                     <span className="font-heading text-[10px] font-bold text-slate-800 block">
-                                      Amavasya / Pitru
+                                      {traditionView === "gujarat" ? "અમાસ / પિતૃ" : traditionView === "north" ? "अमावस्या / पितृ" : "Amavasya"}
                                     </span>
                                   ) : day.is_ekadashi ? (
                                     <span className="font-heading text-[10px] font-bold text-purple-800 block">
-                                      Ekadashi Vrat
+                                      {traditionView === "gujarat" ? "અગિયારસ વ્રત" : traditionView === "north" ? "एकादशी व्रत" : "Ekadashi Vrat"}
                                     </span>
                                   ) : null}
                                 </div>
@@ -1275,6 +1573,13 @@ export default function PanchangaView() {
                 <div className="space-y-2.5">
                   {calendarData.days.map((day: any, i: number) => {
                     const isToday = day.date === todayFormatted;
+                    const isEnglish = traditionView === "english";
+                    const tithiDisplay = getDayTithiDisplay(day, traditionView);
+                    const [dStr, mStr] = (day.date || "").split("/");
+                    const gDayNum = parseInt(dStr, 10);
+                    const gMonNum = parseInt(mStr, 10);
+                    const gMonName = GREGORIAN_MONTHS[gMonNum - 1]?.slice(0, 3) || "";
+
                     return (
                       <div
                         key={i}
@@ -1289,10 +1594,10 @@ export default function PanchangaView() {
                           {/* Date Badge */}
                           <div className="w-12 h-12 rounded-xl bg-card/80 border border-border/30 flex flex-col items-center justify-center shrink-0">
                             <span className="font-heading text-xs font-extrabold text-primary">
-                              {day.day_of_month}
+                              {gDayNum}
                             </span>
                             <span className="text-[8px] font-serif text-muted-foreground uppercase">
-                              {day.vara_sanskrit?.slice(0, 4)}
+                              {gMonName}
                             </span>
                           </div>
 
@@ -1300,7 +1605,7 @@ export default function PanchangaView() {
                           <div className="space-y-0.5 min-w-0">
                             <div className="flex items-center gap-2">
                               <span className="font-heading text-xs font-bold text-foreground truncate">
-                                {day.tithi_name}
+                                {isEnglish ? day.tithi_name : tithiDisplay.full}
                               </span>
                               <span
                                 className={`text-[8px] font-heading px-1.5 py-0.2 rounded ${
@@ -1318,7 +1623,7 @@ export default function PanchangaView() {
                               )}
                             </div>
                             <div className="text-[10px] text-muted-foreground font-serif truncate">
-                              Nakshatra: {day.nakshatra_name} | Sunrise: {day.sunrise}
+                              {getDayNakshatraDisplay(day.nakshatra_name, traditionView)} | {day.vara_sanskrit} | Sunrise: {day.sunrise}
                             </div>
                           </div>
                         </div>
@@ -1428,6 +1733,25 @@ export default function PanchangaView() {
                       <X className="w-5 h-5" />
                     </button>
                   </div>
+
+                  {/* Adhik Masa / Sankranti Event Banners */}
+                  {selectedDayDetail.is_adhika && (
+                    <div className="bg-rose-500/10 border border-rose-500/30 rounded-xl p-3 flex items-center gap-2.5 text-xs font-heading text-rose-800 dark:text-rose-200">
+                      <span className="text-base">✨</span>
+                      <div>
+                        <strong>Adhik Māsa (અધિક માસ / अधिक मास)</strong>: This day belongs to the intercalary lunar month. Special period dedicated to Purushottama worship, japa, and spiritual observances.
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedDayDetail.is_sankranti && (
+                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 flex items-center gap-2.5 text-xs font-heading text-amber-900 dark:text-amber-200">
+                      <span className="text-base">☀️</span>
+                      <div>
+                        <strong>Surya Saṅkrānti (सूर्य संक्रान्ति)</strong>: Solar transit ingress into new zodiac sign occurs today. Highly auspicious for daan, snaan, and surya arghya.
+                      </div>
+                    </div>
+                  )}
 
                   {/* Cosmic Context */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 text-center">

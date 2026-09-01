@@ -988,6 +988,7 @@ mod tests {
                 chara_karaka: None,
                 dig_bala_points: None,
                 dig_bala_percentage: None,
+                speed: None,
             },
             PlanetData {
                 name: "Moon".to_string(),
@@ -1006,6 +1007,7 @@ mod tests {
                 chara_karaka: None,
                 dig_bala_points: None,
                 dig_bala_percentage: None,
+                speed: None,
             },
         ];
 

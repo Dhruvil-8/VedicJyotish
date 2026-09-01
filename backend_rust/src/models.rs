@@ -68,6 +68,19 @@ pub struct CityResult {
 pub struct AshtakavargaResponse {
     pub bhinnashtakavarga: HashMap<String, Vec<u8>>,
     pub sarvashtakavarga: Vec<u8>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub trikona_shodhana: Option<HashMap<String, Vec<u8>>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ekadhipatya_shodhana: Option<HashMap<String, Vec<u8>>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shodhya_pinda: Option<ShodhyaPindaResponse>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ShodhyaPindaResponse {
+    pub rasi_pinda: HashMap<String, u32>,
+    pub graha_pinda: HashMap<String, u32>,
+    pub shodhaya_pinda: HashMap<String, u32>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -156,6 +169,10 @@ pub struct ChartResponse {
     pub bhava_bala: Option<Vec<f64>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub graha_yuddha: Option<Vec<GrahaYuddha>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bhava_cusps: Option<Vec<BhavaCuspData>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub upagrahas: Option<Vec<UpagrahaData>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -285,6 +302,8 @@ pub struct MonthCalendarRequest {
     #[serde(default = "default_view_mode")]
     pub view_mode: String,
     pub lunar_masa: Option<u8>,
+    pub masa_type: Option<String>, // "regular" | "adhik" | "nija"
+    pub is_adhik: Option<bool>,
 }
 
 fn default_tradition() -> String {
@@ -293,6 +312,15 @@ fn default_tradition() -> String {
 
 fn default_view_mode() -> String {
     "lunar".to_string()
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AvailableMasaInfo {
+    pub index: u8,
+    pub name: String,
+    pub is_adhik: bool,
+    pub masa_type: String, // "regular" | "adhik" | "nija"
+    pub masa_id: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -336,6 +364,9 @@ pub struct MonthCalendarResponse {
     pub view_mode: String,
     pub primary_masa: String,
     pub primary_masa_index: u8,
+    pub is_adhika: bool,
+    pub masa_type: String, // "regular" | "adhik" | "nija"
+    pub masa_id: String,
     pub primary_vikram_samvat: u32,
     pub primary_shaka_samvat: u32,
     pub primary_samvatsara: String,
@@ -344,6 +375,8 @@ pub struct MonthCalendarResponse {
     pub start_date: String,
     pub end_date: String,
     pub days: Vec<CalendarDayData>,
+    #[serde(default)]
+    pub available_masas: Vec<AvailableMasaInfo>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -426,6 +459,8 @@ pub struct PlanetData {
     pub dig_bala_points: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub dig_bala_percentage: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub speed: Option<f64>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -477,6 +512,35 @@ pub struct AntarDasha {
     pub lord: String,
     pub start: String,
     pub end: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pratyantardashas: Option<Vec<PratyantarDasha>>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct PratyantarDasha {
+    pub lord: String,
+    pub start: String,
+    pub end: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct BhavaCuspData {
+    pub house: u8,
+    pub sign: String,
+    pub sign_index: usize,
+    pub start_degree: f64,
+    pub cusp_degree: f64,
+    pub end_degree: f64,
+    pub planets: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct UpagrahaData {
+    pub name: String,
+    pub sign: String,
+    pub sign_index: usize,
+    pub longitude: f64,
+    pub house: u8,
 }
 
 // ─── Jaimini Chara Dasha Models ──────────────────────────────────────────────
@@ -745,6 +809,10 @@ pub struct JaiminiResponse {
     pub upapada_lagna: JaiminiPoint,
     pub karakamsha_lagna: JaiminiPoint,
     pub chara_karakas: HashMap<String, String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bhava_arudhas: Option<HashMap<String, JaiminiPoint>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub special_lagnas: Option<HashMap<String, JaiminiPoint>>,
 }
 
 #[derive(Debug, Clone, Serialize)]
