@@ -697,7 +697,8 @@ fn cors_layer() -> CorsLayer {
         .filter_map(|origin| origin.trim().parse::<HeaderValue>().ok())
         .collect();
 
-    let allow_origin = if origins.is_empty() && !auth_required() {
+    let allow_origin = if origins.is_empty() {
+        tracing::warn!("FRONTEND_URL not specified; CORS allowing any origin. Set FRONTEND_URL in production for strict origin isolation.");
         AllowOrigin::any()
     } else {
         AllowOrigin::list(origins)

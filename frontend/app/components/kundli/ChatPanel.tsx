@@ -191,10 +191,10 @@ export default function ChatPanel({
           setChatLoading(false);
         }
       );
-    } catch {
+    } catch (e: any) {
       setChatHistory([
         ...updatedHistory,
-        { role: "model", text: "Error connecting to the celestial spheres. Please try again." },
+        { role: "model", text: e?.message || "Error connecting to the celestial spheres. Please try again." },
       ]);
       setChatLoading(false);
     }

@@ -1,6 +1,7 @@
 const isClient = typeof window !== "undefined";
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 
+const RAW_API_BASE = process.env.NEXT_PUBLIC_API_URL || 
   (isClient ? `${window.location.protocol}//${window.location.hostname}:7860` : "http://127.0.0.1:7860");
+const API_BASE = RAW_API_BASE.replace(/\/+$/, "");
 const API_KEY = process.env.NEXT_PUBLIC_APP_TOKEN || "";
 
 
@@ -62,8 +63,12 @@ export const calculateChart = async (data: any) => {
     body: JSON.stringify(data),
   });
   if (!res.ok) {
-    // Attach the response so callers can parse the validation error body
-    const err: any = new Error("Calculation failed");
+    let errorDetail = "Calculation failed";
+    try {
+      const errJson = await res.json();
+      if (errJson?.detail) errorDetail = errJson.detail;
+    } catch {}
+    const err: any = new Error(errorDetail);
     err.response = res;
     throw err;
   }
@@ -108,6 +113,16 @@ async function readSSEStream(
       }
     }
   }
+
+  // Flush remaining buffer if present
+  if (buffer.trim().startsWith("data: ")) {
+    try {
+      const payload = JSON.parse(buffer.trim().slice(6));
+      if (payload.text) onChunk(payload.text);
+      else if (payload.done) onDone?.();
+      else if (payload.error) onError?.(payload.error);
+    } catch {}
+  }
 }
 
 export const generateReportStream = async (
@@ -122,7 +137,19 @@ export const generateReportStream = async (
     headers: getHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(aiPayload),
   });
-  if (!res.ok) throw new Error("Report generation failed");
+  if (!res.ok) {
+    let errorDetail = "Report generation failed. Please try again.";
+    try {
+      const errJson = await res.json();
+      if (errJson?.detail) errorDetail = errJson.detail;
+      else if (errJson?.error) errorDetail = errJson.error;
+    } catch {}
+    if (res.status === 429 && !errorDetail.includes("limit")) {
+      errorDetail = "AI request limit reached. Please wait a moment before trying again.";
+    }
+    onError?.(errorDetail);
+    throw new Error(errorDetail);
+  }
   await readSSEStream(res, onChunk, onDone, onError);
 };
 
@@ -141,7 +168,19 @@ export const chatWithAstrologerStream = async (
     headers: getHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(aiPayload),
   });
-  if (!res.ok) throw new Error("Chat failed");
+  if (!res.ok) {
+    let errorDetail = "Chat failed. Please try again.";
+    try {
+      const errJson = await res.json();
+      if (errJson?.detail) errorDetail = errJson.detail;
+      else if (errJson?.error) errorDetail = errJson.error;
+    } catch {}
+    if (res.status === 429 && !errorDetail.includes("limit")) {
+      errorDetail = "AI request limit reached. Please wait a moment before trying again.";
+    }
+    onError?.(errorDetail);
+    throw new Error(errorDetail);
+  }
   await readSSEStream(res, onChunk, onDone, onError);
 };
 

@@ -487,8 +487,8 @@ async fn stream_gemini(api_key: String, request_body: GeminiRequest) -> Sse<SseS
                                 }
                             }
                         }
-                        Err(e) => {
-                            error!(error = %e, "Gemini stream chunk error");
+                        Err(_) => {
+                            error!("Gemini stream chunk error");
                             let payload = serde_json::json!({"error": "Stream interrupted. Please try again."});
                             yield Event::default().data(payload.to_string());
                             break;
@@ -521,13 +521,24 @@ async fn stream_gemini(api_key: String, request_body: GeminiRequest) -> Sse<SseS
             }
             Ok(resp) => {
                 let status = resp.status();
-                let body = resp.text().await.unwrap_or_default();
-                error!(status = %status, body = %body, "Gemini API error");
-                let payload = serde_json::json!({"error": "AI generation failed. Please try again."});
-                yield Event::default().data(payload.to_string());
+                // CRITICAL SECURITY: Never print `body` to logs!
+                // Google Gemini error responses echo back caller's API key & consumer info
+                // (e.g. "Consumer 'api_key:...' has been suspended"), which leaks
+                // directly into public terminal/container logs on Hugging Face Spaces.
+                if status == reqwest::StatusCode::TOO_MANY_REQUESTS {
+                    tracing::warn!("Gemini API rate limit reached (429)");
+                    let payload = serde_json::json!({
+                        "error": "The AI astrologer is currently busy. Please wait a minute and try again."
+                    });
+                    yield Event::default().data(payload.to_string());
+                } else {
+                    error!(status = %status.as_u16(), "Gemini API error response");
+                    let payload = serde_json::json!({"error": "AI generation failed. Please try again."});
+                    yield Event::default().data(payload.to_string());
+                }
             }
-            Err(e) => {
-                error!(error = %e, "Gemini API connection failed");
+            Err(_) => {
+                error!("Gemini API connection failed");
                 let payload = serde_json::json!({"error": "AI service connection failed. Please try again."});
                 yield Event::default().data(payload.to_string());
             }

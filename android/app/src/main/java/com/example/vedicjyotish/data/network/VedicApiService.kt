@@ -113,7 +113,12 @@ class VedicApiService(baseUrl: String, private val apiKey: String? = null) {
             .build()
         val response = client.newCall(request).await()
         if (!response.isSuccessful) {
-            onError("Report generation failed (${response.code})")
+            val errorBody = response.body?.string().orEmpty()
+            val detail = parseErrorDetail(errorBody).ifEmpty {
+                if (response.code == 429) "AI request limit reached. Please wait a moment."
+                else "Report generation failed (${response.code})"
+            }
+            onError(detail)
             return@withContext
         }
         readSseStream(response, onChunk, onDone, onError)
@@ -148,7 +153,12 @@ class VedicApiService(baseUrl: String, private val apiKey: String? = null) {
             .build()
         val response = client.newCall(request).await()
         if (!response.isSuccessful) {
-            onError("Chat failed (${response.code})")
+            val errorBody = response.body?.string().orEmpty()
+            val detail = parseErrorDetail(errorBody).ifEmpty {
+                if (response.code == 429) "AI request limit reached. Please wait a moment."
+                else "Chat failed (${response.code})"
+            }
+            onError(detail)
             return@withContext
         }
         readSseStream(response, onChunk, onDone, onError)

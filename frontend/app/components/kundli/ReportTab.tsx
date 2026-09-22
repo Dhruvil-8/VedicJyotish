@@ -33,8 +33,8 @@ export default function ReportTab({
           setReportLoading(false);
         }
       );
-    } catch (e) {
-      showToast("Celestial alignment failed. Please try again.", "error");
+    } catch (e: any) {
+      showToast(e?.message || "Celestial alignment failed. Please try again.", "error");
       setReportLoading(false);
     }
   };
