@@ -112,13 +112,13 @@ object PanchangaEngine {
         // 2. Ephemeris at Sunrise for classical day Panchanga
         val sunriseHourFrac = sunriseMinutes / 60.0
         val sunriseUtHour = sunriseHourFrac - tzOffsetHours
-        val jdSunrise = AstroEphemeris.toJulianDay(year, month, day, 0, 0, 0.0) + (sunriseUtHour / 24.0)
+        val jdSunrise = toJulianDay(year, month, day, 0, 0, 0.0) + (sunriseUtHour / 24.0)
 
-        val snapshot = AstroEphemeris.calculateSnapshot(jdSunrise, lat, lon)
-        val sunDeg = snapshot.planets.firstOrNull { it.name == "Sun" }?.tropicalLongitude ?: 0.0
-        val sunSidereal = snapshot.planets.firstOrNull { it.name == "Sun" }?.siderealLongitude ?: 0.0
-        val moonDeg = snapshot.planets.firstOrNull { it.name == "Moon" }?.tropicalLongitude ?: 0.0
-        val moonSidereal = snapshot.planets.firstOrNull { it.name == "Moon" }?.siderealLongitude ?: 0.0
+        val sunMoon = getSunMoon(jdSunrise, lat, lon)
+        val sunDeg = sunMoon.sunTropical
+        val sunSidereal = sunMoon.sunSidereal
+        val moonDeg = sunMoon.moonTropical
+        val moonSidereal = sunMoon.moonSidereal
 
         // 3. Moonrise & Moonset calculations
         val (moonriseMinutes, moonsetMinutes) = calculateMoonTimes(year, month, day, lat, lon, tzOffsetHours)
@@ -488,7 +488,7 @@ object PanchangaEngine {
         year: Int, month: Int, day: Int,
         latDeg: Double, lonDeg: Double, tzOffset: Double
     ): Triple<Double, Double, Double> {
-        val n = AstroEphemeris.toJulianDay(year, month, day, 12, 0, 0.0) - 2451545.0 + 0.0008
+        val n = toJulianDay(year, month, day, 12, 0, 0.0) - 2451545.0 + 0.0008
 
         val jStar = n - (lonDeg / 360.0)
         val mDeg = (357.5291 + 0.98560028 * jStar) % 360.0
@@ -536,15 +536,15 @@ object PanchangaEngine {
 
         fun getMoonAltitude(minuteOfDay: Double): Double {
             val utHour = (minuteOfDay / 60.0) - tzOffset
-            val jd = AstroEphemeris.toJulianDay(year, month, day, 0, 0, 0.0) + (utHour / 24.0)
+            val jd = toJulianDay(year, month, day, 0, 0, 0.0) + (utHour / 24.0)
 
             // Local Sidereal Time
             val d = jd - 2451545.0
             val gmst = (280.46061837 + 360.98564736629 * d) % 360.0
             val lst = (gmst + lonDeg + 360.0) % 360.0
 
-            val snapshot = AstroEphemeris.calculateSnapshot(jd, latDeg, lonDeg)
-            val moonLong = snapshot.planets.firstOrNull { it.name == "Moon" }?.tropicalLongitude ?: 0.0
+            val coords = getSunMoon(jd, latDeg, lonDeg)
+            val moonLong = coords.moonTropical
             val eps = 23.44 * RAD
 
             val ra = atan2(sin(moonLong * RAD) * cos(eps), cos(moonLong * RAD)) * DEG
@@ -813,5 +813,70 @@ object PanchangaEngine {
             )
         }
         return list
+    }
+
+    data class SunMoonCoords(
+        val sunTropical: Double,
+        val sunSidereal: Double,
+        val moonTropical: Double,
+        val moonSidereal: Double
+    )
+
+    fun toJulianDay(year: Int, month: Int, day: Int, hour: Int = 0, minute: Int = 0, second: Double = 0.0): Double {
+        var y = year
+        var m = month
+        if (m <= 2) {
+            y -= 1
+            m += 12
+        }
+        val a = floor(y / 100.0)
+        val b = 2.0 - a + floor(a / 4.0)
+        val dayFraction = (hour + (minute + second / 60.0) / 60.0) / 24.0
+        return floor(365.25 * (y + 4716)) + floor(30.6001 * (m + 1)) + day + dayFraction + b - 1524.5
+    }
+
+    private fun normalizeDegrees(deg: Double): Double {
+        var d = deg % 360.0
+        if (d < 0.0) d += 360.0
+        return d
+    }
+
+    fun getSunMoon(jd: Double, lat: Double, lon: Double): SunMoonCoords {
+        val nativeArr = RustBridge.getSunMoon(jd, lat, lon)
+        if (nativeArr != null && nativeArr.size >= 4) {
+            return SunMoonCoords(
+                sunTropical = nativeArr[0],
+                sunSidereal = nativeArr[1],
+                moonTropical = nativeArr[2],
+                moonSidereal = nativeArr[3]
+            )
+        }
+        // Self-contained high-accuracy astronomical solver (Meeus algorithm, zero external dependencies)
+        val t = (jd - 2451545.0) / 36525.0
+        val ayanamsa = normalizeDegrees(23.85694 + 1.39697 * t + 0.000308 * t * t)
+
+        // Mean Sun longitude & anomaly
+        val l0 = normalizeDegrees(280.46646 + 36000.76983 * t)
+        val mSun = normalizeDegrees(357.52911 + 35999.05029 * t) * RAD
+        val cSun = (1.914602 - 0.004817 * t) * sin(mSun) + (0.019993 - 0.000101 * t) * sin(2.0 * mSun) + 0.000289 * sin(3.0 * mSun)
+        val sunTrop = normalizeDegrees(l0 + cSun)
+        val sunSid = normalizeDegrees(sunTrop - ayanamsa)
+
+        // Moon Mean longitude & anomaly
+        val lPrime = normalizeDegrees(218.3164477 + 481267.88123421 * t)
+        val dMoon = normalizeDegrees(297.8501921 + 445267.1114034 * t) * RAD
+        val mMoon = normalizeDegrees(134.9633964 + 477198.8675055 * t) * RAD
+        val fMoon = normalizeDegrees(93.2720950 + 483202.0175233 * t) * RAD
+
+        val moonCorrection = 6.288774 * sin(mMoon) +
+                1.274027 * sin(2.0 * dMoon - mMoon) +
+                0.658314 * sin(2.0 * dMoon) +
+                0.213618 * sin(2.0 * mMoon) -
+                0.185116 * sin(mSun) -
+                0.114332 * sin(2.0 * fMoon)
+        val moonTrop = normalizeDegrees(lPrime + moonCorrection)
+        val moonSid = normalizeDegrees(moonTrop - ayanamsa)
+
+        return SunMoonCoords(sunTrop, sunSid, moonTrop, moonSid)
     }
 }

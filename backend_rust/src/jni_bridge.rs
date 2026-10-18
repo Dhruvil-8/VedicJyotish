@@ -4,7 +4,7 @@
 //! for Android apps via native shared libraries (`.so`).
 
 use jni::objects::{JClass, JString};
-use jni::sys::jstring;
+use jni::sys::{jdoubleArray, jstring};
 use jni::JNIEnv;
 
 use crate::{
@@ -172,3 +172,40 @@ pub extern "system" fn Java_com_example_vedicjyotish_data_astrology_RustBridge_c
             .into_raw(),
     }
 }
+
+/// Calculate Sun & Moon sidereal and tropical coordinates for a given Julian Day UT and observer latitude/longitude.
+/// Returns a double array: [sun_trop, sun_sid, moon_trop, moon_sid]
+#[no_mangle]
+pub extern "system" fn Java_com_example_vedicjyotish_data_astrology_RustBridge_calculateSunMoon(
+    env: JNIEnv,
+    _class: JClass,
+    jd_ut: f64,
+    lat: f64,
+    lon: f64,
+) -> jdoubleArray {
+    let mut sun_trop = 0.0;
+    let mut sun_sid = 0.0;
+    let mut moon_trop = 0.0;
+    let mut moon_sid = 0.0;
+
+    if let Ok(snap) = swiss::calculate_snapshot(jd_ut, lat, lon) {
+        if let Some(sun) = snap.planets.iter().find(|p| p.name == "Sun") {
+            sun_sid = sun.longitude;
+            sun_trop = (sun.longitude + snap.ayanamsa_value).rem_euclid(360.0);
+        }
+        if let Some(moon) = snap.planets.iter().find(|p| p.name == "Moon") {
+            moon_sid = moon.longitude;
+            moon_trop = (moon.longitude + snap.ayanamsa_value).rem_euclid(360.0);
+        }
+    }
+
+    let result = [sun_trop, sun_sid, moon_trop, moon_sid];
+    match env.new_double_array(4) {
+        Ok(arr) => {
+            let _ = env.set_double_array_region(&arr, 0, &result);
+            arr.into_raw()
+        }
+        Err(_) => std::ptr::null_mut(),
+    }
+}
+

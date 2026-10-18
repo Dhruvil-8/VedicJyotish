@@ -5,7 +5,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.vedicjyotish.data.astrology.OfflineLocationHelper
 import com.example.vedicjyotish.data.astrology.RustBridge
-import com.example.vedicjyotish.data.astrology.VedicChartEngine
 import com.example.vedicjyotish.data.models.BirthDataRequest
 import com.example.vedicjyotish.data.models.ChartResponse
 import com.example.vedicjyotish.data.models.CityResult

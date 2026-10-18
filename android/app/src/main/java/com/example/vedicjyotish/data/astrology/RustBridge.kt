@@ -8,9 +8,9 @@ import com.google.gson.Gson
 /**
  * Rust Native Bridge (JNI) for 100% offline, native-speed Vedic Astrology Calculations.
  *
- * Calls the compiled Rust Swiss Ephemeris and Parashara calculation engine directly
- * inside the Android process memory. Automatically falls back to Kotlin VedicChartEngine
- * if the native library is not available in the current runtime environment.
+ * Calls the compiled Rust Swiss Ephemeris and Parashara calculation engine (libvedic_engine.so)
+ * directly inside the Android process memory. Serves as the Single Source of Truth (SSOT)
+ * across the entire application.
  */
 object RustBridge {
 
@@ -20,17 +20,43 @@ object RustBridge {
     var isNativeLoaded: Boolean = false
         private set
 
+    private fun logI(tag: String, msg: String) {
+        try {
+            Log.i(tag, msg)
+        } catch (_: Throwable) {
+            println("[$tag] $msg")
+        }
+    }
+
+    private fun logW(tag: String, msg: String, tr: Throwable? = null) {
+        try {
+            Log.w(tag, msg, tr)
+        } catch (_: Throwable) {
+            println("[$tag] $msg")
+            tr?.printStackTrace()
+        }
+    }
+
+    private fun logE(tag: String, msg: String, tr: Throwable? = null) {
+        try {
+            Log.e(tag, msg, tr)
+        } catch (_: Throwable) {
+            System.err.println("[$tag] $msg")
+            tr?.printStackTrace()
+        }
+    }
+
     init {
         try {
             System.loadLibrary("vedic_engine")
             isNativeLoaded = true
-            Log.i(TAG, "Successfully loaded native Rust calculation engine (libvedic_engine.so)")
+            logI(TAG, "Successfully loaded native Rust calculation engine (libvedic_engine.so)")
         } catch (e: UnsatisfiedLinkError) {
             isNativeLoaded = false
-            Log.w(TAG, "Native library 'vedic_engine' not found. Using pure Kotlin calculation fallback.", e)
+            logW(TAG, "Native library 'vedic_engine' not found in current APK.", e)
         } catch (e: Throwable) {
             isNativeLoaded = false
-            Log.w(TAG, "Failed to initialize native engine.", e)
+            logW(TAG, "Failed to initialize native engine.", e)
         }
     }
 
@@ -46,43 +72,45 @@ object RustBridge {
     private external fun calculateCompatibility(inputJson: String): String
 
     @JvmStatic
+    private external fun calculateSunMoon(jd: Double, lat: Double, lon: Double): DoubleArray?
+
+    @JvmStatic
     private external fun initEphemeris(path: String)
 
     // ─── Public Kotlin API ──────────────────────────────────────────────────
 
     /**
-     * Compute a full Vedic Birth Chart offline.
-     * Uses the native Rust core when available, with automatic fallback to Kotlin.
+     * Compute a full Vedic Birth Chart offline using the native Rust Swiss Ephemeris core.
      */
     fun computeChart(request: BirthDataRequest): ChartResponse {
-        if (isNativeLoaded) {
-            try {
-                val inputJson = gson.toJson(request)
-                val outputJson = calculateChart(inputJson)
-
-                if (outputJson.contains("\"error\":")) {
-                    Log.e(TAG, "Native calculation returned error: $outputJson")
-                    throw RuntimeException("Rust calculation error: $outputJson")
-                }
-
-                val response = gson.fromJson(outputJson, ChartResponse::class.java)
-                if (response != null) {
-                    return response
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Native execution failed, falling back to Kotlin engine", e)
-            }
+        check(isNativeLoaded) {
+            "Native Rust calculation engine (libvedic_engine.so) is required for offline calculations."
         }
 
-        // Graceful fallback to pure Kotlin calculation
-        return VedicChartEngine.calculateChart(
-            dateStr = request.date,
-            timeStr = request.time,
-            city = request.city,
-            lat = request.lat,
-            lon = request.lon,
-            tzOffsetHours = request.timezone ?: 5.5
-        )
+        val inputJson = gson.toJson(request)
+        val outputJson = calculateChart(inputJson)
+
+        if (outputJson.contains("\"error\":")) {
+            logE(TAG, "Native calculation returned error: $outputJson")
+            throw RuntimeException("Rust calculation error: $outputJson")
+        }
+
+        return gson.fromJson(outputJson, ChartResponse::class.java)
+            ?: throw RuntimeException("Failed to parse native chart response JSON: $outputJson")
+    }
+
+    /**
+     * Compute high-precision Sun & Moon coordinates for given Julian Day UT and location.
+     * Returns double array: [sunTropical, sunSidereal, moonTropical, moonSidereal]
+     */
+    fun getSunMoon(jd: Double, lat: Double, lon: Double): DoubleArray? {
+        if (!isNativeLoaded) return null
+        return try {
+            calculateSunMoon(jd, lat, lon)
+        } catch (e: Throwable) {
+            logW(TAG, "Failed to calculate Sun/Moon via native Swiss Ephemeris", e)
+            null
+        }
     }
 
     /**

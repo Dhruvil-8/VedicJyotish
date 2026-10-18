@@ -10,7 +10,6 @@ import com.example.vedicjyotish.data.ai.VedicAiClient
 import com.example.vedicjyotish.data.astrology.CompatibilityEngine
 import com.example.vedicjyotish.data.astrology.OfflineLocationHelper
 import com.example.vedicjyotish.data.astrology.RustBridge
-import com.example.vedicjyotish.data.astrology.VedicChartEngine
 import com.example.vedicjyotish.data.models.*
 import com.example.vedicjyotish.utils.DateTimeUtils.normalizeDate
 import com.example.vedicjyotish.utils.DateTimeUtils.normalizeTime
