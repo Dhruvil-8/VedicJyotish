@@ -27,6 +27,9 @@ mod maitri;
 mod argala;
 mod dasha;
 mod shadbala;
+mod error;
+
+pub use error::ApiError;
 
 
 
@@ -59,28 +62,7 @@ struct AppState {
     is_production: bool,
 }
 
-// ─── Error Type ─────────────────────────────────────────────────────────────
 
-#[derive(Debug)]
-pub struct ApiError {
-    status: StatusCode,
-    message: String,
-}
-
-impl ApiError {
-    pub fn new(status: StatusCode, message: impl Into<String>) -> Self {
-        Self {
-            status,
-            message: message.into(),
-        }
-    }
-}
-
-impl IntoResponse for ApiError {
-    fn into_response(self) -> Response {
-        (self.status, Json(json!({ "detail": self.message }))).into_response()
-    }
-}
 
 // ─── Query Params ───────────────────────────────────────────────────────────
 

@@ -16,7 +16,8 @@ data class BirthDataRequest(
     val time: String,   // HH:MM
     val city: String,
     val lat: Double,
-    val lon: Double
+    val lon: Double,
+    val timezone: Double? = 5.5
 )
 
 // --- Chart Response ---

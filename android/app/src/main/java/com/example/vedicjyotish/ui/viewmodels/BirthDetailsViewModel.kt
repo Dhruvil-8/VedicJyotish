@@ -4,7 +4,9 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.vedicjyotish.data.astrology.OfflineLocationHelper
+import com.example.vedicjyotish.data.astrology.RustBridge
 import com.example.vedicjyotish.data.astrology.VedicChartEngine
+import com.example.vedicjyotish.data.models.BirthDataRequest
 import com.example.vedicjyotish.data.models.ChartResponse
 import com.example.vedicjyotish.data.models.CityResult
 import com.example.vedicjyotish.utils.DateTimeUtils.normalizeDate
@@ -237,14 +239,16 @@ class BirthDetailsViewModel : ViewModel() {
 
         viewModelScope.launch {
             try {
-                // 100% On-Device Pure Kotlin & Swiss Ephemeris Vedic Astrology Calculation
-                val response = VedicChartEngine.calculateChart(
-                    dateStr = d,
-                    timeStr = t,
-                    city = c,
-                    lat = lat,
-                    lon = lon,
-                    tzOffsetHours = _timezone.value
+                // 100% Offline On-Device Vedic Astrology Calculation via Rust Native Core (with Kotlin fallback)
+                val response = RustBridge.computeChart(
+                    BirthDataRequest(
+                        date = d,
+                        time = t,
+                        city = c,
+                        lat = lat,
+                        lon = lon,
+                        timezone = _timezone.value
+                    )
                 )
 
                 // Persist profile and complete astrology chart data locally

@@ -94,29 +94,70 @@ pub async fn compute_chart_with_profile(
     mut data: BirthData,
     profile: CalculationProfile,
 ) -> Result<ChartResponse, ApiError> {
+    if data.lat.is_none() || data.lon.is_none() {
+        let (lat, lon) = resolve_coordinates(&data).await?;
+        data.lat = Some(lat);
+        data.lon = Some(lon);
+    }
+    tokio::task::spawn_blocking(move || compute_chart_sync(data, profile))
+        .await
+        .map_err(|e| {
+            ApiError::new(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Task join error: {e}"),
+            )
+        })?
+}
+
+pub fn compute_chart_sync(
+    mut data: BirthData,
+    profile: CalculationProfile,
+) -> Result<ChartResponse, ApiError> {
     validate_profile(&profile)?;
     normalize_birth_data(&mut data)?;
-    let (lat, lon) = resolve_coordinates(&data).await?;
+
+    let (lat, lon) = if let (Some(la), Some(lo)) = (data.lat, data.lon) {
+        (la, lo)
+    } else if let Some(ref c) = data.city {
+        if !c.trim().is_empty() {
+            if let Ok(cities) = atlas::search_city(c) {
+                if let Some(first) = cities.first() {
+                    (first.lat, first.lon)
+                } else {
+                    return Err(ApiError::new(
+                        StatusCode::BAD_REQUEST,
+                        format!("Coordinates for '{c}' not found. Please provide latitude and longitude."),
+                    ));
+                }
+            } else {
+                return Err(ApiError::new(
+                    StatusCode::BAD_REQUEST,
+                    "Coordinates required for offline calculation.",
+                ));
+            }
+        } else {
+            return Err(ApiError::new(
+                StatusCode::BAD_REQUEST,
+                "Coordinates required.",
+            ));
+        }
+    } else {
+        return Err(ApiError::new(
+            StatusCode::BAD_REQUEST,
+            "Latitude and longitude required.",
+        ));
+    };
+
     let resolved_time = timezones::resolve(&data.date, &data.time, lat, lon, data.timezone)?;
     let jd = resolved_time.jd_ut;
-    let profile_clone = profile.clone();
-    let snapshot = tokio::task::spawn_blocking(move || {
-        swiss::calculate_snapshot_with_profile(
-            jd,
-            lat,
-            lon,
-            &profile_clone.ayanamsa,
-            &profile_clone.node_type,
-            &profile_clone.house_system,
-        )
-    })
-    .await
-    .map_err(|e| {
-        ApiError::new(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Task join error: {e}"),
-        )
-    })??;
+    let snapshot = swiss::calculate_snapshot_with_profile(
+        jd,
+        lat,
+        lon,
+        &profile.ayanamsa,
+        &profile.node_type,
+        &profile.house_system,
+    )?;
 
     let asc_idx = chart::sign_index(snapshot.ascendant_degree);
     let sun_deg = snapshot
@@ -253,7 +294,7 @@ pub async fn compute_chart_with_profile(
     let now_resolved = timezones::resolve(&today_date, &today_time, lat, lon, data.timezone);
     let ss_res = if let Ok(resolved) = now_resolved {
         let jd_today = resolved.jd_ut;
-        let saturn_raw = tokio::task::spawn_blocking(move || {
+        let saturn_raw = {
             let _guard = swiss::SWISS_LOCK
                 .lock()
                 .expect("Swiss Ephemeris lock poisoned");
@@ -274,10 +315,7 @@ pub async fn compute_chart_with_profile(
                     None
                 }
             }
-        })
-        .await
-        .ok()
-        .flatten();
+        };
 
         if let Some(sat_long) = saturn_raw {
             let saturn_sign_idx = chart::sign_index(sat_long);
@@ -735,16 +773,64 @@ fn round2(value: f64) -> f64 {
 }
 
 pub async fn compute_transits(
+    mut request: crate::models::TransitRequest,
+) -> Result<crate::models::TransitResponse, ApiError> {
+    if request.birth_data.lat.is_none() || request.birth_data.lon.is_none() {
+        let (lat, lon) = resolve_coordinates(&request.birth_data).await?;
+        request.birth_data.lat = Some(lat);
+        request.birth_data.lon = Some(lon);
+    }
+    tokio::task::spawn_blocking(move || compute_transits_sync(request))
+        .await
+        .map_err(|e| {
+            ApiError::new(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Task join error: {e}"),
+            )
+        })?
+}
+
+pub fn compute_transits_sync(
     request: crate::models::TransitRequest,
 ) -> Result<crate::models::TransitResponse, ApiError> {
-    let natal = compute_chart(request.birth_data.clone()).await?;
+    let natal = compute_chart_sync(request.birth_data.clone(), CalculationProfile::default())?;
     let asc_sign = &natal.ascendant.sign;
     let asc_idx = SIGNS.iter().position(|&s| s == asc_sign).unwrap_or(0);
 
     let moon_sign = &natal.moon_intelligence.sign;
     let moon_idx = SIGNS.iter().position(|&s| s == moon_sign).unwrap_or(0);
 
-    let (lat, lon) = resolve_coordinates(&request.birth_data).await?;
+    let (lat, lon) = if let (Some(la), Some(lo)) = (request.birth_data.lat, request.birth_data.lon) {
+        (la, lo)
+    } else if let Some(ref c) = request.birth_data.city {
+        if !c.trim().is_empty() {
+            if let Ok(cities) = atlas::search_city(c) {
+                if let Some(first) = cities.first() {
+                    (first.lat, first.lon)
+                } else {
+                    return Err(ApiError::new(
+                        StatusCode::BAD_REQUEST,
+                        format!("Coordinates for '{c}' not found."),
+                    ));
+                }
+            } else {
+                return Err(ApiError::new(
+                    StatusCode::BAD_REQUEST,
+                    "Coordinates required.",
+                ));
+            }
+        } else {
+            return Err(ApiError::new(
+                StatusCode::BAD_REQUEST,
+                "Coordinates missing.",
+            ));
+        }
+    } else {
+        return Err(ApiError::new(
+            StatusCode::BAD_REQUEST,
+            "Coordinates missing.",
+        ));
+    };
 
     let mut transit_data = BirthData {
         date: request.transit_date.clone(),
@@ -765,17 +851,7 @@ pub async fn compute_transits(
     )?;
 
     let jd_transit = resolved_time.jd_ut;
-    let lat_t = lat;
-    let lon_t = lon;
-    let snapshot =
-        tokio::task::spawn_blocking(move || swiss::calculate_snapshot(jd_transit, lat_t, lon_t))
-            .await
-            .map_err(|e| {
-                ApiError::new(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    format!("Task join error: {e}"),
-                )
-            })??;
+    let snapshot = swiss::calculate_snapshot(jd_transit, lat, lon)?;
     let transit_sun_deg = snapshot
         .planets
         .iter()
