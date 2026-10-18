@@ -1654,8 +1654,6 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 [[package]]
 name = "swiss-eph"
 version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cf31af1cc5359e9bc07028fecc2317e759b167ca75c6f81caf6f7abe91b89e28"
 dependencies = [
  "cc",
  "wasm-bindgen",
