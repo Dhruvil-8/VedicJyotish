@@ -1,19 +1,29 @@
 package com.example.vedicjyotish.ui.viewmodels
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.vedicjyotish.data.models.BirthDataRequest
+import com.example.vedicjyotish.data.astrology.OfflineLocationHelper
+import com.example.vedicjyotish.data.astrology.VedicChartEngine
 import com.example.vedicjyotish.data.models.ChartResponse
 import com.example.vedicjyotish.data.models.CityResult
-import com.example.vedicjyotish.data.network.ApiClient
 import com.example.vedicjyotish.utils.DateTimeUtils.normalizeDate
 import com.example.vedicjyotish.utils.DateTimeUtils.normalizeTime
+import com.google.gson.Gson
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 @OptIn(FlowPreview::class)
 class BirthDetailsViewModel : ViewModel() {
+
+    private val gson = Gson()
+
+    private val _hasSavedChart = MutableStateFlow(false)
+    val hasSavedChart = _hasSavedChart.asStateFlow()
+
+    private val _savedChartInfo = MutableStateFlow<String?>(null)
+    val savedChartInfo = _savedChartInfo.asStateFlow()
 
     private val _date = MutableStateFlow("") // DD/MM/YYYY
     val date = _date.asStateFlow()
@@ -33,6 +43,9 @@ class BirthDetailsViewModel : ViewModel() {
     private val _longitude = MutableStateFlow<Double?>(null)
     val longitude = _longitude.asStateFlow()
 
+    private val _timezone = MutableStateFlow(5.5)
+    val timezone = _timezone.asStateFlow()
+
     private val _cityQuery = MutableStateFlow("")
     val cityQuery = _cityQuery.asStateFlow()
 
@@ -51,12 +64,18 @@ class BirthDetailsViewModel : ViewModel() {
     private val _chartResult = MutableSharedFlow<ChartResponse>()
     val chartResult = _chartResult.asSharedFlow()
 
+    private var appContext: Context? = null
+
+    fun setContext(context: Context) {
+        appContext = context.applicationContext
+    }
+
     init {
         // Debounced city search geocoder
         viewModelScope.launch {
             _cityQuery
-                .debounce(500)
-                .filter { it.length >= 3 && it != _city.value }
+                .debounce(350)
+                .filter { it.length >= 2 && it != _city.value }
                 .distinctUntilChanged()
                 .collect { query ->
                     searchCity(query)
@@ -89,7 +108,12 @@ class BirthDetailsViewModel : ViewModel() {
         _cityQuery.value = cityResult.name
         _latitude.value = cityResult.lat
         _longitude.value = cityResult.lon
+        _timezone.value = cityResult.tz
         _searchResults.value = emptyList()
+    }
+
+    fun updateTimezone(tz: Double) {
+        _timezone.value = tz
     }
 
     fun clearError() {
@@ -97,10 +121,11 @@ class BirthDetailsViewModel : ViewModel() {
     }
 
     private fun searchCity(query: String) {
+        val ctx = appContext ?: return
         viewModelScope.launch {
             _isSearchingCity.value = true
             try {
-                val results = ApiClient.service.searchCity(query)
+                val results = OfflineLocationHelper.searchCities(ctx, query)
                 _searchResults.value = results
             } catch (e: Exception) {
                 _searchResults.value = emptyList()
@@ -110,18 +135,81 @@ class BirthDetailsViewModel : ViewModel() {
         }
     }
 
-    fun updateSelectedLanguage(language: String, context: android.content.Context) {
+    fun updateSelectedLanguage(language: String, context: Context) {
         _selectedLanguage.value = language
-        val prefs = context.getSharedPreferences("vedic_prefs", android.content.Context.MODE_PRIVATE)
+        val prefs = context.getSharedPreferences("vedic_prefs", Context.MODE_PRIVATE)
         prefs.edit().putString("selected_language", language).apply()
     }
 
-    fun loadLanguage(context: android.content.Context) {
-        val prefs = context.getSharedPreferences("vedic_prefs", android.content.Context.MODE_PRIVATE)
+    fun loadLanguage(context: Context) {
+        val prefs = context.getSharedPreferences("vedic_prefs", Context.MODE_PRIVATE)
         _selectedLanguage.value = prefs.getString("selected_language", "English") ?: "English"
     }
 
-    fun calculateChart() {
+    fun loadSavedProfile(context: Context) {
+        val prefs = context.getSharedPreferences("vedic_prefs", Context.MODE_PRIVATE)
+        val savedDate = prefs.getString("birth_date", "") ?: ""
+        val savedTime = prefs.getString("birth_time", "") ?: ""
+        val savedCity = prefs.getString("birth_city", "") ?: ""
+        val savedLat = prefs.getFloat("birth_lat", 0.0f)
+        val savedLon = prefs.getFloat("birth_lon", 0.0f)
+        val savedTz = prefs.getFloat("birth_tz", 5.5f)
+        val savedChartJson = prefs.getString("saved_chart_json", "") ?: ""
+
+        if (savedDate.isNotEmpty() && savedCity.isNotEmpty()) {
+            _date.value = savedDate
+            _time.value = savedTime
+            _city.value = savedCity
+            _cityQuery.value = savedCity
+            _latitude.value = savedLat.toDouble()
+            _longitude.value = savedLon.toDouble()
+            _timezone.value = savedTz.toDouble()
+        }
+
+        if (savedChartJson.isNotEmpty()) {
+            _hasSavedChart.value = true
+            _savedChartInfo.value = "$savedCity • $savedDate"
+        }
+    }
+
+    fun loadSavedChart(context: Context) {
+        val prefs = context.getSharedPreferences("vedic_prefs", Context.MODE_PRIVATE)
+        val json = prefs.getString("saved_chart_json", null) ?: return
+        try {
+            val chart = gson.fromJson(json, ChartResponse::class.java)
+            if (chart != null) {
+                viewModelScope.launch {
+                    _chartResult.emit(chart)
+                }
+            }
+        } catch (e: Exception) {
+            _error.value = "Failed to load saved chart"
+        }
+    }
+
+    fun clearSavedData(context: Context) {
+        val prefs = context.getSharedPreferences("vedic_prefs", Context.MODE_PRIVATE)
+        prefs.edit()
+            .remove("birth_date")
+            .remove("birth_time")
+            .remove("birth_city")
+            .remove("birth_lat")
+            .remove("birth_lon")
+            .remove("birth_tz")
+            .remove("saved_chart_json")
+            .apply()
+        _date.value = ""
+        _time.value = ""
+        _city.value = ""
+        _cityQuery.value = ""
+        _latitude.value = null
+        _longitude.value = null
+        _timezone.value = 5.5
+        _hasSavedChart.value = false
+        _savedChartInfo.value = null
+    }
+
+    fun calculateChart(context: Context) {
         val d = normalizeDate(_date.value)
         val t = normalizeTime(_time.value)
         _date.value = d
@@ -149,14 +237,32 @@ class BirthDetailsViewModel : ViewModel() {
 
         viewModelScope.launch {
             try {
-                val request = BirthDataRequest(
-                    date = d,
-                    time = t,
+                // 100% On-Device Pure Kotlin & Swiss Ephemeris Vedic Astrology Calculation
+                val response = VedicChartEngine.calculateChart(
+                    dateStr = d,
+                    timeStr = t,
                     city = c,
                     lat = lat,
-                    lon = lon
+                    lon = lon,
+                    tzOffsetHours = _timezone.value
                 )
-                val response = ApiClient.service.calculateChart(request)
+
+                // Persist profile and complete astrology chart data locally
+                val prefs = context.getSharedPreferences("vedic_prefs", Context.MODE_PRIVATE)
+                val chartJson = gson.toJson(response)
+                prefs.edit()
+                    .putString("birth_date", d)
+                    .putString("birth_time", t)
+                    .putString("birth_city", c)
+                    .putFloat("birth_lat", lat.toFloat())
+                    .putFloat("birth_lon", lon.toFloat())
+                    .putFloat("birth_tz", _timezone.value.toFloat())
+                    .putString("saved_chart_json", chartJson)
+                    .apply()
+
+                _hasSavedChart.value = true
+                _savedChartInfo.value = "$c • $d"
+
                 _chartResult.emit(response)
             } catch (e: Exception) {
                 _error.value = e.message ?: "Failed to calculate birth chart"

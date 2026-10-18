@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_background"
+    android:orientation="vertical"
+    android:padding="10dp">
+
+    <!-- Top Bar: Title, Location & Refresh -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/widget_txt_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="🕉 वैदिक काल व मुहूर्त"
+            android:textColor="#8B4513"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/widget_txt_city"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:text="New Delhi"
+            android:textColor="#8A857D"
+            android:textSize="10sp" />
+
+        <ImageView
+            android:id="@+id/widget_btn_refresh"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:contentDescription="Refresh"
+            android:src="@drawable/ic_refresh" />
+    </LinearLayout>
+
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="5dp"
+        android:layout_marginBottom="6dp"
+        android:background="#E8E4DC" />
+
+    <!-- Center Section: Ishta Kala & Live Active Muhurta -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:baselineAligned="false"
+        android:orientation="horizontal">
+
+        <!-- Left: Ishta Kala & Dinamana -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/widget_txt_ishta_kala"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="14 घटी 25 वि"
+                android:textColor="#8B4513"
+                android:textSize="17sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="इष्ट काल (Vedic Time)"
+                android:textColor="#6E6962"
+                android:textSize="9.5sp" />
+
+            <TextView
+                android:id="@+id/widget_txt_day_length"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="दिनमान: 30.6 Gh"
+                android:textColor="#B8860B"
+                android:textSize="9.5sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- Right: Active Current Muhurta -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1.2"
+            android:gravity="end"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/widget_txt_muhurta_name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="अभिजित (Abhijit)"
+                android:textColor="#2E7D32"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/widget_txt_muhurta_time"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="11:48 AM - 12:36 PM"
+                android:textColor="#262421"
+                android:textSize="9.5sp" />
+
+            <TextView
+                android:id="@+id/widget_txt_muhurta_quality"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:background="@drawable/widget_pill_background"
+                android:paddingStart="6dp"
+                android:paddingTop="1dp"
+                android:paddingEnd="6dp"
+                android:paddingBottom="1dp"
+                android:text="शुभ मुहूर्त (Auspicious)"
+                android:textColor="#2E7D32"
+                android:textSize="9sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="6dp"
+        android:layout_marginBottom="5dp"
+        android:background="#E8E4DC" />
+
+    <!-- Upcoming Muhurta Row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/widget_txt_upcoming_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="आगामी मुहूर्त: "
+            android:textColor="#8B4513"
+            android:textSize="9.5sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/widget_txt_next_muhurta"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="विधि (Vidhi) (12:36 PM - 01:24 PM)"
+            android:textColor="#262421"
+            android:textSize="9.5sp" />
+
+        <TextView
+            android:id="@+id/widget_txt_next_quality"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/widget_pill_background"
+            android:paddingStart="5dp"
+            android:paddingTop="1dp"
+            android:paddingEnd="5dp"
+            android:paddingBottom="1dp"
+            android:text="शुभ"
+            android:textColor="#2E7D32"
+            android:textSize="8.5sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="5dp"
+        android:layout_marginBottom="5dp"
+        android:background="#E8E4DC" />
+
+    <!-- Bottom Bar: Tithi, Nakshatra & Rahu Kalam -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/widget_txt_tithi_nakshatra"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="शुक्ल दशमी • रोहिणी"
+            android:textColor="#262421"
+            android:textSize="9.5sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/widget_txt_rahu_kalam"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="राहु: 04:30 PM - 06:00 PM"
+            android:textColor="#C62828"
+            android:textSize="9sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+</LinearLayout>

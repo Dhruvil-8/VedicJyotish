@@ -1,5 +1,6 @@
 package com.example.vedicjyotish.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -9,10 +10,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,10 +29,8 @@ import android.content.Context
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.vedicjyotish.ui.viewmodels.BirthDetailsViewModel
-import com.example.vedicjyotish.theme.ParchmentBg
-import com.example.vedicjyotish.theme.VedicCharcoal
-import com.example.vedicjyotish.theme.VedicGold
-import com.example.vedicjyotish.theme.VedicTerracotta
+import com.example.vedicjyotish.theme.*
+import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,32 +50,41 @@ fun BirthDetailsScreen(
     val errorMsg by viewModel.error.collectAsStateWithLifecycle()
     val latitude by viewModel.latitude.collectAsStateWithLifecycle()
     val longitude by viewModel.longitude.collectAsStateWithLifecycle()
+    val timezone by viewModel.timezone.collectAsStateWithLifecycle()
+    val hasSavedChart by viewModel.hasSavedChart.collectAsStateWithLifecycle()
+    val savedChartInfo by viewModel.savedChartInfo.collectAsStateWithLifecycle()
 
     val scrollState = rememberScrollState()
     val context = LocalContext.current
-    val prefs = remember { context.getSharedPreferences("vedic_prefs", android.content.Context.MODE_PRIVATE) }
 
-    // Listen for successful calculation events
+    // Listen for successful calculation events and load saved profile
     LaunchedEffect(Unit) {
+        viewModel.setContext(context)
         viewModel.loadLanguage(context)
+        viewModel.loadSavedProfile(context)
         viewModel.chartResult.collect { chart ->
-            prefs.edit()
-                .putString("birth_date", date)
-                .putString("birth_time", time)
-                .putString("birth_city", selectedCity)
-                .putFloat("birth_lat", viewModel.latitude.value?.toFloat() ?: 0.0f)
-                .putFloat("birth_lon", viewModel.longitude.value?.toFloat() ?: 0.0f)
-                .apply()
             onChartCalculated(chart)
         }
     }
 
+    val glassTextFieldColors = OutlinedTextFieldDefaults.colors(
+        focusedBorderColor = VedicTerracotta,
+        unfocusedBorderColor = VedicBorder,
+        focusedLabelColor = VedicTerracotta,
+        unfocusedLabelColor = VedicMutedCharcoal,
+        focusedTextColor = VedicCharcoal,
+        unfocusedTextColor = VedicCharcoal,
+        cursorColor = VedicTerracotta,
+        focusedContainerColor = Color(0xFFFFFFFF),
+        unfocusedContainerColor = Color(0xFFFFFFFF)
+    )
+
     Scaffold(
+        containerColor = ParchmentBg,
         topBar = {
-            TopAppBar(
+            CenterAlignedTopAppBar(
                 title = {
                     Column(
-                        modifier = Modifier.fillMaxWidth(),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
@@ -84,66 +92,129 @@ fun BirthDetailsScreen(
                             color = VedicTerracotta,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
-                            letterSpacing = 4.sp
+                            letterSpacing = 2.5.sp
                         )
                         Text(
-                            text = "ENTER BIRTH INFORMATION",
+                            text = "॥ ॐ गं गणपतये नमः ॥",
                             color = VedicGold,
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            letterSpacing = 2.sp
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = ParchmentBg,
-                    titleContentColor = VedicTerracotta
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = ParchmentBg
                 )
             )
         }
     ) { paddingValues ->
+
         Box(
             modifier = modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .background(ParchmentBg)
-                .padding(20.dp),
-            contentAlignment = Alignment.Center
+                .verticalScroll(scrollState)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            contentAlignment = Alignment.TopCenter
         ) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(scrollState),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFFAF9F6)),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            VedicCard(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                backgroundColor = ParchmentCardBg,
+                borderColor = VedicBorder,
+                contentPadding = 18.dp
             ) {
                 Column(
-                    modifier = Modifier.padding(24.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "✦ COSMIC INITIATION ✦",
-                        color = VedicTerracotta,
+                        text = "BIRTH INFORMATION",
+                        color = LiquidGold,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 2.sp
                     )
 
                     Text(
-                        text = "Map the exact alignment of planets at your time of birth",
-                        color = Color.Gray,
-                        fontSize = 11.sp,
+                        text = "Compute exact astronomical planetary alignment at your time of birth",
+                        color = TextSecondary,
+                        fontSize = 12.sp,
                         textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(top = 4.dp, bottom = 24.dp)
+                        modifier = Modifier.padding(top = 4.dp, bottom = 18.dp)
                     )
+
+                    // SAVED KUNDLI QUICK-ACCESS BANNER
+                    if (hasSavedChart) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = LiquidGold.copy(alpha = 0.12f),
+                            border = BorderStroke(1.dp, LiquidGold.copy(alpha = 0.45f)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 18.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .padding(12.dp)
+                                    .fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "SAVED READING",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = LiquidGold,
+                                        letterSpacing = 1.sp
+                                    )
+                                    Text(
+                                        text = savedChartInfo ?: "Previous Reading",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = TextPrimary
+                                    )
+                                    Text(
+                                        text = "Tap Open to view instantly",
+                                        fontSize = 10.sp,
+                                        color = TextSecondary
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    IconButton(
+                                        onClick = { viewModel.clearSavedData(context) },
+                                        modifier = Modifier.size(28.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Close,
+                                            contentDescription = "Clear saved data",
+                                            tint = TextSecondary,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Button(
+                                        onClick = { viewModel.loadSavedChart(context) },
+                                        colors = ButtonDefaults.buttonColors(containerColor = LiquidGold),
+                                        shape = RoundedCornerShape(8.dp),
+                                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+                                    ) {
+                                        Text("Open", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = CosmicVoid)
+                                    }
+                                }
+                            }
+                        }
+                    }
 
                     // 1. DATE OF BIRTH
                     OutlinedTextField(
                         value = date,
                         onValueChange = { viewModel.updateDate(it) },
                         label = { Text("Date of Birth (DD/MM/YYYY)", fontSize = 13.sp) },
-                        placeholder = { Text("e.g. 15/08/1947", color = Color.LightGray) },
+                        placeholder = { Text("e.g. 15/08/1947", color = TextMuted) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         trailingIcon = {
@@ -153,25 +224,21 @@ fun BirthDetailsScreen(
                                 Icon(
                                     imageVector = Icons.Default.DateRange,
                                     contentDescription = "Select Date",
-                                    tint = VedicGold
+                                    tint = LiquidGold
                                 )
                             }
                         },
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = VedicTerracotta,
-                            unfocusedBorderColor = VedicGold,
-                            cursorColor = VedicTerracotta
-                        )
+                        colors = glassTextFieldColors
                     )
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
 
                     // 2. TIME OF BIRTH
                     OutlinedTextField(
                         value = time,
                         onValueChange = { viewModel.updateTime(it) },
                         label = { Text("Time of Birth (HH:MM - 24hr)", fontSize = 13.sp) },
-                        placeholder = { Text("e.g. 14:30", color = Color.LightGray) },
+                        placeholder = { Text("e.g. 14:30", color = TextMuted) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         trailingIcon = {
@@ -181,18 +248,14 @@ fun BirthDetailsScreen(
                                 Icon(
                                     imageVector = Icons.Default.Schedule,
                                     contentDescription = "Select Time",
-                                    tint = VedicGold
+                                    tint = LiquidGold
                                 )
                             }
                         },
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = VedicTerracotta,
-                            unfocusedBorderColor = VedicGold,
-                            cursorColor = VedicTerracotta
-                        )
+                        colors = glassTextFieldColors
                     )
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
 
                     // 3. PLACE OF BIRTH (CITY GEOLOCATION AUTOCONTACT)
                     Box(modifier = Modifier.fillMaxWidth()) {
@@ -200,37 +263,41 @@ fun BirthDetailsScreen(
                             OutlinedTextField(
                                 value = cityQuery,
                                 onValueChange = { viewModel.updateCityQuery(it) },
-                                label = { Text("Place of Birth (City)", fontSize = 13.sp) },
-                                placeholder = { Text("e.g. Mumbai, London", color = Color.LightGray) },
+                                label = { Text("Place of Birth (City / Village)", fontSize = 13.sp) },
+                                placeholder = { Text("e.g. Mumbai, New York, London", color = TextMuted) },
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true,
                                 trailingIcon = {
                                     if (isSearchingCity) {
                                         CircularProgressIndicator(
-                                            color = VedicTerracotta,
+                                            color = LiquidGold,
                                             strokeWidth = 2.dp,
-                                            modifier = Modifier.size(16.dp)
+                                            modifier = Modifier.size(18.dp)
                                         )
-                                    } else {
-                                        Icon(Icons.Default.LocationOn, contentDescription = "Location", tint = VedicGold)
+                                    } else if (cityQuery.isNotEmpty()) {
+                                        IconButton(onClick = { viewModel.updateCityQuery("") }) {
+                                            Icon(
+                                                Icons.Default.Close,
+                                                contentDescription = "Clear city",
+                                                tint = TextSecondary,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
                                     }
                                 },
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = VedicTerracotta,
-                                    unfocusedBorderColor = VedicGold,
-                                    cursorColor = VedicTerracotta
-                                )
+                                colors = glassTextFieldColors
                             )
 
                             // Dropdown Results Popup
                             if (searchResults.isNotEmpty()) {
-                                Card(
+                                Surface(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(top = 4.dp),
-                                    shape = RoundedCornerShape(8.dp),
-                                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = CosmicCard,
+                                    border = BorderStroke(1.dp, GlassBorder),
+                                    shadowElevation = 8.dp
                                 ) {
                                     Column {
                                         searchResults.forEach { result ->
@@ -246,18 +313,18 @@ fun BirthDetailsScreen(
                                                 Icon(
                                                     imageVector = Icons.Default.LocationOn,
                                                     contentDescription = null,
-                                                    tint = VedicGold,
+                                                    tint = LiquidGold,
                                                     modifier = Modifier.size(16.dp)
                                                 )
                                                 Spacer(modifier = Modifier.width(8.dp))
                                                 Text(
                                                     text = result.name,
-                                                    color = VedicCharcoal,
+                                                    color = TextPrimary,
                                                     fontSize = 13.sp,
                                                     fontWeight = FontWeight.Medium
                                                 )
                                             }
-                                            Divider(color = Color(0xFFF4F3EF), thickness = 1.dp)
+                                            HorizontalDivider(color = GlassBorderSubtle)
                                         }
                                     }
                                 }
@@ -274,17 +341,18 @@ fun BirthDetailsScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Info,
+                                imageVector = Icons.Default.LocationOn,
                                 contentDescription = null,
                                 tint = VedicGold,
-                                modifier = Modifier.size(12.dp)
+                                modifier = Modifier.size(13.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
-                             Text(
-                                text = "Selected: ${latitude}°N, ${longitude}°E",
-                                color = Color.Gray,
+                            val tzSign = if (timezone >= 0) "+" else ""
+                            Text(
+                                text = "Selected: ${latitude}°N, ${longitude}°E • GMT$tzSign$timezone",
+                                color = VedicMutedCharcoal,
                                 fontSize = 11.sp,
-                                fontStyle = FontStyle.Italic
+                                fontWeight = FontWeight.Medium
                             )
                         }
                     }
@@ -295,14 +363,14 @@ fun BirthDetailsScreen(
                         "English" to "English",
                         "Hindi" to "हिन्दी (Hindi)",
                         "Gujarati" to "ગુજરાતી (Gujarati)",
-                        "Marathi" to "मраठी (Marathi)",
+                        "Marathi" to "मराठी (Marathi)",
                         "Tamil" to "தமிழ் (Tamil)",
                         "Telugu" to "తెలుగు (Telugu)",
                         "Bengali" to "বাংলা (Bengali)",
                         "Kannada" to "ಕನ್ನಡ (Kannada)"
                     )
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
 
                     Box(modifier = Modifier.fillMaxWidth()) {
                         ExposedDropdownMenuBox(
@@ -316,19 +384,16 @@ fun BirthDetailsScreen(
                                 label = { Text("Consultation Language", fontSize = 13.sp) },
                                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = langExpanded) },
                                 modifier = Modifier.menuAnchor().fillMaxWidth(),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = VedicTerracotta,
-                                    unfocusedBorderColor = VedicGold,
-                                    cursorColor = VedicTerracotta
-                                )
+                                colors = glassTextFieldColors
                             )
                             ExposedDropdownMenu(
                                 expanded = langExpanded,
-                                onDismissRequest = { langExpanded = false }
+                                onDismissRequest = { langExpanded = false },
+                                modifier = Modifier.background(CosmicCard)
                             ) {
                                 languages.forEach { lang ->
                                     DropdownMenuItem(
-                                        text = { Text(lang.second) },
+                                        text = { Text(lang.second, color = TextPrimary) },
                                         onClick = {
                                             viewModel.updateSelectedLanguage(lang.first, context)
                                             langExpanded = false
@@ -341,41 +406,42 @@ fun BirthDetailsScreen(
 
                     // Error Message
                     if (errorMsg != null) {
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(14.dp))
                         Text(
                             text = errorMsg!!,
-                            color = MaterialTheme.colorScheme.error,
+                            color = LiquidRose,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             textAlign = TextAlign.Center
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(28.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
 
                     // 4. SUBMIT BUTTON
                     Button(
-                        onClick = { viewModel.calculateChart() },
+                        onClick = { viewModel.calculateChart(context) },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(48.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = VedicTerracotta),
-                        shape = RoundedCornerShape(24.dp),
+                            .height(50.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = LiquidGold),
+                        shape = RoundedCornerShape(25.dp),
                         enabled = !isCalculating
                     ) {
                         if (isCalculating) {
                             CircularProgressIndicator(
-                                color = Color.White,
+                                color = CosmicVoid,
                                 strokeWidth = 2.dp,
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("CALCULATING...")
+                            Text("CALCULATING...", color = CosmicVoid, fontWeight = FontWeight.Bold)
                         } else {
                             Text(
                                 text = "CALCULATE COSMIC CHART",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
+                                color = CosmicVoid,
                                 letterSpacing = 1.sp
                             )
                         }
@@ -386,58 +452,51 @@ fun BirthDetailsScreen(
     }
 }
 
-private fun showDatePicker(
-    context: android.content.Context,
-    currentDate: String,
-    onDateSelected: (String) -> Unit
-) {
-    val calendar = java.util.Calendar.getInstance()
-    val parts = currentDate.split("/")
-    if (parts.size == 3) {
-        val d = parts[0].toIntOrNull()
-        val m = parts[1].toIntOrNull()
-        val y = parts[2].toIntOrNull()
-        if (d != null && m != null && y != null) {
-            calendar.set(java.util.Calendar.YEAR, y)
-            calendar.set(java.util.Calendar.MONTH, m - 1)
-            calendar.set(java.util.Calendar.DAY_OF_MONTH, d)
-        }
+private fun showDatePicker(context: Context, currentDate: String, onDateSelected: (String) -> Unit) {
+    val cal = Calendar.getInstance()
+    if (currentDate.isNotEmpty()) {
+        try {
+            val parts = currentDate.split("/")
+            if (parts.size == 3) {
+                cal.set(Calendar.DAY_OF_MONTH, parts[0].toInt())
+                cal.set(Calendar.MONTH, parts[1].toInt() - 1)
+                cal.set(Calendar.YEAR, parts[2].toInt())
+            }
+        } catch (_: Exception) {}
     }
+
     android.app.DatePickerDialog(
         context,
         { _, year, month, dayOfMonth ->
             val formatted = String.format("%02d/%02d/%04d", dayOfMonth, month + 1, year)
             onDateSelected(formatted)
         },
-        calendar.get(java.util.Calendar.YEAR),
-        calendar.get(java.util.Calendar.MONTH),
-        calendar.get(java.util.Calendar.DAY_OF_MONTH)
+        cal.get(Calendar.YEAR),
+        cal.get(Calendar.MONTH),
+        cal.get(Calendar.DAY_OF_MONTH)
     ).show()
 }
 
-private fun showTimePicker(
-    context: android.content.Context,
-    currentTime: String,
-    onTimeSelected: (String) -> Unit
-) {
-    val calendar = java.util.Calendar.getInstance()
-    val parts = currentTime.split(":")
-    if (parts.size == 2) {
-        val h = parts[0].toIntOrNull()
-        val m = parts[1].toIntOrNull()
-        if (h != null && m != null) {
-            calendar.set(java.util.Calendar.HOUR_OF_DAY, h)
-            calendar.set(java.util.Calendar.MINUTE, m)
-        }
+private fun showTimePicker(context: Context, currentTime: String, onTimeSelected: (String) -> Unit) {
+    val cal = Calendar.getInstance()
+    if (currentTime.isNotEmpty()) {
+        try {
+            val parts = currentTime.split(":")
+            if (parts.size >= 2) {
+                cal.set(Calendar.HOUR_OF_DAY, parts[0].toInt())
+                cal.set(Calendar.MINUTE, parts[1].toInt())
+            }
+        } catch (_: Exception) {}
     }
+
     android.app.TimePickerDialog(
         context,
         { _, hourOfDay, minute ->
             val formatted = String.format("%02d:%02d", hourOfDay, minute)
             onTimeSelected(formatted)
         },
-        calendar.get(java.util.Calendar.HOUR_OF_DAY),
-        calendar.get(java.util.Calendar.MINUTE),
+        cal.get(Calendar.HOUR_OF_DAY),
+        cal.get(Calendar.MINUTE),
         true
     ).show()
 }

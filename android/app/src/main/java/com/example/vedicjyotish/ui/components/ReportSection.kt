@@ -1,6 +1,7 @@
 package com.example.vedicjyotish.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -17,9 +18,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.vedicjyotish.theme.VedicCharcoal
-import com.example.vedicjyotish.theme.VedicGold
-import com.example.vedicjyotish.theme.VedicTerracotta
+import com.example.vedicjyotish.theme.*
+
 
 @Composable
 fun ReportSection(
@@ -34,7 +34,8 @@ fun ReportSection(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFFFAF9F6), RoundedCornerShape(12.dp))
+            .background(Color(0x18FFFFFF), RoundedCornerShape(18.dp))
+            .border(androidx.compose.foundation.BorderStroke(1.dp, GlassBorder), RoundedCornerShape(18.dp))
             .padding(16.dp)
     ) {
         // --- HEADER ---
@@ -48,14 +49,14 @@ fun ReportSection(
             Column {
                 Text(
                     text = "DEEP CELESTIAL ANALYSIS",
-                    color = VedicTerracotta,
+                    color = LiquidGold,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.5.sp
                 )
                 Text(
-                    text = "Comprehensive Gemini-Powered Report",
-                    color = VedicGold,
+                    text = "Comprehensive Astrological AI Synthesis",
+                    color = AstralCyan,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Medium
                 )
@@ -66,13 +67,13 @@ fun ReportSection(
                     Icon(
                         imageVector = Icons.Default.Refresh,
                         contentDescription = "Regenerate Report",
-                        tint = VedicTerracotta
+                        tint = LiquidGold
                     )
                 }
             }
         }
 
-        Divider(color = VedicGold.copy(alpha = 0.3f), thickness = 1.dp)
+        HorizontalDivider(color = GlassBorderSubtle)
 
         Spacer(modifier = Modifier.height(12.dp))
 
@@ -91,28 +92,28 @@ fun ReportSection(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         CircularProgressIndicator(
-                            color = VedicTerracotta,
+                            color = LiquidGold,
                             strokeWidth = 3.dp,
                             modifier = Modifier.size(40.dp)
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "Consulting the Gemini stars...",
-                            color = VedicTerracotta,
+                            text = "Consulting celestial alignments with your selected AI...",
+                            color = LiquidGold,
                             fontSize = 14.sp,
                             fontStyle = FontStyle.Italic,
                             fontWeight = FontWeight.Medium
                         )
                         Text(
-                            text = "Translating ancient charts into modern insights",
-                            color = VedicGold,
+                            text = "Translating ancient charts into profound insights",
+                            color = TextSecondary,
                             fontSize = 11.sp,
                             textAlign = TextAlign.Center,
                             modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
                         )
                     }
                 }
-                errorMsg != null -> {
+                    errorMsg != null -> {
                     // Error message
                     Column(
                         modifier = Modifier.fillMaxSize(),
@@ -120,8 +121,8 @@ fun ReportSection(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "✦ Star Map Distorted ✦",
-                            color = VedicTerracotta,
+                            text = "Star Map Distorted",
+                            color = LiquidRose,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 1.sp
@@ -129,7 +130,7 @@ fun ReportSection(
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = errorMsg,
-                            color = VedicCharcoal,
+                            color = TextPrimary,
                             fontSize = 13.sp,
                             textAlign = TextAlign.Center,
                             modifier = Modifier.padding(horizontal = 24.dp)
@@ -137,11 +138,11 @@ fun ReportSection(
                         Spacer(modifier = Modifier.height(24.dp))
                         Button(
                             onClick = onRetryClick,
-                            colors = ButtonDefaults.buttonColors(containerColor = VedicTerracotta)
+                            colors = ButtonDefaults.buttonColors(containerColor = LiquidGold)
                         ) {
-                            Icon(Icons.Default.Refresh, contentDescription = "Retry", modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.Refresh, contentDescription = "Retry", modifier = Modifier.size(16.dp), tint = CosmicVoid)
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Retry Celestial Reading", fontSize = 13.sp)
+                            Text("Retry Celestial Reading", fontSize = 13.sp, color = CosmicVoid, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -154,9 +155,9 @@ fun ReportSection(
                     ) {
                         Button(
                             onClick = onRetryClick,
-                            colors = ButtonDefaults.buttonColors(containerColor = VedicTerracotta)
+                            colors = ButtonDefaults.buttonColors(containerColor = LiquidGold)
                         ) {
-                            Text("Generate Full Analysis")
+                            Text("Generate Full Analysis", color = CosmicVoid, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -177,14 +178,14 @@ fun ReportSection(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 CircularProgressIndicator(
-                                    color = VedicTerracotta,
+                                    color = LiquidGold,
                                     strokeWidth = 2.dp,
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = "Rishi is still writing...",
-                                    color = Color.Gray,
+                                    color = TextSecondary,
                                     fontSize = 12.sp,
                                     fontStyle = FontStyle.Italic
                                 )

@@ -55,6 +55,8 @@ fun CompatibilityTab(
     val matchingSearchResults by viewModel.matchingSearchResults.collectAsStateWithLifecycle()
     val isSearchingCity by viewModel.isMatchingSearchingCity.collectAsStateWithLifecycle()
     val matchingMethod by viewModel.matchingMethod.collectAsStateWithLifecycle()
+    val myGender by viewModel.myGender.collectAsStateWithLifecycle()
+    val matchingTimezone by viewModel.matchingTimezone.collectAsStateWithLifecycle()
     val isCalculating by viewModel.isCalculatingMatching.collectAsStateWithLifecycle()
     val matchingError by viewModel.matchingError.collectAsStateWithLifecycle()
     val compatibilityResult by viewModel.compatibilityResult.collectAsStateWithLifecycle()
@@ -135,7 +137,33 @@ fun CompatibilityTab(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Profile Gender Selection
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "My Profile Gender",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = VedicCharcoal
+                    )
+                    val genderOptions = listOf("Male", "Female")
+                    val selectedGenderIdx = if (myGender == "Female") 1 else 0
+                    VedicSegmentedControl(
+                        options = genderOptions,
+                        selectedIndex = selectedGenderIdx,
+                        onOptionSelected = { idx ->
+                            viewModel.updateMyGender(genderOptions[idx])
+                        },
+                        modifier = Modifier.width(170.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
 
                 // 1. DATE FIELD
                 OutlinedTextField(
@@ -256,7 +284,7 @@ fun CompatibilityTab(
                                                 fontWeight = FontWeight.Medium
                                             )
                                         }
-                                        Divider(color = Color(0xFFF4F3EF), thickness = 1.dp)
+                                        HorizontalDivider(color = Color(0xFFF4F3EF), thickness = 1.dp)
                                     }
                                 }
                             }
@@ -275,7 +303,7 @@ fun CompatibilityTab(
                         Icon(Icons.Default.Info, contentDescription = null, tint = VedicGold, modifier = Modifier.size(12.dp))
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "Selected: ${matchingLatitude ?: 0.0}°N, ${matchingLongitude ?: 0.0}°E",
+                            text = "Selected: ${matchingLatitude ?: 0.0}°N, ${matchingLongitude ?: 0.0}°E • GMT${if ((matchingTimezone ?: 5.5) >= 0) "+" else ""}${matchingTimezone ?: 5.5}",
                             color = Color.Gray,
                             fontSize = 10.sp,
                             fontStyle = FontStyle.Italic
@@ -446,7 +474,7 @@ fun ScorecardSection(res: CompatibilityResponse) {
                         fontSize = 28.sp,
                         fontWeight = FontWeight.Black
                     )
-                    Divider(color = VedicGold, modifier = Modifier.width(40.dp).padding(vertical = 2.dp), thickness = 1.5.dp)
+                    HorizontalDivider(color = VedicGold, modifier = Modifier.width(40.dp).padding(vertical = 2.dp), thickness = 1.5.dp)
                     Text(
                         text = "${res.maxScore.toInt()} GUNAS",
                         color = VedicCharcoal,

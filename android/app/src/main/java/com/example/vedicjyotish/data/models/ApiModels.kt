@@ -6,7 +6,8 @@ import com.google.gson.annotations.SerializedName
 data class CityResult(
     val name: String,
     val lat: Double,
-    val lon: Double
+    val lon: Double,
+    val tz: Double = 5.5
 )
 
 // --- Birth Data (Request) ---
@@ -98,7 +99,8 @@ data class PlanetaryRow(
     val retrograde: Boolean,
     val combust: Boolean,
     @SerializedName("navamsa_sign") val navamsaSign: String,
-    @SerializedName("chara_karaka") val charaKaraka: String? = null
+    @SerializedName("chara_karaka") val charaKaraka: String? = null,
+    @SerializedName("deg_in_sign") val degInSign: Double = 0.0
 )
 
 // --- Yoga ---

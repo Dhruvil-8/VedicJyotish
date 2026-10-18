@@ -49,6 +49,9 @@ dependencies {
   implementation(composeBom)
   androidTestImplementation(composeBom)
 
+  // Pure Offline Swiss Ephemeris JAR (Thomas Mack / Astrodienst)
+  implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
+
   // Core Android dependencies
   implementation(libs.androidx.core.ktx)
   implementation(libs.androidx.lifecycle.runtime.ktx)

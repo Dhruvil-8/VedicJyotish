@@ -126,6 +126,9 @@ async fn test_api_chart_calculation() {
         .expect("Failed to parse chart calculation JSON response");
 
     // Verify key fields in birth chart calculation matches ChartResponse structure
+    println!("RUST CHART ASCENDANT: {}", json["ascendant"]);
+    println!("RUST CHART MOON: {}", json["moon_intelligence"]);
+    println!("RUST CHART PLANETS: {}", json["planetary_table"]);
     assert!(json["ascendant"].is_object());
     assert!(json["chart_data"].is_object());
     assert!(json["planetary_table"].is_array());

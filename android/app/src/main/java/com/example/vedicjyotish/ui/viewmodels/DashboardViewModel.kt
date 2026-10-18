@@ -1,10 +1,16 @@
 package com.example.vedicjyotish.ui.viewmodels
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.vedicjyotish.data.models.ChatMessage
-import com.example.vedicjyotish.data.models.ChartResponse
-import com.example.vedicjyotish.data.network.ApiClient
+import com.example.vedicjyotish.data.ai.AiKeyManager
+import com.example.vedicjyotish.data.ai.ChatSession
+import com.example.vedicjyotish.data.ai.ChatSessionManager
+import com.example.vedicjyotish.data.ai.VedicAiClient
+import com.example.vedicjyotish.data.astrology.CompatibilityEngine
+import com.example.vedicjyotish.data.astrology.OfflineLocationHelper
+import com.example.vedicjyotish.data.astrology.VedicChartEngine
+import com.example.vedicjyotish.data.models.*
 import com.example.vedicjyotish.utils.DateTimeUtils.normalizeDate
 import com.example.vedicjyotish.utils.DateTimeUtils.normalizeTime
 import kotlinx.coroutines.flow.*
@@ -12,13 +18,22 @@ import kotlinx.coroutines.launch
 
 class DashboardViewModel : ViewModel() {
 
-    private lateinit var chartData: ChartResponse
-    private var isInitialized = false
+    lateinit var chartData: ChartResponse
+        private set
+    var isInitialized = false
+        private set
+
+    lateinit var aiKeyManager: AiKeyManager
+        private set
+    private lateinit var aiClient: VedicAiClient
+    private lateinit var chatSessionManager: ChatSessionManager
+    private lateinit var appContext: Context
 
     private val _selectedLanguage = MutableStateFlow("English")
     val selectedLanguage = _selectedLanguage.asStateFlow()
 
-    // Tabs: 0: Charts, 1: Planets, 2: Dashas & Yogas, 3: Rishi Chat, 4: Deep Report, 5: Compatibility
+    // Tabs:
+    // 0: Charts (D1/D9), 1: Planets, 2: Dashas & Yogas, 3: Panchanga, 4: Rishi Chat, 5: Deep Report, 6: Compatibility
     private val _selectedTab = MutableStateFlow(0)
     val selectedTab = _selectedTab.asStateFlow()
 
@@ -45,8 +60,11 @@ class DashboardViewModel : ViewModel() {
     private val _chatError = MutableStateFlow<String?>(null)
     val chatError = _chatError.asStateFlow()
 
-    private val _questionCount = MutableStateFlow(0)
-    val questionCount = _questionCount.asStateFlow()
+    private val _allSessions = MutableStateFlow<List<ChatSession>>(emptyList())
+    val allSessions = _allSessions.asStateFlow()
+
+    private val _activeSessionTitle = MutableStateFlow("Consultation")
+    val activeSessionTitle = _activeSessionTitle.asStateFlow()
 
     // --- Compatibility / Kundali Matching States ---
     private val _matchingDate = MutableStateFlow("") // DD/MM/YYYY
@@ -67,14 +85,20 @@ class DashboardViewModel : ViewModel() {
     private val _matchingLongitude = MutableStateFlow<Double?>(null)
     val matchingLongitude = _matchingLongitude.asStateFlow()
 
-    private val _matchingSearchResults = MutableStateFlow<List<com.example.vedicjyotish.data.models.CityResult>>(emptyList())
+    private val _matchingSearchResults = MutableStateFlow<List<CityResult>>(emptyList())
     val matchingSearchResults = _matchingSearchResults.asStateFlow()
 
     private val _isMatchingSearchingCity = MutableStateFlow(false)
     val isMatchingSearchingCity = _isMatchingSearchingCity.asStateFlow()
 
-    private val _matchingMethod = MutableStateFlow("North") // "North" or "South"
+    private val _matchingMethod = MutableStateFlow("North")
     val matchingMethod = _matchingMethod.asStateFlow()
+
+    private val _myGender = MutableStateFlow("Male") // "Male" or "Female"
+    val myGender = _myGender.asStateFlow()
+
+    private val _matchingTimezone = MutableStateFlow(5.5)
+    val matchingTimezone = _matchingTimezone.asStateFlow()
 
     private val _isCalculatingMatching = MutableStateFlow(false)
     val isCalculatingMatching = _isCalculatingMatching.asStateFlow()
@@ -82,14 +106,22 @@ class DashboardViewModel : ViewModel() {
     private val _matchingError = MutableStateFlow<String?>(null)
     val matchingError = _matchingError.asStateFlow()
 
-    private val _compatibilityResult = MutableStateFlow<com.example.vedicjyotish.data.models.CompatibilityResponse?>(null)
+    private val _compatibilityResult = MutableStateFlow<CompatibilityResponse?>(null)
     val compatibilityResult = _compatibilityResult.asStateFlow()
 
-    fun init(chart: ChartResponse, context: android.content.Context) {
-        val prefs = context.getSharedPreferences("vedic_prefs", android.content.Context.MODE_PRIVATE)
+    fun init(chart: ChartResponse, context: Context) {
+        appContext = context.applicationContext
+        val prefs = context.getSharedPreferences("vedic_prefs", Context.MODE_PRIVATE)
         _selectedLanguage.value = prefs.getString("selected_language", "English") ?: "English"
 
-        if (isInitialized && this::chartData.isInitialized && this.chartData == chart) return
+        aiKeyManager = AiKeyManager(context)
+        aiClient = VedicAiClient(aiKeyManager)
+        chatSessionManager = ChatSessionManager(context)
+
+        if (isInitialized && this::chartData.isInitialized && this.chartData == chart) {
+            refreshChatState()
+            return
+        }
         this.chartData = chart
         isInitialized = true
         initDebouncedIfNeeded()
@@ -99,19 +131,22 @@ class DashboardViewModel : ViewModel() {
         _isGeneratingReport.value = false
         _reportError.value = null
 
-        // Reset chat state
-        _chatInput.value = ""
-        _isChatStreaming.value = false
-        _chatError.value = null
-        _questionCount.value = 0
+        // Initial welcome message if session is fresh
+        val active = chatSessionManager.getActiveSession()
+        if (active.messages.isEmpty()) {
+            val greeting = "Welcome, seeker. I am Rishi, your celestial guide. By analyzing your birth chart with Ascendant in ${chart.ascendant.sign} and Nakshatra ${chart.moonIntelligence.nakshatra}, I am here to help you decode your karmic flow, career path, and relationships. What would you like to ask?"
+            chatSessionManager.addMessageToActive(ChatMessage(role = "model", text = greeting))
+        }
 
-        // Initialize Chat with Rishi greeting
-        _chatMessages.value = listOf(
-            ChatMessage(
-                role = "model",
-                text = "Welcome, seeker. I am Rishi, your celestial guide. By studying your birth chart with Ascendant in ${chart.ascendant.sign} and Nakshatra ${chart.moonIntelligence.nakshatra}, I can help you decode the influence of the planets on your destiny. What would you like to ask about your life path, career, or relationships?"
-            )
-        )
+        refreshChatState()
+    }
+
+    private fun refreshChatState() {
+        if (!this::chatSessionManager.isInitialized) return
+        val active = chatSessionManager.getActiveSession()
+        _chatMessages.value = active.messages.toList()
+        _activeSessionTitle.value = active.title
+        _allSessions.value = chatSessionManager.getAllSessions()
     }
 
     fun selectTab(tabIndex: Int) {
@@ -123,7 +158,7 @@ class DashboardViewModel : ViewModel() {
     }
 
     // ──────────────────────────────────────────────────────
-    //  Deep Report Generation (SSE Streaming)
+    //  Deep Report Generation (Direct On-Device AI Streaming)
     // ──────────────────────────────────────────────────────
     fun generateDeepReport() {
         if (!isInitialized) return
@@ -133,7 +168,7 @@ class DashboardViewModel : ViewModel() {
 
         viewModelScope.launch {
             try {
-                ApiClient.service.generateReportStream(
+                aiClient.streamDeepReport(
                     chartData = chartData,
                     language = _selectedLanguage.value,
                     onChunk = { chunk ->
@@ -155,69 +190,76 @@ class DashboardViewModel : ViewModel() {
     }
 
     // ──────────────────────────────────────────────────────
-    //  Rishi Chat (SSE Streaming with 3-question limit)
+    //  Rishi Chat (Unlimited Multi-Turn On-Device Streaming)
     // ──────────────────────────────────────────────────────
     fun updateChatInput(input: String) {
         _chatInput.value = input
     }
 
+    fun startNewChat() {
+        if (!this::chatSessionManager.isInitialized || !this::chartData.isInitialized) return
+        val greeting = "Greetings, seeker. I am ready to delve into another sphere of your horoscope. Ask me anything about your current planetary influences, career, or personal destiny."
+        chatSessionManager.startNewSession(greeting)
+        refreshChatState()
+    }
+
+    fun switchSession(sessionId: String) {
+        if (!this::chatSessionManager.isInitialized) return
+        chatSessionManager.switchToSession(sessionId)
+        refreshChatState()
+    }
+
     fun sendChatMessage() {
         val question = _chatInput.value.trim()
         if (question.isEmpty() || _isChatStreaming.value) return
-        if (_questionCount.value >= 3) {
-            _chatError.value = "You have reached the free-tier limit of 3 questions. Consult a premium astrologer for deeper readings."
-            return
-        }
 
-        // Add user question
-        val updatedMessages = _chatMessages.value.toMutableList()
-        updatedMessages.add(ChatMessage(role = "user", text = question))
-        _chatMessages.value = updatedMessages
+        val userMsg = ChatMessage(role = "user", text = question)
+        chatSessionManager.addMessageToActive(userMsg)
+
+        val modelMsg = ChatMessage(role = "model", text = "")
+        chatSessionManager.addMessageToActive(modelMsg)
+
         _chatInput.value = ""
         _chatError.value = null
         _isChatStreaming.value = true
-        _questionCount.value += 1
-
-        // Add an empty model message to stream into
-        val modelMessageIndex = updatedMessages.size
-        updatedMessages.add(ChatMessage(role = "model", text = ""))
-        _chatMessages.value = updatedMessages
+        refreshChatState()
 
         viewModelScope.launch {
             var accumulatedText = ""
             try {
-                // Pass history excluding the first welcome greeting and the last empty model message
-                val history = _chatMessages.value.subList(1, _chatMessages.value.size - 1)
-                ApiClient.service.chatStream(
+                val active = chatSessionManager.getActiveSession()
+                // Pass history excluding the placeholder last message
+                val history = active.messages.dropLast(1)
+
+                aiClient.streamChat(
                     chartData = chartData,
-                    question = question,
-                    history = history,
+                    messages = history,
                     language = _selectedLanguage.value,
                     onChunk = { chunk ->
                         accumulatedText += chunk
-                        val list = _chatMessages.value.toMutableList()
-                        if (modelMessageIndex < list.size) {
-                            list[modelMessageIndex] = ChatMessage(role = "model", text = accumulatedText)
-                            _chatMessages.value = list
-                        }
+                        chatSessionManager.updateLastMessageInActive(accumulatedText)
+                        refreshChatState()
                     },
                     onDone = {
                         _isChatStreaming.value = false
+                        refreshChatState()
                     },
                     onError = { error ->
                         _chatError.value = error
                         _isChatStreaming.value = false
+                        refreshChatState()
                     }
                 )
             } catch (e: Exception) {
-                _chatError.value = e.message ?: "Failed to get chat response"
+                _chatError.value = e.message ?: "Chat streaming failed"
                 _isChatStreaming.value = false
+                refreshChatState()
             }
         }
     }
 
     // ──────────────────────────────────────────────────────
-    //  Compatibility (Ashtakoota Matching) Methods & Autocomplete
+    //  Compatibility (100% On-Device Ashtakoota Guna Milan)
     // ──────────────────────────────────────────────────────
     private var isDebouncedSearchInitialized = false
 
@@ -225,8 +267,8 @@ class DashboardViewModel : ViewModel() {
     private fun initDebouncedSearch() {
         viewModelScope.launch {
             _matchingCityQuery
-                .debounce(500)
-                .filter { it.length >= 3 && it != _matchingCity.value }
+                .debounce(350)
+                .filter { it.length >= 2 && it != _matchingCity.value }
                 .distinctUntilChanged()
                 .collect { query ->
                     searchMatchingCity(query)
@@ -254,12 +296,21 @@ class DashboardViewModel : ViewModel() {
         }
     }
 
-    fun selectMatchingCity(cityResult: com.example.vedicjyotish.data.models.CityResult) {
+    fun selectMatchingCity(cityResult: CityResult) {
         _matchingCity.value = cityResult.name
         _matchingCityQuery.value = cityResult.name
         _matchingLatitude.value = cityResult.lat
         _matchingLongitude.value = cityResult.lon
+        _matchingTimezone.value = cityResult.tz
         _matchingSearchResults.value = emptyList()
+    }
+
+    fun updateMyGender(gender: String) {
+        _myGender.value = gender
+    }
+
+    fun updateMatchingTimezone(tz: Double) {
+        _matchingTimezone.value = tz
     }
 
     fun setMatchingMethod(method: String) {
@@ -270,7 +321,7 @@ class DashboardViewModel : ViewModel() {
         viewModelScope.launch {
             _isMatchingSearchingCity.value = true
             try {
-                val results = ApiClient.service.searchCity(query)
+                val results = OfflineLocationHelper.searchCities(appContext, query)
                 _matchingSearchResults.value = results
             } catch (e: Exception) {
                 _matchingSearchResults.value = emptyList()
@@ -280,8 +331,8 @@ class DashboardViewModel : ViewModel() {
         }
     }
 
-    fun loadActiveProfile(context: android.content.Context) {
-        val prefs = context.getSharedPreferences("vedic_prefs", android.content.Context.MODE_PRIVATE)
+    fun loadActiveProfile(context: Context) {
+        val prefs = context.getSharedPreferences("vedic_prefs", Context.MODE_PRIVATE)
         _matchingDate.value = prefs.getString("birth_date", "") ?: ""
         _matchingTime.value = prefs.getString("birth_time", "") ?: ""
         val city = prefs.getString("birth_city", "") ?: ""
@@ -291,18 +342,17 @@ class DashboardViewModel : ViewModel() {
         _matchingLongitude.value = prefs.getFloat("birth_lon", 0.0f).toDouble()
     }
 
-    fun updateSelectedLanguage(language: String, context: android.content.Context) {
+    fun updateSelectedLanguage(language: String, context: Context) {
         _selectedLanguage.value = language
-        val prefs = context.getSharedPreferences("vedic_prefs", android.content.Context.MODE_PRIVATE)
+        val prefs = context.getSharedPreferences("vedic_prefs", Context.MODE_PRIVATE)
         prefs.edit().putString("selected_language", language).apply()
-        
-        // Auto-regenerate deep report on language change if currently viewing it
+
         if (_selectedTab.value == 4) {
             generateDeepReport()
         }
     }
 
-    fun calculateCompatibility(context: android.content.Context) {
+    fun calculateCompatibility(context: Context) {
         val d = normalizeDate(_matchingDate.value)
         val t = normalizeTime(_matchingTime.value)
         _matchingDate.value = d
@@ -331,7 +381,7 @@ class DashboardViewModel : ViewModel() {
 
         viewModelScope.launch {
             try {
-                val prefs = context.getSharedPreferences("vedic_prefs", android.content.Context.MODE_PRIVATE)
+                val prefs = context.getSharedPreferences("vedic_prefs", Context.MODE_PRIVATE)
                 val boyDate = prefs.getString("birth_date", "") ?: ""
                 val boyTime = prefs.getString("birth_time", "") ?: ""
                 val boyCity = prefs.getString("birth_city", "") ?: ""
@@ -344,27 +394,44 @@ class DashboardViewModel : ViewModel() {
                     return@launch
                 }
 
-                val boyRequest = com.example.vedicjyotish.data.models.BirthDataRequest(
-                    date = boyDate,
-                    time = boyTime,
+                val myTz = prefs.getFloat("birth_tz", 5.5f).toDouble()
+                val partnerTz = _matchingTimezone.value
+
+                // 1. Calculate Primary User Chart on-device
+                val myChart = VedicChartEngine.calculateChart(
+                    dateStr = boyDate,
+                    timeStr = boyTime,
                     city = boyCity,
                     lat = boyLat,
-                    lon = boyLon
+                    lon = boyLon,
+                    tzOffsetHours = myTz
                 )
 
-                val girlRequest = com.example.vedicjyotish.data.models.BirthDataRequest(
-                    date = d,
-                    time = t,
+                // 2. Calculate Matching Partner Chart on-device
+                val partnerChart = VedicChartEngine.calculateChart(
+                    dateStr = d,
+                    timeStr = t,
                     city = c,
                     lat = lat,
-                    lon = lon
+                    lon = lon,
+                    tzOffsetHours = partnerTz
                 )
 
-                val result = ApiClient.service.calculateCompatibility(
-                    boy = boyRequest,
-                    girl = girlRequest,
+                // Correctly assign Groom (Boy) and Bride (Girl) based on user's gender
+                val boyChart = if (_myGender.value == "Male") myChart else partnerChart
+                val girlChart = if (_myGender.value == "Male") partnerChart else myChart
+
+                // 3. Compute 36-point Ashtakoota Guna Milan on-device
+                val result = CompatibilityEngine.calculateMatching(
+                    boySign = boyChart.moonIntelligence.sign,
+                    boyNakshatra = boyChart.moonIntelligence.nakshatra,
+                    boyPada = boyChart.moonIntelligence.pada,
+                    girlSign = girlChart.moonIntelligence.sign,
+                    girlNakshatra = girlChart.moonIntelligence.nakshatra,
+                    girlPada = girlChart.moonIntelligence.pada,
                     method = _matchingMethod.value
                 )
+
                 _compatibilityResult.value = result
             } catch (e: Exception) {
                 _matchingError.value = e.message ?: "Failed to calculate compatibility"
