@@ -36,6 +36,9 @@ sealed class AppScreen {
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Eagerly initialize native Rust Swiss Ephemeris engine on startup
+        val nativeLoaded = com.example.vedicjyotish.data.astrology.RustBridge.isNativeLoaded
+        android.util.Log.i("MainActivity", "Rust native calculation engine loaded: $nativeLoaded")
         enableEdgeToEdge()
         setContent {
             VedicJyotishTheme {

@@ -48,6 +48,11 @@ object RustBridge {
 
     init {
         try {
+            try {
+                System.loadLibrary("swiss_eph")
+            } catch (_: Throwable) {
+                // In case swiss_eph is statically linked into vedic_engine
+            }
             System.loadLibrary("vedic_engine")
             isNativeLoaded = true
             logI(TAG, "Successfully loaded native Rust calculation engine (libvedic_engine.so)")

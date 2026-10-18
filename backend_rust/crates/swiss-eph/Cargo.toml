@@ -53,10 +53,7 @@ embedded-ephe = ["swiss-eph-data"]
 
 [lib]
 name = "swiss_eph"
-crate-type = [
-    "cdylib",
-    "rlib",
-]
+crate-type = ["rlib"]
 path = "src/lib.rs"
 
 [dependencies.swiss-eph-data]
