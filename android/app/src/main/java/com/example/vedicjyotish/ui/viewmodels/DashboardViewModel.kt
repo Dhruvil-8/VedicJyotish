@@ -9,6 +9,7 @@ import com.example.vedicjyotish.data.ai.ChatSessionManager
 import com.example.vedicjyotish.data.ai.VedicAiClient
 import com.example.vedicjyotish.data.astrology.CompatibilityEngine
 import com.example.vedicjyotish.data.astrology.OfflineLocationHelper
+import com.example.vedicjyotish.data.astrology.RustBridge
 import com.example.vedicjyotish.data.astrology.VedicChartEngine
 import com.example.vedicjyotish.data.models.*
 import com.example.vedicjyotish.utils.DateTimeUtils.normalizeDate
@@ -398,23 +399,27 @@ class DashboardViewModel : ViewModel() {
                 val partnerTz = _matchingTimezone.value
 
                 // 1. Calculate Primary User Chart on-device
-                val myChart = VedicChartEngine.calculateChart(
-                    dateStr = boyDate,
-                    timeStr = boyTime,
-                    city = boyCity,
-                    lat = boyLat,
-                    lon = boyLon,
-                    tzOffsetHours = myTz
+                val myChart = RustBridge.computeChart(
+                    BirthDataRequest(
+                        date = boyDate,
+                        time = boyTime,
+                        city = boyCity,
+                        lat = boyLat,
+                        lon = boyLon,
+                        timezone = myTz
+                    )
                 )
 
                 // 2. Calculate Matching Partner Chart on-device
-                val partnerChart = VedicChartEngine.calculateChart(
-                    dateStr = d,
-                    timeStr = t,
-                    city = c,
-                    lat = lat,
-                    lon = lon,
-                    tzOffsetHours = partnerTz
+                val partnerChart = RustBridge.computeChart(
+                    BirthDataRequest(
+                        date = d,
+                        time = t,
+                        city = c,
+                        lat = lat,
+                        lon = lon,
+                        timezone = partnerTz
+                    )
                 )
 
                 // Correctly assign Groom (Boy) and Bride (Girl) based on user's gender
