@@ -128,7 +128,7 @@ pub fn calculate_snapshot_with_profile(
         };
 
         let mut xx = [0.0_f64; 6];
-        let mut serr = [0_i8; 256];
+        let mut serr = [0 as std::os::raw::c_char; 256];
         let result = unsafe {
             swiss_eph::swe_calc_ut(
                 jd_ut,
@@ -171,7 +171,7 @@ pub fn get_sun_moon_sidereal(jd_ut: f64) -> (f64, f64) {
     unsafe {
         swiss_eph::swe_set_sid_mode(swiss_eph::SE_SIDM_LAHIRI, 0.0, 0.0);
         let mut xx_sun = [0.0_f64; 6];
-        let mut serr = [0_i8; 256];
+        let mut serr = [0 as std::os::raw::c_char; 256];
         swiss_eph::swe_calc_ut(
             jd_ut,
             swiss_eph::SE_SUN,
@@ -221,7 +221,7 @@ pub fn calculate_sunrise_sunset(
     let _guard = SWISS_LOCK.lock().expect("Swiss Ephemeris lock poisoned");
     let mut tret_rise = 0.0;
     let mut tret_set = 0.0;
-    let mut serr = [0_i8; 256];
+    let mut serr = [0 as std::os::raw::c_char; 256];
     let mut geopos = [lon, lat, 0.0];
 
 
