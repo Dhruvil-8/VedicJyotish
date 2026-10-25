@@ -22,6 +22,7 @@ WORKDIR /app
 
 # Copy manifest files first for dependency layer caching
 COPY Cargo.toml Cargo.lock ./
+COPY crates/ crates/
 
 # Create a dummy main.rs to build dependencies (cache layer)
 RUN mkdir -p src/bin && \

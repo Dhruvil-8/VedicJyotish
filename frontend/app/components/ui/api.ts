@@ -1,16 +1,14 @@
 const isClient = typeof window !== "undefined";
-const RAW_API_BASE = process.env.NEXT_PUBLIC_API_URL || 
-  (isClient ? `${window.location.protocol}//${window.location.hostname}:7860` : "http://127.0.0.1:7860");
+// In browser environments, default to the secure Next.js server proxy `/api/backend`.
+// The server proxy attaches the secret API_SECRET_KEY server-side, protecting it from browser exposure.
+// If NEXT_PUBLIC_API_URL is explicitly set to an absolute URL, use direct connection.
+const RAW_API_BASE =
+  process.env.NEXT_PUBLIC_API_URL ||
+  (isClient ? "/api/backend" : "http://127.0.0.1:7860");
 const API_BASE = RAW_API_BASE.replace(/\/+$/, "");
-const API_KEY = process.env.NEXT_PUBLIC_APP_TOKEN || "";
-
 
 const getHeaders = (extraHeaders: Record<string, string> = {}) => {
-  const headers: Record<string, string> = { ...extraHeaders };
-  if (API_KEY) {
-    headers["X-API-Key"] = API_KEY;
-  }
-  return headers;
+  return { ...extraHeaders };
 };
 
 const SENSITIVE_CHART_KEYS = new Set<string>([

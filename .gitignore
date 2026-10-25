@@ -60,6 +60,7 @@ Thumbs.db
 .vscode/
 .idea/
 *.log
+.agents/
 
 # Hugging Face deployment clone
 hf-deploy/

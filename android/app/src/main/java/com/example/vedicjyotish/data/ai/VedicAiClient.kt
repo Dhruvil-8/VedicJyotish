@@ -92,10 +92,12 @@ class VedicAiClient(private val keyManager: AiKeyManager) {
         try {
             when (provider.protocol) {
                 ApiProtocol.GEMINI_REST -> {
-                    val url = "$baseUrl/models/$model:generateContent?key=$key"
+                    val url = "$baseUrl/models/$model:generateContent"
                     val bodyJson = """{"contents":[{"parts":[{"text":"Say Hello in one word."}]}]}"""
                     val req = Request.Builder()
                         .url(url)
+                        .header("x-goog-api-key", key)
+                        .header("Content-Type", "application/json")
                         .post(bodyJson.toRequestBody("application/json".toMediaType()))
                         .build()
                     val resp = client.newCall(req).execute()
@@ -160,8 +162,9 @@ class VedicAiClient(private val keyManager: AiKeyManager) {
             val reqBuilder = Request.Builder()
             when (provider.protocol) {
                 ApiProtocol.GEMINI_REST -> {
-                    val url = "$baseUrl/models?key=$apiKey"
+                    val url = "$baseUrl/models"
                     reqBuilder.url(url)
+                        .header("x-goog-api-key", apiKey)
                 }
                 ApiProtocol.ANTHROPIC_MESSAGES -> {
                     val url = "$baseUrl/models"
