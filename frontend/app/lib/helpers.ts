@@ -21,6 +21,26 @@ export function convertTo24Hour(timeStr: string): string {
 }
 
 /**
+ * Normalizes date inputs from various formats (e.g. YYYY-MM-DD, YYYY/MM/DD, DD-MM-YYYY)
+ * to the backend-required DD/MM/YYYY format.
+ */
+export function normalizeDateInput(d: string): string {
+  if (!d) return "";
+  const clean = d.trim();
+  const ymd = clean.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
+  if (ymd) {
+    const [, y, m, day] = ymd;
+    return `${day.padStart(2, "0")}/${m.padStart(2, "0")}/${y}`;
+  }
+  const dmy = clean.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/);
+  if (dmy) {
+    const [, day, m, y] = dmy;
+    return `${day.padStart(2, "0")}/${m.padStart(2, "0")}/${y}`;
+  }
+  return clean;
+}
+
+/**
  * Parses a date string in DD/MM/YYYY format to a JS Date object.
  */
 export function parseDate(dateStr: string): Date {

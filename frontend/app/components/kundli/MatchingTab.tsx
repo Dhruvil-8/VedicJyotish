@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { calculateCompatibility } from "../ui/api";
 import { useCitySearch } from "../../hooks/useCitySearch";
 import { useToast } from "../../hooks/useToast";
-import { convertTo24Hour } from "../../lib/helpers";
+import { convertTo24Hour, normalizeDateInput } from "../../lib/helpers";
 
 interface MatchingTabProps {
   activeProfile?: {
@@ -88,14 +88,14 @@ export default function MatchingTab({ activeProfile = null }: MatchingTabProps) 
     try {
       const payload = {
         boy: {
-          date: matchingBoyDate,
+          date: normalizeDateInput(matchingBoyDate),
           time: convertTo24Hour(matchingBoyTime),
           city: matchingBoySelectedCity.name,
           lat: matchingBoySelectedCity.lat,
           lon: matchingBoySelectedCity.lon,
         },
         girl: {
-          date: matchingGirlDate,
+          date: normalizeDateInput(matchingGirlDate),
           time: convertTo24Hour(matchingGirlTime),
           city: matchingGirlSelectedCity.name,
           lat: matchingGirlSelectedCity.lat,
@@ -107,9 +107,9 @@ export default function MatchingTab({ activeProfile = null }: MatchingTabProps) 
       const result = await calculateCompatibility(payload);
       setMatchingResult(result);
     } catch (e: any) {
-      let msg = "Error calculating compatibility. Please check inputs and try again.";
+      let msg = e?.message || "Error calculating compatibility. Please check inputs and try again.";
       try {
-        const body = await e?.response?.json?.();
+        const body = await e?.response?.clone?.()?.json?.();
         if (body?.detail) msg = body.detail;
       } catch {}
       showToast(msg, "error");

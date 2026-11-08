@@ -7,7 +7,7 @@ import { calculateChart } from "../ui/api";
 import { useCitySearch } from "../../hooks/useCitySearch";
 import { useToast } from "../../hooks/useToast";
 import { LANGUAGES } from "../../lib/constants";
-import { convertTo24Hour } from "../../lib/helpers";
+import { convertTo24Hour, normalizeDateInput } from "../../lib/helpers";
 import { getCachedLocation, setCachedLocation } from "../../lib/locationCache";
 
 // In-memory cache to store API calculation results for duplicate inputs
@@ -79,7 +79,7 @@ export default function BirthForm({
     setLoading(true);
     try {
       const payload = {
-        date,
+        date: normalizeDateInput(date),
         time: convertTo24Hour(time),
         city: selectedCity.name,
         lat: selectedCity.lat,
@@ -104,9 +104,9 @@ export default function BirthForm({
         language: selectedLanguage,
       });
     } catch (e: any) {
-      let msg = "Error calculating chart. Please check your inputs and try again.";
+      let msg = e?.message || "Error calculating chart. Please check your inputs and try again.";
       try {
-        const body = await e?.response?.json?.();
+        const body = await e?.response?.clone?.()?.json?.();
         if (body?.detail) {
           const detail = Array.isArray(body.detail) ? body.detail[0]?.msg : body.detail;
           if (detail) msg = detail.replace(/^Value error, /i, "");
