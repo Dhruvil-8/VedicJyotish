@@ -1,5 +1,8 @@
 import { NextRequest } from "next/server";
 
+// Allow up to 60 seconds for long-running Server-Sent Events (SSE) AI report streaming
+export const maxDuration = 60;
+
 // Server-side target URL (defaults to localhost:7860 or external deployment)
 const BACKEND_URL = (
   process.env.BACKEND_URL ||

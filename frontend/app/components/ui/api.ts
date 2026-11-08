@@ -1,10 +1,11 @@
 const isClient = typeof window !== "undefined";
-// In browser environments, default to the secure Next.js server proxy `/api/backend`.
-// The server proxy attaches the secret API_SECRET_KEY server-side, protecting it from browser exposure.
-// If NEXT_PUBLIC_API_URL is explicitly set to an absolute URL, use direct connection.
-const RAW_API_BASE =
-  process.env.NEXT_PUBLIC_API_URL ||
-  (isClient ? "/api/backend" : "http://127.0.0.1:7860");
+// In browser environments, route through the secure Next.js server proxy `/api/backend`.
+// The server proxy attaches the secret API_SECRET_KEY server-side, protecting it from browser exposure
+// and ensuring zero secrets are committed or exposed in public client bundles.
+// Direct connection can still be opted into explicitly via NEXT_PUBLIC_DIRECT_API_URL if ever needed.
+const RAW_API_BASE = isClient
+  ? (process.env.NEXT_PUBLIC_DIRECT_API_URL || "/api/backend")
+  : (process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:7860");
 const API_BASE = RAW_API_BASE.replace(/\/+$/, "");
 
 const getHeaders = (extraHeaders: Record<string, string> = {}) => {
