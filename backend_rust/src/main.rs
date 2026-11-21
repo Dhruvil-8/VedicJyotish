@@ -28,6 +28,8 @@ mod argala;
 mod dasha;
 mod shadbala;
 mod error;
+mod classical_rules;
+mod muhurtha;
 
 pub use error::ApiError;
 
@@ -76,6 +78,7 @@ struct SearchCityQuery {
 #[tokio::main]
 async fn main() {
     dotenv().ok();
+    dotenvy::from_filename("backend_rust/.env").ok();
 
     // Initialize structured logging
     let log_level = if is_production() { "warn" } else { "info" };
@@ -149,6 +152,15 @@ async fn main() {
         .route(
             "/calculate_transits",
             post(calculate_transits).layer(middleware::from_fn(ratelimit::limit_chart)),
+        )
+        // Muhurtha electional scoring
+        .route(
+            "/calculate_muhurtha",
+            post(calculate_muhurtha_handler).layer(middleware::from_fn(ratelimit::limit_chart)),
+        )
+        .route(
+            "/api/v1/muhurtha",
+            post(calculate_muhurtha_handler).layer(middleware::from_fn(ratelimit::limit_chart)),
         )
         // AI-powered endpoints (5/min)
         .route(
@@ -321,6 +333,16 @@ async fn calculate_transits(
     validate_api_key(&state, &headers)?;
     let transits = engine::compute_transits(request).await?;
     Ok(Json(transits))
+}
+
+async fn calculate_muhurtha_handler(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(req): Json<muhurtha::MuhurthaRequest>,
+) -> Result<Json<muhurtha::MuhurthaResponse>, ApiError> {
+    validate_api_key(&state, &headers)?;
+    let result = muhurtha::calculate_muhurtha(req).await?;
+    Ok(Json(result))
 }
 
 async fn calculate_full_chart(

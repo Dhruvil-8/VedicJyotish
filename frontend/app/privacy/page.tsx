@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Privacy Policy | Vedic Jyotish",
@@ -68,12 +67,12 @@ export default function PrivacyPolicyPage() {
 
         {/* Header */}
         <div className="text-center mb-12">
-          <Link
+          <a
             href="/"
             className="inline-flex items-center gap-2 text-xs font-heading text-muted-foreground hover:text-primary transition-colors tracking-widest uppercase mb-8"
           >
             ← Back to Vedic Jyotish
-          </Link>
+          </a>
           <h1 className="text-4xl md:text-5xl font-heading gold-glow mb-3">
             Privacy Policy
           </h1>
@@ -107,14 +106,14 @@ export default function PrivacyPolicyPage() {
                 <span className="mt-1 w-2 h-2 rounded-full bg-primary/60 flex-shrink-0" />
                 <div>
                   <strong className="text-foreground">Birth Date &amp; Time</strong>
-                  <p className="text-xs mt-0.5">The date and time of birth you enter into the form. This is used exclusively to calculate planetary positions using the Swiss Ephemeris library running on our server. We do <strong>not</strong> store this data in any database.</p>
+                  <p className="text-xs mt-0.5">The date and time of birth you enter into the form. This is used exclusively in-memory to calculate planetary positions and house cusps using the Swiss Ephemeris library running on our backend. We do <strong>not</strong> store this data in any database. Only the birth date is provided to the AI for age and chronological life-stage context; exact birth time is never transmitted to external AI.</p>
                 </div>
               </div>
               <div className="flex gap-3 items-start">
                 <span className="mt-1 w-2 h-2 rounded-full bg-primary/60 flex-shrink-0" />
                 <div>
                   <strong className="text-foreground">Birth City / Location</strong>
-                  <p className="text-xs mt-0.5">The city name or geographic coordinates (latitude/longitude) you enter. The city name text is resolved locally against our offline database to resolve coordinates. Coordinates are used solely for timezone and planetary calculations.</p>
+                  <p className="text-xs mt-0.5">The city name or geographic coordinates you enter. The city name text is resolved locally against our offline database to obtain coordinates. Coordinates are used strictly in-memory for timezone and planetary calculations and are <strong>never</strong> transmitted to AI services. We do not collect real names, emails, street addresses, or precise GPS locations.</p>
                 </div>
               </div>
               <div className="flex gap-3 items-start">
@@ -164,7 +163,7 @@ export default function PrivacyPolicyPage() {
               <ThirdParty
                 name="Google Gemini API (Google LLC, USA)"
                 role="AI report generation and conversational astrology chat."
-                data="Computed astrological chart data (planetary positions, houses, nakshatras, dashas)."
+                data="Computed astrological chart data (planetary positions, houses, nakshatras, dashas) and birth date / age for chronological life stage accuracy. No real names, emails, exact birth times, or geographic coordinates are shared."
                 policy="https://ai.google.dev/gemini-api/terms"
                 risk="Medium"
               />
@@ -304,12 +303,12 @@ export default function PrivacyPolicyPage() {
 
         {/* Footer */}
         <footer className="mt-12 text-center space-y-3">
-          <Link
+          <a
             href="/"
             className="inline-block px-6 py-3 bg-primary text-primary-foreground font-heading text-sm rounded-full shadow-lg hover:shadow-primary/30 hover:scale-[1.02] active:scale-[0.98] transition-all"
           >
             ← Return to Vedic Jyotish
-          </Link>
+          </a>
           <p className="text-xs font-serif text-muted-foreground opacity-60 tracking-widest uppercase">
             © 2026 Vedic Jyotish • Powered by Swiss Ephemeris &amp; Gemini AI
           </p>

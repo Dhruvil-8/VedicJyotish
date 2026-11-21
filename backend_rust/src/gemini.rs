@@ -29,7 +29,7 @@ fn gemini_api_key() -> Option<String> {
 }
 
 fn gemini_model() -> String {
-    env::var("GEMINI_MODEL").unwrap_or_else(|_| "gemini-flash-lite-latest".to_string())
+    env::var("GEMINI_MODEL").unwrap_or_else(|_| "gemini-2.5-flash".to_string())
 }
 
 fn max_questions() -> usize {
@@ -71,15 +71,13 @@ struct GeminiCandidate {
 }
 
 // ─── Sensitive keys to strip from chart data before sending to AI ───────────
+// We strip birth_time, exact location, coordinates, timezone, and personal names.
+// birth_date is intentionally preserved so the AI has chronological age context.
 
 const SENSITIVE_KEYS: &[&str] = &[
-    "date",
     "time",
-    "birth_date",
     "birth_time",
-    "date_of_birth",
     "time_of_birth",
-    "dob",
     "location",
     "city",
     "lat",
@@ -88,6 +86,9 @@ const SENSITIVE_KEYS: &[&str] = &[
     "longitude",
     "timezone",
     "tz",
+    "name",
+    "email",
+    "address",
 ];
 
 fn sanitize_for_ai(value: &serde_json::Value) -> serde_json::Value {
@@ -221,11 +222,24 @@ fn build_report_prompt(chart: &serde_json::Value) -> String {
         .and_then(|v| v.as_str())
         .unwrap_or("?");
 
+    let birth_date = sanitized.get("birth_date").and_then(|v| v.as_str()).unwrap_or("");
+    let age = sanitized.get("current_age").and_then(|v| v.as_i64());
+    let age_str = if let Some(a) = age {
+        format!(" (Age: {a} years)")
+    } else {
+        String::new()
+    };
+    let birth_info = if !birth_date.is_empty() {
+        format!("\nSubject Chronological Context: Date of Birth: {birth_date}{age_str}")
+    } else {
+        String::new()
+    };
+
     let analysis_date = chrono::Local::now().format("%d-%B-%Y %H:%M:%S").to_string();
 
     let chart_context = format!(
         r#"COMPLETE BIRTH CHART ANALYSIS DATA:
-Analysis Date/Time (Current Reference): {analysis_date}
+Analysis Date/Time (Current Reference): {analysis_date}{birth_info}
 
 Ascendant: {asc_sign} ({asc_deg:.2}°)
 Moon: {moon_sign} in {moon_nak} Pada {moon_pada} ({moon_strength})
@@ -243,6 +257,7 @@ Navamsa Chart (D9):
 
 Yogas Detected:
 {yoga_str}"#,
+        birth_info = birth_info,
         planet_lines = planet_lines.join("\n"),
         navamsa_lines = navamsa_lines.join("\n"),
         yoga_str = yoga_str,
@@ -307,7 +322,7 @@ FORMATTING RULES:
 - Keep paragraphs deeply analytical, logical, and practical.
 - Target 1500 - 2000 words (exactly 3 pages of highly detailed reading).
 - Be highly specific and reference actual house numbers, signs, and degrees from the provided data.
-- Do NOT suggest any remedies, mantras, gemstones, or rituals — this is a pure analysis report.
+- CRITICAL MANDATE: Under NO circumstances should you suggest any remedies, gemstones, rudraksha, mantras, yantras, rituals, totke, or pujas. In authentic Vedic Jyotish philosophy, the birth chart is an objective karmic diagnostic map. Guide the native purely through psychological awareness, cognitive strengths, emotional patterns, behavioral adjustments, personal accountability, and practical life understanding.
 - End the report with this affirmative closing note on its own line: "*This report is crafted using Vedic Jyotish principles and AI-powered. Use these insights as a guiding light on your journey — for deeper personalised guidance, consult a qualified Jyotishi.*""#,
         language = language
     )
@@ -335,7 +350,7 @@ fn build_chat_request(
         role: None,
         parts: vec![GeminiPart {
             text: format!(
-                "You are an expert Vedic Astrologer.\nToday's Current Date/Time (Transit Reference): {}\nAnalyze the chart.\nRespond entirely and strictly in the {} language.\nFORMATTING RULES:\n1. Use **Bold** for Planet Names and Key Terms.\n2. Use bullet points for lists.\n3. Keep paragraphs short.",
+                "You are an expert Vedic Astrologer providing analytical, psychological, and cosmic life guidance.\nToday's Current Date/Time (Transit Reference): {}\nAnalyze the chart.\nRespond entirely and strictly in the {} language.\n\nCRITICAL MANDATE: Under NO circumstances should you suggest any remedies, gemstones, rudraksha, mantras, yantras, rituals, totke, or pujas. In authentic Vedic Jyotish philosophy, the birth chart is an objective karmic diagnostic map. Guide the native purely through psychological awareness, cognitive strengths, emotional patterns, behavioral adjustments, personal accountability, and practical life understanding.\n\nFORMATTING RULES:\n1. Use **Bold** for Planet Names and Key Terms.\n2. Use bullet points for lists.\n3. Keep paragraphs short and crisp.",
                 today_str,
                 language
             ),

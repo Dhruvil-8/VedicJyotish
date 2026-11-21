@@ -466,8 +466,8 @@ export default function MatchingTab({ activeProfile = null }: MatchingTabProps) 
                 {matchingResult.total_score >= 28
                   ? "This combination indicates highly compatible psychological temperaments, mental bonding, and physical affinity. Highly favorable and auspicious for long-term relational happiness."
                   : matchingResult.total_score >= 18
-                    ? "A suitable matching. The score indicates stable compatibility, though minor adjustments or remediation might be needed to harmonize areas with planetary conflicts."
-                    : "Considerable stellar conflict detected in core mental or physiological categories (Vashya, Gana, or Naadi). Caution, comprehensive counseling, and vedic remedies are recommended."}
+                    ? "A suitable matching. The score indicates stable compatibility, though conscious communication and mutual understanding are recommended to harmonize areas with planetary conflicts."
+                    : "Considerable stellar conflict detected in core mental or physiological categories (Vashya, Gana, or Naadi). Caution, comprehensive pre-marital counseling, and conscious emotional alignment are recommended."}
               </p>
             </div>
           </div>

@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { calculateChart, calculateCalendar } from "../components/ui/api";
+import { MuhurthaSection } from "../components/kundli/MuhurthaSection";
 import { useCitySearch } from "../hooks/useCitySearch";
 import { useToast } from "../hooks/useToast";
 import { getCachedLocation, setCachedLocation, CachedLocation } from "../lib/locationCache";
@@ -288,11 +289,45 @@ const GREGORIAN_MONTHS = [
   "December",
 ];
 
+const VARA_SANSKRIT_MAP: Record<string, string> = {
+  Sunday: "Ravivara (रविवार)",
+  Monday: "Somavara (सोमवार)",
+  Tuesday: "Mangalavara (मंगलवार)",
+  Wednesday: "Budhavara (बुधवार)",
+  Thursday: "Guruvara (गुरुवार)",
+  Friday: "Shukravara (शुक्रवार)",
+  Saturday: "Shanivara (शनिवार)",
+};
+
+const VARA_LORD_MAP: Record<string, string> = {
+  Sunday: "Sun (Surya)",
+  Monday: "Moon (Chandra)",
+  Tuesday: "Mars (Mangala)",
+  Wednesday: "Mercury (Budha)",
+  Thursday: "Jupiter (Brihaspati)",
+  Friday: "Venus (Shukra)",
+  Saturday: "Saturn (Shani)",
+};
+
+const INAUSPICIOUS_YOGAS = new Set([
+  "Vishkambha",
+  "Atiganda",
+  "Shula",
+  "Ganda",
+  "Vyaghata",
+  "Vajra",
+  "Vyatipata",
+  "Parigha",
+  "Vaidhriti",
+]);
+
+const FIXED_KARANAS = new Set(["Shakuni", "Chatushpada", "Naga", "Kimstughna"]);
+
 export default function PanchangaView() {
   const { showToast } = useToast();
 
-  // Primary Tab: "calendar" | "daily"
-  const [activeTab, setActiveTab] = useState<"calendar" | "daily">("calendar");
+  // Primary Tab: "calendar" | "daily" | "muhurtha"
+  const [activeTab, setActiveTab] = useState<"calendar" | "daily" | "muhurtha">("calendar");
 
   // Separate Traditional View
   const [traditionView, setTraditionView] = useState<TraditionType>("gujarat");
@@ -317,7 +352,7 @@ export default function PanchangaView() {
   }, [now]);
 
   const [calYear, setCalYear] = useState<number>(now.getFullYear());
-  const [selectedMasaIdx, setSelectedMasaIdx] = useState<number>(4); // 4 = Shravana
+  const [selectedMasaIdx, setSelectedMasaIdx] = useState<number>((now.getMonth() + 7) % 12);
   const [selectedMasaType, setSelectedMasaType] = useState<string>("regular");
   const [isAdhikSelected, setIsAdhikSelected] = useState<boolean>(false);
   const [calGregMonth, setCalGregMonth] = useState<number>(now.getMonth() + 1);
@@ -435,7 +470,7 @@ export default function PanchangaView() {
       if (e?.detail) {
         setSelectedPanchangCity(e.detail);
         setPanchangCityInput(e.detail.name);
-        fetchMonthCalendar(traditionView, selectedMasaIdx, calGregMonth, calYear, e.detail);
+        fetchMonthCalendar(traditionView, undefined, calGregMonth, calYear, e.detail);
       }
     };
     window.addEventListener("vedic_location_changed", handleLocationSync);
@@ -769,24 +804,24 @@ export default function PanchangaView() {
         </p>
 
         {/* Responsive Segmented Mode Switcher */}
-        <div className="w-full max-w-md mx-auto pt-2">
+        <div className="w-full max-w-lg mx-auto pt-2">
           <div className="grid grid-cols-2 p-1 bg-card/60 rounded-2xl border border-border/40 backdrop-blur-md shadow-inner">
             <button
               type="button"
               onClick={() => setActiveTab("calendar")}
-              className={`py-2.5 px-3 rounded-xl font-heading text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 ${
+              className={`py-2.5 px-2 sm:px-3 rounded-xl font-heading text-[11px] sm:text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 sm:gap-2 ${
                 activeTab === "calendar"
                   ? "bg-primary text-primary-foreground font-bold shadow-md"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
               <CalendarIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-              <span className="truncate">Monthly Calendar</span>
+              <span className="truncate">Calendar</span>
             </button>
             <button
               type="button"
               onClick={() => setActiveTab("daily")}
-              className={`py-2.5 px-3 rounded-xl font-heading text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 ${
+              className={`py-2.5 px-2 sm:px-3 rounded-xl font-heading text-[11px] sm:text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 sm:gap-2 ${
                 activeTab === "daily"
                   ? "bg-primary text-primary-foreground font-bold shadow-md"
                   : "text-muted-foreground hover:text-foreground"
@@ -795,6 +830,20 @@ export default function PanchangaView() {
               <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
               <span className="truncate">Daily Panchang</span>
             </button>
+            {/* Shubh Muhurtha Tab disabled per user request:
+            <button
+              type="button"
+              onClick={() => setActiveTab("muhurtha")}
+              className={`py-2.5 px-2 sm:px-3 rounded-xl font-heading text-[11px] sm:text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 sm:gap-2 ${
+                activeTab === "muhurtha"
+                  ? "bg-primary text-primary-foreground font-bold shadow-md"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+              <span className="truncate">Shubh Muhurtha</span>
+            </button>
+            */}
           </div>
         </div>
       </div>
@@ -1134,9 +1183,7 @@ export default function PanchangaView() {
                     const curM = now.getMonth() + 1;
                     setCalYear(curY);
                     setCalGregMonth(curM);
-                    const defaultMasa = traditionView === "north" ? 5 : 4;
-                    setSelectedMasaIdx(defaultMasa);
-                    fetchMonthCalendar(traditionView, defaultMasa, curM, curY, selectedPanchangCity);
+                    fetchMonthCalendar(traditionView, undefined, curM, curY, selectedPanchangCity, "regular", false);
                   }}
                   className="px-2.5 py-1.5 bg-card/40 border border-border/40 hover:bg-primary/10 text-primary text-xs font-heading rounded-lg transition-all cursor-pointer whitespace-nowrap"
                 >
@@ -2056,8 +2103,63 @@ export default function PanchangaView() {
           </div>
 
           {/* Detailed Panchanga Output */}
-          {panchangData && (
+          {panchangData && (() => {
+            const varaName = panchangData.vara || "Monday";
+            const varaDisplay = panchangData.vaara?.sanskrit || VARA_SANSKRIT_MAP[varaName] || varaName;
+            const varaLord = panchangData.vara_lord || panchangData.vaara?.lord || VARA_LORD_MAP[varaName] || "Graha";
+
+            const tithiProgress = panchangData.tithi?.progress != null
+              ? (panchangData.tithi.progress * 100)
+              : (panchangData.tithi?.progress_percent || 0);
+
+            const nakProgress = panchangData.nakshatra?.progress != null
+              ? (panchangData.nakshatra.progress * 100)
+              : (panchangData.nakshatra?.progress_percent || 0);
+
+            const nakPada = panchangData.nakshatra?.pada || (panchangData.nakshatra?.progress != null ? Math.min(4, Math.floor(panchangData.nakshatra.progress * 4) + 1) : 1);
+            const nakLord = panchangData.nakshatra_lord || panchangData.nakshatra?.lord || "Graha";
+
+            const yogaProgress = panchangData.yoga?.progress != null
+              ? (panchangData.yoga.progress * 100)
+              : (panchangData.yoga?.progress_percent || 0);
+            const isYogaBenefic = panchangData.yoga?.benefic ?? !INAUSPICIOUS_YOGAS.has(panchangData.yoga?.name || "");
+
+            const karanaProgress = panchangData.karana?.progress != null
+              ? (panchangData.karana.progress * 100)
+              : (panchangData.karana?.progress_percent || 0);
+            const isFixedKarana = panchangData.karana?.is_fixed ?? FIXED_KARANAS.has(panchangData.karana?.name || "");
+
+            const brahmaMuhurtaDisplay = panchangData.brahma_muhurta || panchangData.brahma_muhurat || "Pre-dawn";
+            const festivalDisplay = panchangData.festival || (panchangData.vrats && panchangData.vrats.length > 0 ? panchangData.vrats.join(" • ") : null);
+
+            return (
             <div className="space-y-4 sm:space-y-6">
+              {/* Active Hindu Festival / Vrat Banner */}
+              {festivalDisplay && (
+                <div className="p-3.5 sm:p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-3 text-xs sm:text-sm font-heading text-amber-800 dark:text-amber-200 shadow-sm animate-fadeIn">
+                  <div className="flex items-center gap-2.5">
+                    <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500 shrink-0" />
+                    <div>
+                      <span className="text-[9px] uppercase tracking-wider text-muted-foreground block font-sans">
+                        Sacred Hindu Festival / Vrat
+                      </span>
+                      <span className="font-bold text-foreground">
+                        {festivalDisplay}
+                      </span>
+                    </div>
+                  </div>
+                  {/* Muhurtha button disabled per user request:
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("muhurtha")}
+                    className="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-900 dark:text-amber-100 text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap shrink-0"
+                  >
+                    Check Muhurtha →
+                  </button>
+                  */}
+                </div>
+              )}
+
               {/* 5 Cosmic Limbs Card */}
               <div className="glass-parchment p-4 sm:p-6 rounded-2xl vedic-border shadow-xl space-y-4 sm:space-y-6">
                 <div className="flex items-center justify-between border-b border-primary/10 pb-3">
@@ -2071,10 +2173,10 @@ export default function PanchangaView() {
                   </div>
                   <div className="text-right">
                     <span className="text-xs font-heading text-foreground font-semibold block">
-                      {panchangData.vaara?.sanskrit || "Vara"}
+                      {varaDisplay}
                     </span>
                     <span className="text-[9px] sm:text-[10px] text-muted-foreground font-serif">
-                      Lord: {panchangData.vaara?.lord || "Graha"}
+                      Lord: {varaLord}
                     </span>
                   </div>
                 </div>
@@ -2096,12 +2198,12 @@ export default function PanchangaView() {
                     <div className="space-y-1">
                       <div className="flex items-center justify-between text-[9px] sm:text-[10px] text-muted-foreground">
                         <span>Progress</span>
-                        <span>{panchangData.tithi?.progress_percent?.toFixed(1) || "0.0"}%</span>
+                        <span>{tithiProgress.toFixed(1)}%</span>
                       </div>
                       <div className="h-1.5 w-full bg-border/40 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-primary rounded-full transition-all duration-500"
-                          style={{ width: `${panchangData.tithi?.progress_percent || 0}%` }}
+                          style={{ width: `${tithiProgress}%` }}
                         />
                       </div>
                     </div>
@@ -2114,7 +2216,7 @@ export default function PanchangaView() {
                         2. Nakshatra (Star)
                       </span>
                       <span className="text-[8px] sm:text-[9px] font-heading px-1.5 py-0.5 rounded bg-secondary/10 text-secondary">
-                        Pada {panchangData.nakshatra?.pada || 1}
+                        Pada {nakPada}
                       </span>
                     </div>
                     <div className="font-heading text-sm sm:text-base text-secondary font-bold">
@@ -2122,13 +2224,13 @@ export default function PanchangaView() {
                     </div>
                     <div className="space-y-1">
                       <div className="flex items-center justify-between text-[9px] sm:text-[10px] text-muted-foreground">
-                        <span>Lord: {panchangData.nakshatra?.lord || "Graha"}</span>
-                        <span>{panchangData.nakshatra?.progress_percent?.toFixed(1) || "0.0"}%</span>
+                        <span>Lord: {nakLord}</span>
+                        <span>{nakProgress.toFixed(1)}%</span>
                       </div>
                       <div className="h-1.5 w-full bg-border/40 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-secondary rounded-full transition-all duration-500"
-                          style={{ width: `${panchangData.nakshatra?.progress_percent || 0}%` }}
+                          style={{ width: `${nakProgress}%` }}
                         />
                       </div>
                     </div>
@@ -2141,7 +2243,7 @@ export default function PanchangaView() {
                         3. Yoga (Luni-Solar)
                       </span>
                       <span className="text-[8px] sm:text-[9px] font-heading px-1.5 py-0.5 rounded bg-card/80 text-muted-foreground">
-                        {panchangData.yoga?.benefic ? "Auspicious" : "Caution"}
+                        {isYogaBenefic ? "Auspicious" : "Caution"}
                       </span>
                     </div>
                     <div className="font-heading text-sm sm:text-base text-foreground font-bold">
@@ -2150,12 +2252,12 @@ export default function PanchangaView() {
                     <div className="space-y-1">
                       <div className="flex items-center justify-between text-[9px] sm:text-[10px] text-muted-foreground">
                         <span>Progress</span>
-                        <span>{panchangData.yoga?.progress_percent?.toFixed(1) || "0.0"}%</span>
+                        <span>{yogaProgress.toFixed(1)}%</span>
                       </div>
                       <div className="h-1.5 w-full bg-border/40 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-foreground/60 rounded-full transition-all duration-500"
-                          style={{ width: `${panchangData.yoga?.progress_percent || 0}%` }}
+                          style={{ width: `${yogaProgress}%` }}
                         />
                       </div>
                     </div>
@@ -2168,7 +2270,7 @@ export default function PanchangaView() {
                         4. Karana (Half-Tithi)
                       </span>
                       <span className="text-[8px] sm:text-[9px] font-heading px-1.5 py-0.5 rounded bg-card/80 text-muted-foreground">
-                        {panchangData.karana?.is_fixed ? "Fixed" : "Movable"}
+                        {isFixedKarana ? "Fixed" : "Movable"}
                       </span>
                     </div>
                     <div className="font-heading text-sm sm:text-base text-foreground font-bold">
@@ -2177,12 +2279,12 @@ export default function PanchangaView() {
                     <div className="space-y-1">
                       <div className="flex items-center justify-between text-[9px] sm:text-[10px] text-muted-foreground">
                         <span>Progress</span>
-                        <span>{panchangData.karana?.progress_percent?.toFixed(1) || "0.0"}%</span>
+                        <span>{karanaProgress.toFixed(1)}%</span>
                       </div>
                       <div className="h-1.5 w-full bg-border/40 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-foreground/60 rounded-full transition-all duration-500"
-                          style={{ width: `${panchangData.karana?.progress_percent || 0}%` }}
+                          style={{ width: `${karanaProgress}%` }}
                         />
                       </div>
                     </div>
@@ -2194,11 +2296,22 @@ export default function PanchangaView() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                 {/* Auspicious Muhurtas */}
                 <div className="glass-parchment p-4 sm:p-6 rounded-2xl vedic-border shadow-xl space-y-3 sm:space-y-4">
-                  <div className="flex items-center gap-2 border-b border-primary/10 pb-3">
-                    <Sun className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-                    <h3 className="font-heading text-sm sm:text-base text-primary font-bold">
-                      Auspicious Timings (शुभ मुहूर्त)
-                    </h3>
+                  <div className="flex items-center justify-between border-b border-primary/10 pb-3">
+                    <div className="flex items-center gap-2">
+                      <Sun className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+                      <h3 className="font-heading text-sm sm:text-base text-primary font-bold">
+                        Auspicious Timings (शुभ मुहूर्त)
+                      </h3>
+                    </div>
+                    {/* Muhurtha shortcut disabled per user request:
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("muhurtha")}
+                      className="text-[10px] font-heading text-primary hover:underline cursor-pointer flex items-center gap-1"
+                    >
+                      Muhurtha Engine →
+                    </button>
+                    */}
                   </div>
                   <div className="space-y-2.5 sm:space-y-3">
                     <div className="bg-primary/5 p-3 rounded-xl border border-primary/20 flex items-center justify-between">
@@ -2225,7 +2338,7 @@ export default function PanchangaView() {
                         </span>
                       </div>
                       <span className="font-heading text-xs font-bold text-foreground bg-card/60 px-2.5 py-1 rounded-lg border border-border/20 shrink-0">
-                        {panchangData.brahma_muhurat || "Pre-dawn"}
+                        {brahmaMuhurtaDisplay}
                       </span>
                     </div>
                   </div>
@@ -2559,9 +2672,17 @@ export default function PanchangaView() {
                 </div>
               )}
             </div>
-          )}
+          );
+        })()}
         </div>
       )}
+
+      {/* ─── MUHURTHA DECISION ENGINE TAB (Disabled per user request) ─── */}
+      {/*
+      {activeTab === "muhurtha" && (
+        <MuhurthaSection initialDate={panchangDate} initialCity={selectedPanchangCity} />
+      )}
+      */}
     </div>
   );
 }

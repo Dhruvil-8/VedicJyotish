@@ -42,10 +42,10 @@ async function proxyRequest(
     };
 
     if (req.method !== "GET" && req.method !== "HEAD") {
-      // Forward the request body as stream or buffer
-      init.body = req.body;
-      // @ts-ignore - 'duplex' is required for Node.js fetch when streaming body
-      init.duplex = "half";
+      const bodyBytes = await req.arrayBuffer();
+      if (bodyBytes.byteLength > 0) {
+        init.body = Buffer.from(bodyBytes);
+      }
     }
 
     const backendRes = await fetch(targetUrl, init);

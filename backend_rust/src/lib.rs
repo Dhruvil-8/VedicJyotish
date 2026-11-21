@@ -20,12 +20,14 @@ pub mod error;
 pub mod gemini;
 pub mod maitri;
 pub mod models;
+pub mod muhurtha;
 pub mod panchanga;
 pub mod ratelimit;
 pub mod service;
 pub mod shadbala;
 pub mod swiss;
 pub mod timezones;
+pub mod classical_rules;
 pub mod yoga;
 
 pub mod jni_bridge;

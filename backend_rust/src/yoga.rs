@@ -297,6 +297,41 @@ pub fn detect_yogas(planets: &[PlanetData], asc_idx: usize) -> Vec<Yoga> {
         ));
     }
 
+    // Vipareeta Sub-Yogas: Harsha, Sarala, Vimala
+    if let Some(&h6) = p_house.get(lord_6) {
+        if h6 == 6 {
+            yogas.push(yoga(
+                "Harsha Yoga",
+                &format!(
+                    "6th Lord ({lord_6}) resides in the 6th house. Confers invincible physical immunity, victory over rivals, freedom from debts, and triumph in competitive arenas.",
+                ),
+                "benefic",
+            ));
+        }
+    }
+    if let Some(&h8) = p_house.get(lord_8) {
+        if h8 == 8 {
+            yogas.push(yoga(
+                "Sarala Yoga",
+                &format!(
+                    "8th Lord ({lord_8}) resides in the 8th house. Confers fearlessness, profound longevity, resolute determination, scholarly acumen, and sudden prosperity.",
+                ),
+                "benefic",
+            ));
+        }
+    }
+    if let Some(&h12) = p_house.get(lord_12) {
+        if h12 == 12 {
+            yogas.push(yoga(
+                "Vimala Yoga",
+                &format!(
+                    "12th Lord ({lord_12}) resides in the 12th house. Confers noble independence, virtuous expenditures, peace of mind, freedom from malicious enemies, and spiritual enlightenment.",
+                ),
+                "benefic",
+            ));
+        }
+    }
+
     // Sunapha / Anapha / Durudhara Yogas
     if let Some(&moon_house) = p_house.get("Moon") {
         let second_from_moon = (moon_house % 12) + 1;
@@ -468,6 +503,258 @@ pub fn detect_yogas(planets: &[PlanetData], asc_idx: usize) -> Vec<Yoga> {
             "All main planets are in dual signs (Gemini, Virgo, Sagittarius, Pisces). Bestows high intellect, multi-dimensional skills, adaptability, and an analytical mind.",
             "benefic",
         ));
+    }
+
+    // Solar Yogas: Vesi, Vasi, Ubhayachari (Planets in 2nd and/or 12th from Sun)
+    if let Some(&sun_house) = p_house.get("Sun") {
+        let second_from_sun = (sun_house % 12) + 1;
+        let twelfth_from_sun = if sun_house == 1 { 12 } else { sun_house - 1 };
+
+        let qualifying_second: Vec<&str> = house_planets
+            .get(&second_from_sun)
+            .map(|list| {
+                list.iter()
+                    .copied()
+                    .filter(|&p| !matches!(p, "Sun" | "Moon" | "Rahu" | "Ketu"))
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        let qualifying_twelfth: Vec<&str> = house_planets
+            .get(&twelfth_from_sun)
+            .map(|list| {
+                list.iter()
+                    .copied()
+                    .filter(|&p| !matches!(p, "Sun" | "Moon" | "Rahu" | "Ketu"))
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        if !qualifying_second.is_empty() && !qualifying_twelfth.is_empty() {
+            yogas.push(yoga(
+                "Ubhayachari Yoga",
+                &format!(
+                    "Planets occupy both the 2nd ({}) and 12th ({}) houses from the Sun (excluding Moon & nodes). Confers high executive prestige, eloquence, symmetry in life, and respected authority.",
+                    qualifying_second.join(", "),
+                    qualifying_twelfth.join(", ")
+                ),
+                "benefic",
+            ));
+        } else if !qualifying_second.is_empty() {
+            yogas.push(yoga(
+                "Vesi Yoga",
+                &format!(
+                    "Planets occupy the 2nd house from the Sun: {}. Bestows truthful speech, steady prosperity, moral rectitude, and recognized skill in enterprise.",
+                    qualifying_second.join(", ")
+                ),
+                "benefic",
+            ));
+        } else if !qualifying_twelfth.is_empty() {
+            yogas.push(yoga(
+                "Vasi Yoga",
+                &format!(
+                    "Planets occupy the 12th house from the Sun: {}. Confers intellectual dexterity, physical resilience, artistic talent, and respected fame.",
+                    qualifying_twelfth.join(", ")
+                ),
+                "benefic",
+            ));
+        }
+    }
+
+    // Dharma-Karmadhipati Yoga (9th & 10th lords relationship)
+    let lord_1 = sign_lord(asc_idx);
+    let lord_9 = sign_lord((asc_idx + 8) % 12);
+    let lord_10 = sign_lord((asc_idx + 9) % 12);
+    if lord_9 != lord_10 {
+        if let (Some(&h9), Some(&h10)) = (p_house.get(lord_9), p_house.get(lord_10)) {
+            if h9 == h10 {
+                yogas.push(yoga(
+                    "Dharma-Karmadhipati Yoga",
+                    &format!(
+                        "9th Lord ({lord_9}) and 10th Lord ({lord_10}) are conjoined in House {h9}. Paramount Parashari Raja Yoga conferring executive authority, high civic distinction, ethical leadership, and lasting success.",
+                    ),
+                    "benefic",
+                ));
+            } else if (h9 as i16 - h10 as i16).abs() == 6 {
+                yogas.push(yoga(
+                    "Dharma-Karmadhipati Yoga",
+                    &format!(
+                        "9th Lord ({lord_9}) in House {h9} and 10th Lord ({lord_10}) in House {h10} mutually aspect each other. Grants high public stature, ethical governance, and professional eminence.",
+                    ),
+                    "benefic",
+                ));
+            }
+        }
+    }
+
+    // Saraswati Yoga (Benefics in Kendra, Trikona, or 2nd house with strong Jupiter)
+    let auspicious_houses = [1, 2, 4, 5, 7, 9, 10];
+    let jup_h = p_house.get("Jupiter").copied();
+    let ven_h = p_house.get("Venus").copied();
+    let mer_h = p_house.get("Mercury").copied();
+    if let (Some(jh), Some(vh), Some(mh)) = (jup_h, ven_h, mer_h) {
+        if auspicious_houses.contains(&jh)
+            && auspicious_houses.contains(&vh)
+            && auspicious_houses.contains(&mh)
+        {
+            let jup_strong = planets
+                .iter()
+                .find(|p| p.name == "Jupiter")
+                .map(|p| matches!(p.strength.as_str(), "Exalted" | "Own Sign" | "Moolatrikona") || [1, 4, 7, 10].contains(&p.house))
+                .unwrap_or(false);
+            if jup_strong {
+                yogas.push(yoga(
+                    "Saraswati Yoga",
+                    "All natural benefics (Jupiter, Venus, Mercury) occupy auspicious Kendras, Trikonas, or 2nd house with an empowered Jupiter. Bestows profound wisdom, poetic eloquence, scholarly mastery, and deep learning.",
+                    "benefic",
+                ));
+            }
+        }
+    }
+
+    // Lakshmi Yoga (9th lord exalted or in own sign in Kendra/Trikona, and Lagna lord well-placed)
+    if let Some(p_9) = planets.iter().find(|p| p.name == lord_9) {
+        if [1, 4, 5, 7, 9, 10].contains(&p_9.house)
+            && matches!(p_9.strength.as_str(), "Exalted" | "Own Sign" | "Moolatrikona")
+        {
+            let lagna_lord_strong = planets
+                .iter()
+                .find(|p| p.name == lord_1)
+                .map(|p| [1, 4, 5, 7, 9, 10].contains(&p.house))
+                .unwrap_or(false);
+            if lagna_lord_strong {
+                yogas.push(yoga(
+                    "Lakshmi Yoga",
+                    &format!(
+                        "9th Lord ({lord_9}) is fortified in House {} in an auspicious dignity with a well-placed Lagna Lord ({lord_1}). Bestows the eternal grace of Goddess Lakshmi: righteous wealth, sovereign honor, and lasting happiness.",
+                        p_9.house
+                    ),
+                    "benefic",
+                ));
+            }
+        }
+    }
+
+    // Vasumathi Yoga (Benefics in Upachaya houses 3, 6, 10, 11 from Lagna)
+    let upachaya_benefics: Vec<&str> = ["Jupiter", "Venus", "Mercury"]
+        .iter()
+        .copied()
+        .filter(|&p| {
+            p_house
+                .get(p)
+                .map(|&h| [3, 6, 10, 11].contains(&h))
+                .unwrap_or(false)
+        })
+        .collect();
+
+    if upachaya_benefics.len() == 3 {
+        yogas.push(yoga(
+            "Vasumathi Yoga",
+            "All natural benefics (Jupiter, Venus, Mercury) occupy Upachaya growth houses (3, 6, 10, 11). Confers vast self-earned wealth, financial independence, and immunity from debt.",
+            "benefic",
+        ));
+    } else if upachaya_benefics.len() == 2 {
+        yogas.push(yoga(
+            "Partial Vasumathi Yoga",
+            &format!(
+                "Benefics ({}) occupy Upachaya growth houses (3, 6, 10, 11). Fosters steady financial growth through enterprise and self-effort.",
+                upachaya_benefics.join(", ")
+            ),
+            "benefic",
+        ));
+    }
+
+    // Pushkala Yoga (Chandra Lagna lord conjoined or aspecting Lagna lord in Kendra/benefic house)
+    if let Some(moon_planet) = planets.iter().find(|p| p.name == "Moon") {
+        let moon_sign_idx = sign_index(moon_planet.full_degree);
+        let chandra_lord = sign_lord(moon_sign_idx);
+        if chandra_lord != lord_1 {
+            if let (Some(&cl_h), Some(&ll_h)) = (p_house.get(chandra_lord), p_house.get(lord_1)) {
+                if cl_h == ll_h && [1, 4, 5, 7, 9, 10].contains(&cl_h) {
+                    yogas.push(yoga(
+                        "Pushkala Yoga",
+                        &format!(
+                            "Lord of the Moon sign ({chandra_lord}) and Lagna Lord ({lord_1}) are conjoined in auspicious House {cl_h}. Confers sweet, persuasive speech, royal favor, widespread renown, and noble demeanor.",
+                        ),
+                        "benefic",
+                    ));
+                }
+            }
+        }
+    }
+
+    // Kahala Yoga (4th and 9th lords in mutual Kendras)
+    let lord_4 = sign_lord((asc_idx + 3) % 12);
+    if let (Some(&h4), Some(&h9)) = (p_house.get(lord_4), p_house.get(lord_9)) {
+        let diff = (h4 as i16 - h9 as i16).abs();
+        if [0, 3, 6, 9].contains(&diff) {
+            yogas.push(yoga(
+                "Kahala Yoga",
+                &format!(
+                    "4th Lord ({lord_4}) and 9th Lord ({lord_9}) occupy mutual Kendra positions. Confers tenacious determination, command over organizations or teams, and fearless fortitude.",
+                ),
+                "benefic",
+            ));
+        }
+    }
+
+    // Parvata Yoga (Benefics in Kendras and Dusthanas 6 & 8 free of malefics)
+    let kendra_has_benefic = ["Jupiter", "Venus", "Mercury"]
+        .iter()
+        .any(|p| p_house.get(*p).map(|&h| [1, 4, 7, 10].contains(&h)).unwrap_or(false));
+    let dusthana_has_malefic = ["Saturn", "Mars", "Rahu", "Ketu", "Sun"]
+        .iter()
+        .any(|p| p_house.get(*p).map(|&h| h == 6 || h == 8).unwrap_or(false));
+    if kendra_has_benefic && !dusthana_has_malefic {
+        yogas.push(yoga(
+            "Parvata Yoga",
+            "Natural benefics occupy Kendra angles while 6th and 8th houses are free from malefic affliction. Bestows an unshakeable reputation, immovable assets, charitable generosity, and high administrative stature.",
+            "benefic",
+        ));
+    }
+
+    // Chamara Yoga (Lagna lord fortified in Kendra)
+    if let Some(ll_data) = planets.iter().find(|p| p.name == lord_1) {
+        if [1, 4, 7, 10].contains(&ll_data.house)
+            && matches!(ll_data.strength.as_str(), "Exalted" | "Own Sign" | "Moolatrikona")
+        {
+            yogas.push(yoga(
+                "Chamara Yoga",
+                &format!(
+                    "Lagna Lord ({lord_1}) is fortified in Kendra House {} in own/exalted sign. Royal emblem yoga conferring high civic honors, eloquence in assemblies, and long-lasting distinction.",
+                    ll_data.house
+                ),
+                "benefic",
+            ));
+        }
+    }
+
+    // Shankha Yoga (5th and 6th lords in mutual Kendras)
+    let lord_5 = sign_lord((asc_idx + 4) % 12);
+    if let (Some(&h5), Some(&h6)) = (p_house.get(lord_5), p_house.get(lord_6)) {
+        let diff = (h5 as i16 - h6 as i16).abs();
+        if [0, 3, 6, 9].contains(&diff) {
+            yogas.push(yoga(
+                "Shankha Yoga",
+                &format!(
+                    "5th Lord ({lord_5}) and 6th Lord ({lord_6}) occupy mutual Kendra houses. Bestows scholastic mastery, profound philosophical and humanitarian pursuits, high morality, and wealth.",
+                ),
+                "benefic",
+            ));
+        }
+    }
+
+    // Bheri Yoga (Lagna lord, 9th lord, and Jupiter in Kendras)
+    if let (Some(&h1), Some(&h9), Some(&hj)) = (p_house.get(lord_1), p_house.get(lord_9), p_house.get("Jupiter")) {
+        if [1, 4, 7, 10].contains(&h1) && [1, 4, 7, 10].contains(&h9) && [1, 4, 7, 10].contains(&hj) {
+            yogas.push(yoga(
+                "Bheri Yoga",
+                &format!(
+                    "Lagna Lord ({lord_1}), 9th Lord ({lord_9}), and Jupiter all occupy Kendra angles. Confers lasting joy, regal fame, high status, and freedom from danger.",
+                ),
+                "benefic",
+            ));
+        }
     }
 
     // Append any Neechabhanga Yogas

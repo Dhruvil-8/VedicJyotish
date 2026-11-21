@@ -2,13 +2,12 @@
 
 import React, { useState } from "react";
 import { Calendar, Clock, MapPin, Search, Globe, ChevronRight, RefreshCw } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { calculateChart } from "../ui/api";
+import { calculateChart, searchCity } from "../ui/api";
 import { useCitySearch } from "../../hooks/useCitySearch";
 import { useToast } from "../../hooks/useToast";
 import { LANGUAGES } from "../../lib/constants";
 import { convertTo24Hour, normalizeDateInput } from "../../lib/helpers";
-import { getCachedLocation, setCachedLocation } from "../../lib/locationCache";
+import { setCachedLocation } from "../../lib/locationCache";
 
 // In-memory cache to store API calculation results for duplicate inputs
 const chartCache = new Map<string, any>();
@@ -40,14 +39,20 @@ export default function BirthForm({
   const [selectedLanguage, setSelectedLanguage] = useState<string>(defaultLanguage);
   const [loading, setLoading] = useState(false);
 
-  // Initialize cached location on mount if no city is chosen
-  React.useEffect(() => {
-    const cached = getCachedLocation();
-    if (cached && !selectedCity) {
-      setSelectedCity(cached);
-      setCityInput(cached.name);
+  // Convert DD/MM/YYYY or YYYY-MM-DD to ISO YYYY-MM-DD for native <input type="date">
+  const isoDate = React.useMemo(() => {
+    if (!date) return "";
+    const parts = date.trim().split(/[-/.]/);
+    if (parts.length === 3) {
+      if (parts[0].length <= 2 && parts[2].length === 4) {
+        return `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
+      }
+      if (parts[0].length === 4) {
+        return `${parts[0]}-${parts[1].padStart(2, "0")}-${parts[2].padStart(2, "0")}`;
+      }
     }
-  }, []);
+    return "";
+  }, [date]);
 
   // Debounced City Search
   const { results: cityResults, setResults: setCityResults } = useCitySearch(
@@ -64,8 +69,22 @@ export default function BirthForm({
   };
 
   const handleCalculate = async () => {
-    if (!selectedCity) {
-      showToast("Please select a city from the dropdown list.", "info");
+    let cityToUse = selectedCity;
+    if (!cityToUse && cityInput.trim().length >= 2) {
+      if (cityResults.length > 0) {
+        cityToUse = cityResults[0];
+        setSelectedCity(cityToUse);
+      } else {
+        const found = await searchCity(cityInput.trim());
+        if (found && found.length > 0) {
+          cityToUse = found[0];
+          setSelectedCity(cityToUse);
+        }
+      }
+    }
+
+    if (!cityToUse) {
+      showToast("Please search and select your birth city.", "info");
       return;
     }
     if (!date) {
@@ -81,9 +100,9 @@ export default function BirthForm({
       const payload = {
         date: normalizeDateInput(date),
         time: convertTo24Hour(time),
-        city: selectedCity.name,
-        lat: selectedCity.lat,
-        lon: selectedCity.lon,
+        city: cityToUse.name,
+        lat: cityToUse.lat,
+        lon: cityToUse.lon,
       };
       
       const cacheKey = `${payload.date}|${payload.time}|${payload.lat}|${payload.lon}`;
@@ -100,7 +119,7 @@ export default function BirthForm({
         chartData: data,
         date,
         time,
-        city: selectedCity,
+        city: cityToUse,
         language: selectedLanguage,
       });
     } catch (e: any) {
@@ -119,12 +138,7 @@ export default function BirthForm({
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 1.05 }}
-      className="max-w-xl mx-auto"
-    >
+    <div className="max-w-xl mx-auto">
       <div className="glass-parchment p-8 md:p-12 rounded-2xl vedic-border shadow-2xl relative overflow-hidden group">
         <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none group-hover:bg-primary/10 transition-colors" />
 
@@ -139,21 +153,30 @@ export default function BirthForm({
               <label className="flex items-center gap-2 text-xs font-heading text-secondary tracking-widest uppercase">
                 <Calendar className="w-3.5 h-3.5" /> Date (DD/MM/YYYY)
               </label>
-              <div className="relative">
+              <div className="relative flex items-center">
                 <input
                   type="text"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
-                  placeholder="DD/MM/YYYY"
+                  onBlur={() => {
+                    if (date.trim()) {
+                      setDate(normalizeDateInput(date));
+                    }
+                  }}
+                  placeholder="DD/MM/YYYY (e.g. 15/08/1990)"
                   className="w-full bg-muted/30 border border-border/50 rounded-lg p-3 pr-12 font-serif focus:border-primary focus:ring-1 focus:ring-primary/50 outline-none transition-all text-foreground"
                 />
-                <label
-                  className="absolute right-0 top-0 bottom-0 w-11 min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer hover:bg-primary/10 rounded-r-lg transition-colors group"
+                <div
+                  className="absolute right-0 top-0 bottom-0 w-11 flex items-center justify-center hover:bg-primary/10 rounded-r-lg transition-colors group cursor-pointer text-primary overflow-hidden"
                   title="Open Calendar Date Picker"
                 >
+                  <Calendar className="w-4 h-4 text-primary group-hover:scale-110 transition-transform pointer-events-none" />
                   <input
                     type="date"
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    value={isoDate}
+                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                    tabIndex={0}
+                    aria-label="Select date"
                     onChange={(e) => {
                       const val = e.target.value;
                       if (val) {
@@ -162,8 +185,7 @@ export default function BirthForm({
                       }
                     }}
                   />
-                  <Calendar className="w-4 h-4 text-primary group-hover:scale-110 transition-transform pointer-events-none" />
-                </label>
+                </div>
               </div>
             </div>
 
@@ -172,28 +194,36 @@ export default function BirthForm({
               <label className="flex items-center gap-2 text-xs font-heading text-secondary tracking-widest uppercase">
                 <Clock className="w-3.5 h-3.5" /> Time (HH:MM, 24h)
               </label>
-              <div className="relative">
+              <div className="relative flex items-center">
                 <input
                   type="text"
                   value={time}
                   onChange={(e) => setTime(e.target.value)}
-                  placeholder="HH:MM"
+                  onBlur={() => {
+                    if (time.trim()) {
+                      setTime(convertTo24Hour(time));
+                    }
+                  }}
+                  placeholder="HH:MM (e.g. 14:30 or 02:30 PM)"
                   className="w-full bg-muted/30 border border-border/50 rounded-lg p-3 pr-12 font-serif focus:border-primary focus:ring-1 focus:ring-primary/50 outline-none transition-all text-foreground"
                 />
-                <label
-                  className="absolute right-0 top-0 bottom-0 w-11 min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer hover:bg-primary/10 rounded-r-lg transition-colors group"
+                <div
+                  className="absolute right-0 top-0 bottom-0 w-11 flex items-center justify-center hover:bg-primary/10 rounded-r-lg transition-colors group cursor-pointer text-primary overflow-hidden"
                   title="Open Time Picker"
                 >
+                  <Clock className="w-4 h-4 text-primary group-hover:scale-110 transition-transform pointer-events-none" />
                   <input
                     type="time"
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    value={time.includes(":") ? convertTo24Hour(time) : ""}
+                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                    tabIndex={0}
+                    aria-label="Select time"
                     onChange={(e) => {
                       const val = e.target.value;
                       if (val) setTime(val);
                     }}
                   />
-                  <Clock className="w-4 h-4 text-primary group-hover:scale-110 transition-transform pointer-events-none" />
-                </label>
+                </div>
               </div>
             </div>
           </div>
@@ -217,12 +247,8 @@ export default function BirthForm({
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             </div>
 
-            <AnimatePresence>
               {cityResults.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
+                <div
                   className="absolute z-50 w-full glass-parchment border border-border/50 mt-1 rounded-lg shadow-2xl overflow-hidden"
                 >
                   {cityResults.map((city, i) => (
@@ -235,9 +261,8 @@ export default function BirthForm({
                       {city.name}
                     </button>
                   ))}
-                </motion.div>
+                </div>
               )}
-            </AnimatePresence>
           </div>
 
           {/* Language */}
@@ -261,7 +286,7 @@ export default function BirthForm({
           <button
             type="button"
             onClick={handleCalculate}
-            disabled={loading || !selectedCity}
+            disabled={loading}
             className="w-full group bg-primary text-primary-foreground font-heading py-4 rounded-lg shadow-lg hover:shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
           >
             {loading ? (
@@ -275,6 +300,6 @@ export default function BirthForm({
           </button>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }

@@ -240,5 +240,78 @@ export const calculateCalendar = async (payload: {
   return res.json();
 };
 
+export interface TarabalaInfo {
+  janma_nakshatra: string;
+  transit_nakshatra: string;
+  tara_number: number;
+  tara_name: string;
+  is_favorable: boolean;
+  description: string;
+}
+
+export interface ChandrabalaInfo {
+  janma_sign: string;
+  transit_sign: string;
+  house_from_moon: number;
+  is_favorable: boolean;
+  description: string;
+}
+
+export interface MuhurthaRequest {
+  date: string; // DD/MM/YYYY
+  time: string; // HH:MM
+  lat: number;
+  lon: number;
+  timezone: number;
+  activity: string; // travel, business, marriage, property, medical, general
+  direction?: string; // east, west, north, south
+  birth_moon_nakshatra?: string;
+  birth_moon_sign?: string;
+}
+
+export interface MuhurthaResponse {
+  activity: string;
+  score: number;
+  quality: string;
+  is_auspicious: boolean;
+  date: string;
+  time: string;
+  panchanga?: any;
+  slots?: any;
+  disha_shoola?: any;
+  tarabala?: TarabalaInfo;
+  chandrabala?: ChandrabalaInfo;
+  positive_factors?: string[];
+  negative_factors?: string[];
+  reasons: string[];
+  rules_applied: string[];
+  recommendation: string;
+  active_rahu_kalam: boolean;
+  in_abhijit: boolean;
+  in_brahma_muhurta: boolean;
+  shoola_warning?: string;
+  shoola_mitigation?: string;
+}
+
+export const calculateMuhurtha = async (payload: MuhurthaRequest): Promise<MuhurthaResponse> => {
+  const res = await fetch(`${API_BASE}/calculate_muhurtha`, {
+    method: "POST",
+    headers: getHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    let errorDetail = "Muhurtha calculation failed";
+    try {
+      const errJson = await res.json();
+      if (errJson?.detail) errorDetail = errJson.detail;
+    } catch {}
+    const err: any = new Error(errorDetail);
+    err.response = res;
+    throw err;
+  }
+  return res.json();
+};
+
+
 
 

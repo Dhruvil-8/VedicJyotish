@@ -47,7 +47,7 @@ export default function ReportTab({
           <h3 className="text-2xl font-heading text-primary gold-glow mb-4">Deep Cosmic Analysis</h3>
           <p className="max-w-md mx-auto text-muted-foreground font-serif italic mb-8 px-4 leading-relaxed text-sm">
             Generate a comprehensive AI-powered report based on Sanatan Jyotish guidelines, outlining
-            past life karma, health warnings, dasha timings, and custom remedies.
+            past life karma, health indications, dasha timings, and deep psychological self-awareness.
           </p>
           <button
             type="button"

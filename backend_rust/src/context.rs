@@ -6,9 +6,18 @@ use crate::models::{AiChartContext, AiSafety, ChartResponse};
 
 pub fn detect_topic_from_question(question: &str) -> &str {
     let q = question.to_lowercase();
-    if q.contains("job") || q.contains("career") || q.contains("profession") || q.contains("business")
+    if q.contains("travel") || q.contains("journey") || q.contains("trip") || q.contains("flight")
+        || q.contains("foreign") || q.contains("relocate") || q.contains("relocation") || q.contains("abroad")
+        || q.contains("visa") || q.contains("overseas") || q.contains("immigration") || q.contains("moving")
+    {
+        "travel"
+    } else if q.contains("business") || q.contains("commerce") || q.contains("trade") || q.contains("deal")
+        || q.contains("startup") || q.contains("company") || q.contains("selling") || q.contains("contract")
+    {
+        "business"
+    } else if q.contains("job") || q.contains("career") || q.contains("profession")
         || q.contains("work") || q.contains("promotion") || q.contains("office") || q.contains("boss")
-        || q.contains("employ") || q.contains("industry") || q.contains("startup")
+        || q.contains("employ") || q.contains("industry")
     {
         "career"
     } else if q.contains("marry") || q.contains("marriage") || q.contains("spouse") || q.contains("wife")
@@ -51,6 +60,66 @@ pub fn build_ai_chart_context(chart: ChartResponse) -> AiChartContext {
         structured: chart,
         prompt_context,
     }
+}
+
+// ─── Dasha Date Parsing & Active Dasha Finders ─────────────────────────────────
+
+fn parse_dasha_date(s: &str) -> Option<chrono::NaiveDate> {
+    chrono::NaiveDate::parse_from_str(s, "%d-%m-%Y")
+        .or_else(|_| chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d"))
+        .or_else(|_| chrono::NaiveDate::parse_from_str(s, "%d/%m/%Y"))
+        .or_else(|_| chrono::NaiveDate::parse_from_str(s, "%Y/%m/%d"))
+        .ok()
+}
+
+fn find_active_dasha_typed<'a>(
+    timeline: &'a [crate::models::MahaDasha],
+) -> Option<(&'a crate::models::MahaDasha, Option<&'a crate::models::AntarDasha>)> {
+    let today = chrono::Local::now().naive_local().date();
+    for md in timeline {
+        if let (Some(start), Some(end)) = (parse_dasha_date(&md.start), parse_dasha_date(&md.end)) {
+            if start <= today && today <= end {
+                let active_ad = md.antardashas.iter().find(|ad| {
+                    if let (Some(s), Some(e)) = (parse_dasha_date(&ad.start), parse_dasha_date(&ad.end)) {
+                        s <= today && today <= e
+                    } else {
+                        false
+                    }
+                });
+                return Some((md, active_ad));
+            }
+        }
+    }
+    timeline.first().map(|md| (md, md.antardashas.first()))
+}
+
+fn find_active_dasha_value<'a>(
+    timeline: &'a [serde_json::Value],
+) -> Option<(&'a serde_json::Value, Option<&'a serde_json::Value>)> {
+    let today = chrono::Local::now().naive_local().date();
+    for md in timeline {
+        let md_start = md.get("start").and_then(|v| v.as_str()).and_then(parse_dasha_date);
+        let md_end = md.get("end").and_then(|v| v.as_str()).and_then(parse_dasha_date);
+        if let (Some(start), Some(end)) = (md_start, md_end) {
+            if start <= today && today <= end {
+                let mut active_ad = None;
+                if let Some(antars) = md.get("antardashas").and_then(|v| v.as_array()) {
+                    for ad in antars {
+                        let ad_start = ad.get("start").and_then(|v| v.as_str()).and_then(parse_dasha_date);
+                        let ad_end = ad.get("end").and_then(|v| v.as_str()).and_then(parse_dasha_date);
+                        if let (Some(s), Some(e)) = (ad_start, ad_end) {
+                            if s <= today && today <= e {
+                                active_ad = Some(ad);
+                                break;
+                            }
+                        }
+                    }
+                }
+                return Some((md, active_ad));
+            }
+        }
+    }
+    timeline.first().map(|md| (md, md.get("antardashas").and_then(|v| v.as_array()).and_then(|arr| arr.first())))
 }
 
 // ─── Topic-Specific Specialized Formatters ────────────────────────────────────
@@ -237,24 +306,56 @@ pub fn render_topic_prompt_context(chart: &ChartResponse, topic: &str) -> String
             // Education Yogas
             append_filtered_yogas(chart, &mut lines, &["Budhaditya", "Gaja Kesari", "Nala"]);
         }
+        "travel" => {
+            lines.push("Primary Travel & Relocation Placements:".to_string());
+            append_house_detail(chart, &mut lines, 3);  // Short journeys
+            append_house_detail(chart, &mut lines, 7);  // Foreign journeys
+            append_house_detail(chart, &mut lines, 9);  // Long voyages/Pilgrimages
+            append_house_detail(chart, &mut lines, 12); // Foreign residence/Distant lands
+
+            append_planet_detail(chart, &mut lines, "Moon"); // Karaka of travel/movement
+            append_planet_detail(chart, &mut lines, "Rahu"); // Karaka of foreign lands
+
+            // Travel Yogas
+            append_filtered_yogas(chart, &mut lines, &["Rajju", "Ubhayachari", "Vasi"]);
+        }
+        "business" => {
+            lines.push("Primary Business & Commercial Enterprise Placements:".to_string());
+            append_house_detail(chart, &mut lines, 2);  // Liquid capital & reserves
+            append_house_detail(chart, &mut lines, 7);  // Open trade & partnerships
+            append_house_detail(chart, &mut lines, 10); // Professional standing
+            append_house_detail(chart, &mut lines, 11); // Large profits & commercial gains
+
+            append_planet_detail(chart, &mut lines, "Mercury"); // Karaka of trade/commerce
+            append_planet_detail(chart, &mut lines, "Jupiter"); // Karaka of financial expansion
+
+            // Business Yogas
+            append_filtered_yogas(chart, &mut lines, &["Budhaditya", "Vasumathi", "Gaja Kesari", "Amala"]);
+        }
         _ => {
             // General fallback matches the default detailed rendering
             return render_prompt_context(chart);
         }
     }
 
-    // Append Current Dasha for all topics (always important!)
-    if let Some(current) = chart.vimshottari_timeline.first() {
+    // Append Current Active Dasha for all topics (always important!)
+    if let Some((active_md, active_ad)) = find_active_dasha_typed(&chart.vimshottari_timeline) {
         lines.push(format!(
-            "Current Vimshottari Mahadasha: {} from {} to {}.",
-            current.lord, current.start, current.end
+            "Current Running Vimshottari Mahadasha: {} from {} to {}.",
+            active_md.lord, active_md.start, active_md.end
         ));
-        if let Some(antar) = current.antardashas.first() {
+        if let Some(antar) = active_ad {
             lines.push(format!(
-                "Current Antardasha: {} from {} to {}.",
+                "Current Running Antardasha: {} from {} to {}.",
                 antar.lord, antar.start, antar.end
             ));
         }
+    }
+
+    // Append Authentic Classical Shastra Rules & Axioms for this topic
+    let classical_axioms = crate::classical_rules::render_category_rules_for_prompt(topic, 5);
+    if !classical_axioms.is_empty() {
+        lines.push(classical_axioms);
     }
 
     lines.join("\n")
@@ -450,6 +551,32 @@ pub fn render_topic_prompt_context_json(chart: &serde_json::Value, topic: &str) 
             append_filtered_yogas_json(chart, &mut lines, &["Budhaditya", "Gaja Kesari", "Nala"]);
             append_relevant_aspects_json(chart, &mut lines, "education");
         }
+        "travel" => {
+            lines.push("Primary Travel & Relocation Placements:".to_string());
+            append_house_detail_json(chart, &mut lines, 3);
+            append_house_detail_json(chart, &mut lines, 7);
+            append_house_detail_json(chart, &mut lines, 9);
+            append_house_detail_json(chart, &mut lines, 12);
+
+            append_planet_detail_json(chart, &mut lines, "Moon");
+            append_planet_detail_json(chart, &mut lines, "Rahu");
+
+            append_filtered_yogas_json(chart, &mut lines, &["Rajju", "Ubhayachari", "Vasi"]);
+            append_relevant_aspects_json(chart, &mut lines, "travel");
+        }
+        "business" => {
+            lines.push("Primary Business & Commercial Enterprise Placements:".to_string());
+            append_house_detail_json(chart, &mut lines, 2);
+            append_house_detail_json(chart, &mut lines, 7);
+            append_house_detail_json(chart, &mut lines, 10);
+            append_house_detail_json(chart, &mut lines, 11);
+
+            append_planet_detail_json(chart, &mut lines, "Mercury");
+            append_planet_detail_json(chart, &mut lines, "Jupiter");
+
+            append_filtered_yogas_json(chart, &mut lines, &["Budhaditya", "Vasumathi", "Gaja Kesari", "Amala"]);
+            append_relevant_aspects_json(chart, &mut lines, "business");
+        }
         _ => {
             return render_prompt_context_json(chart);
         }
@@ -487,23 +614,28 @@ pub fn render_topic_prompt_context_json(chart: &serde_json::Value, topic: &str) 
     }
 
     if let Some(timeline) = chart.get("vimshottari_timeline").and_then(|v| v.as_array()) {
-
-        if let Some(current) = timeline.first() {
-            let lord = current.get("lord").and_then(|v| v.as_str()).unwrap_or("?");
-            let start = current.get("start").and_then(|v| v.as_str()).unwrap_or("?");
-            let end = current.get("end").and_then(|v| v.as_str()).unwrap_or("?");
+        if let Some((active_md, active_ad)) = find_active_dasha_value(timeline) {
+            let lord = active_md.get("lord").and_then(|v| v.as_str()).unwrap_or("?");
+            let start = active_md.get("start").and_then(|v| v.as_str()).unwrap_or("?");
+            let end = active_md.get("end").and_then(|v| v.as_str()).unwrap_or("?");
             lines.push(format!(
-                "Current Vimshottari Mahadasha: {lord} from {start} to {end}."
+                "Current Running Vimshottari Mahadasha: {lord} from {start} to {end}."
             ));
-            if let Some(antar) = current.get("antardashas").and_then(|v| v.as_array()).and_then(|arr| arr.first()) {
+            if let Some(antar) = active_ad {
                 let a_lord = antar.get("lord").and_then(|v| v.as_str()).unwrap_or("?");
                 let a_start = antar.get("start").and_then(|v| v.as_str()).unwrap_or("?");
                 let a_end = antar.get("end").and_then(|v| v.as_str()).unwrap_or("?");
                 lines.push(format!(
-                    "Current Antardasha: {a_lord} from {a_start} to {a_end}."
+                    "Current Running Antardasha: {a_lord} from {a_start} to {a_end}."
                 ));
             }
         }
+    }
+
+    // Append Authentic Classical Shastra Rules & Axioms for this topic
+    let classical_axioms = crate::classical_rules::render_category_rules_for_prompt(topic, 5);
+    if !classical_axioms.is_empty() {
+        lines.push(classical_axioms);
     }
 
     lines.join("\n")
@@ -512,17 +644,15 @@ pub fn render_topic_prompt_context_json(chart: &serde_json::Value, topic: &str) 
 fn render_prompt_context_json(chart: &serde_json::Value) -> String {
     let mut lines = Vec::new();
     
-    let birth_date = chart.get("birth_date").and_then(|v| v.as_str()).unwrap_or("Unknown");
-    let birth_time = chart.get("birth_time").and_then(|v| v.as_str()).unwrap_or("Unknown");
-    let city = chart.pointer("/location/city").and_then(|v| v.as_str()).unwrap_or("Unknown");
-    let lat = chart.pointer("/location/lat").and_then(|v| v.as_f64()).unwrap_or(0.0);
-    let lon = chart.pointer("/location/lon").and_then(|v| v.as_f64()).unwrap_or(0.0);
-    let tz = chart.pointer("/location/tz").and_then(|v| v.as_f64()).unwrap_or(0.0);
-    
-    lines.push(format!(
-        "Subject Birth Details: Date of Birth={}, Time of Birth={}, Location={} (Lat: {:.4}, Lon: {:.4}, TZ: {} hours)",
-        birth_date, birth_time, city, lat, lon, tz
-    ));
+    let birth_date = chart.get("birth_date").and_then(|v| v.as_str()).unwrap_or("");
+    let age = chart.get("current_age").and_then(|v| v.as_i64());
+    if !birth_date.is_empty() {
+        if let Some(a) = age {
+            lines.push(format!("Subject Chronological Context: Date of Birth: {} (Age: {} years)", birth_date, a));
+        } else {
+            lines.push(format!("Subject Chronological Context: Date of Birth: {}", birth_date));
+        }
+    }
     
     let profile = chart.get("profile");
     let ayanamsa = profile.and_then(|p| p.get("ayanamsa")).and_then(|v| v.as_str()).unwrap_or("Lahiri");
@@ -698,6 +828,12 @@ fn render_prompt_context_json(chart: &serde_json::Value) -> String {
                 lines.push(format!("  - War between {p1} and {p2} (distance {:.2}°), Winner is {winner}", diff));
             }
         }
+    }
+
+    // Append Authentic Classical Shastra Rules & Axioms for general reading
+    let classical_axioms = crate::classical_rules::render_category_rules_for_prompt("general", 5);
+    if !classical_axioms.is_empty() {
+        lines.push(classical_axioms);
     }
 
     lines.join("\n")
@@ -1010,14 +1146,14 @@ fn render_prompt_context(chart: &ChartResponse) -> String {
         }
     }
 
-    if let Some(current) = chart.vimshottari_timeline.first() {
+    if let Some((active_md, active_ad)) = find_active_dasha_typed(&chart.vimshottari_timeline) {
         lines.push(format!(
-            "Current/first Vimshottari mahadasha in response: {} from {} to {}.",
-            current.lord, current.start, current.end
+            "Current Running Vimshottari Mahadasha: {} from {} to {}.",
+            active_md.lord, active_md.start, active_md.end
         ));
-        if let Some(antar) = current.antardashas.first() {
+        if let Some(antar) = active_ad {
             lines.push(format!(
-                "First antardasha: {} from {} to {}.",
+                "Current Running Antardasha: {} from {} to {}.",
                 antar.lord, antar.start, antar.end
             ));
         }
@@ -1044,6 +1180,12 @@ fn render_prompt_context(chart: &ChartResponse) -> String {
                 lines.push(format!("  - War between {} and {} (distance {:.2}°), Winner is {}", w.planet_1, w.planet_2, w.degree_diff, w.winner));
             }
         }
+    }
+
+    // Append Authentic Classical Shastra Rules & Axioms for general reading
+    let classical_axioms = crate::classical_rules::render_category_rules_for_prompt("general", 5);
+    if !classical_axioms.is_empty() {
+        lines.push(classical_axioms);
     }
 
     lines.join("\n")
