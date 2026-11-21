@@ -631,10 +631,10 @@ async fn chat_with_astrologer(
     }
 
     let question = payload.question.trim().to_string();
-    if question.is_empty() || question.chars().count() > 500 {
+    if question.is_empty() || question.chars().count() > 5000 {
         return Err(ApiError::new(
             StatusCode::UNPROCESSABLE_ENTITY,
-            "Question must be between 1 and 500 characters.",
+            "Question must be between 1 and 5000 characters.",
         ));
     }
 

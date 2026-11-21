@@ -1251,27 +1251,6 @@ CRITICAL MANDATE: Under NO circumstances recommend remedies, gemstones, rudraksh
                   </div>
 
                   <div className="flex items-center gap-3">
-                    {/* Auspiciousness / Karmic Ease Meter */}
-                    <div
-                      className="flex items-center gap-2 bg-card/60 px-3 py-1.5 rounded-xl border border-border/30"
-                      title="Classical Auspicious Ease Index: Indicates natural ease and favorable flow vs. disciplined effort and duty demanded during this epoch according to functional lordships."
-                    >
-                      <div className="text-right">
-                        <span className="text-[9px] font-heading uppercase text-muted-foreground block">
-                          Karmic Ease
-                        </span>
-                        <span className="text-xs font-heading font-bold text-primary">
-                          {phase.karmicPotential}%
-                        </span>
-                      </div>
-                      <div className="w-14 sm:w-16 h-2 bg-background rounded-full overflow-hidden border border-border/40">
-                        <div
-                          className="h-full bg-gradient-to-r from-amber-500 to-emerald-500 rounded-full"
-                          style={{ width: `${phase.karmicPotential}%` }}
-                        />
-                      </div>
-                    </div>
-
                     <div>
                       {phase.isCurrent ? (
                         <span className="px-2.5 py-1 rounded-full bg-primary text-primary-foreground font-heading text-[10px] tracking-wider uppercase font-bold shadow-sm">
@@ -1502,10 +1481,6 @@ CRITICAL MANDATE: Under NO circumstances recommend remedies, gemstones, rudraksh
                                   <p className="text-xs text-muted-foreground font-serif mt-0.5">
                                     {activeAd.milestoneTitle}
                                   </p>
-                                </div>
-                                <div className="flex items-center gap-2 text-xs font-heading">
-                                  <span className="text-muted-foreground">Sub-Period Ease:</span>
-                                  <span className="font-bold text-primary">{activeAd.karmicPotential}%</span>
                                 </div>
                               </div>
 
