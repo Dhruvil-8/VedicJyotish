@@ -86,6 +86,19 @@ export const searchCity = async (query: string) => {
 };
 
 export const calculateChart = async (data: any) => {
+  // If running in client browser, compute locally using WebAssembly!
+  if (isClient) {
+    try {
+      const { computeClientChart } = await import("../../lib/ephemeris/engine");
+      const localResult = await computeClientChart(data);
+      if (localResult && localResult.ascendant) {
+        return localResult;
+      }
+    } catch (clientErr) {
+      console.warn("Client-side WASM calculation failed, falling back to backend:", clientErr);
+    }
+  }
+
   const res = await fetch(`${API_BASE}/calculate_chart`, {
     method: "POST",
     headers: getHeaders({ "Content-Type": "application/json" }),
@@ -214,6 +227,24 @@ export const chatWithAstrologerStream = async (
 };
 
 export const calculateCompatibility = async (payload: any) => {
+  if (isClient && payload.boy_nakshatra != null && payload.girl_nakshatra != null) {
+    try {
+      const { computeClientGunaMilan } = await import("../../lib/ephemeris/engine");
+      const localResult = await computeClientGunaMilan(
+        Number(payload.boy_nakshatra),
+        Number(payload.boy_pada ?? 1),
+        Number(payload.girl_nakshatra),
+        Number(payload.girl_pada ?? 1),
+        payload.method || "ashtakoota"
+      );
+      if (localResult) {
+        return localResult;
+      }
+    } catch (clientErr) {
+      console.warn("Client-side Guna Milan calculation failed, falling back to backend:", clientErr);
+    }
+  }
+
   const res = await fetch(`${API_BASE}/api/v1/match/compatibility`, {
     method: "POST",
     headers: getHeaders({ "Content-Type": "application/json" }),
@@ -324,6 +355,18 @@ export interface MuhurthaResponse {
 }
 
 export const calculateMuhurtha = async (payload: MuhurthaRequest): Promise<MuhurthaResponse> => {
+  if (isClient) {
+    try {
+      const { computeClientMuhurtha } = await import("../../lib/ephemeris/engine");
+      const localResult = await computeClientMuhurtha(payload);
+      if (localResult && localResult.recommendation) {
+        return localResult;
+      }
+    } catch (clientErr) {
+      console.warn("Client-side Muhurtha failed, falling back to backend:", clientErr);
+    }
+  }
+
   const res = await fetch(`${API_BASE}/calculate_muhurtha`, {
     method: "POST",
     headers: getHeaders({ "Content-Type": "application/json" }),

@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { handleChatStream, handleReportStream } from "@/app/lib/geminiStream";
 
 // Configure Edge Runtime for Cloudflare Pages and Vercel Edge Functions
 export const runtime = "edge";
@@ -15,6 +16,7 @@ const BACKEND_URL = (
 
 // Server-only API Key (NEVER exposed to client browser via NEXT_PUBLIC_)
 const SERVER_API_KEY = process.env.API_SECRET_KEY || process.env.BACKEND_API_KEY || "";
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
 
 async function proxyRequest(
   req: NextRequest,
@@ -23,6 +25,28 @@ async function proxyRequest(
   try {
     const { path } = await paramsPromise;
     const subpath = Array.isArray(path) ? path.join("/") : "";
+
+    // ─── Direct Serverless Gemini AI Handlers ──────────────────────────────
+    // If GEMINI_API_KEY is configured in Vercel/Cloudflare, handle AI chat & reports
+    // serverlessly with zero dependency on the Rust backend process.
+    if (GEMINI_API_KEY && (subpath === "generate_report" || subpath === "chat_with_astrologer")) {
+      try {
+        const body = await req.json();
+        if (subpath === "generate_report") {
+          return handleReportStream(body, GEMINI_API_KEY);
+        } else if (subpath === "chat_with_astrologer") {
+          return handleChatStream(
+            body.chart_data,
+            body.question,
+            body.history || [],
+            GEMINI_API_KEY
+          );
+        }
+      } catch (geminiErr: any) {
+        console.warn("Direct serverless Gemini handler failed, attempting backend fallback:", geminiErr);
+      }
+    }
+
     const reqUrl = new URL(req.url);
     const targetUrl = `${BACKEND_URL}/${subpath}${reqUrl.search}`;
 
