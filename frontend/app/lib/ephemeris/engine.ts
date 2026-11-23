@@ -365,13 +365,20 @@ export async function computeClientChart(data: any): Promise<any> {
     sunrise_jd: sunriseJd,
     sunset_jd: sunsetJd,
     next_sunrise_jd: nextSunriseJd,
+    jd_ut: jdUT,
     amanta_month: amantaMasaIdx,
     purnimanta_month: purnimantaMasaIdx,
     is_adhika_month: false,
   };
 
   const chartJson = wasm.compute_chart_wasm(JSON.stringify(coreInput));
-  return JSON.parse(chartJson);
+  const parsedChart = JSON.parse(chartJson);
+  parsedChart.raw_planets = rawPlanets;
+  parsedChart.sunriseJd = sunriseJd;
+  parsedChart.sunsetJd = sunsetJd;
+  parsedChart.nextSunriseJd = nextSunriseJd;
+  parsedChart.jdUT = jdUT;
+  return parsedChart;
 }
 
 /**
@@ -420,18 +427,15 @@ export async function computeClientMuhurtha(payload: any): Promise<any> {
       city: "",
       timezone_name: null,
       ascendant_degree: chartRes.ascendant.degree,
-      ayanamsa_value: chartRes.ayanamsa_value || 24.0,
+      ayanamsa_value: chartRes.panchanga?.ayanamsha || 24.0,
       house_cusps: chartRes.house_cusps || [],
-      planets: chartRes.planetary_table.map((p: any) => ({
-        name: p.name,
-        longitude: p.longitude,
-        speed: p.speed,
-      })),
+      planets: chartRes.raw_planets || [],
       profile: null,
       current_saturn_longitude: null,
-      sunrise_jd: chartRes.panchanga?.sunrise_jd || null,
-      sunset_jd: chartRes.panchanga?.sunset_jd || null,
-      next_sunrise_jd: null,
+      sunrise_jd: chartRes.sunriseJd || null,
+      sunset_jd: chartRes.sunsetJd || null,
+      next_sunrise_jd: chartRes.nextSunriseJd || null,
+      jd_ut: chartRes.jdUT || null,
       amanta_month: null,
       purnimanta_month: null,
       is_adhika_month: null,
@@ -446,6 +450,297 @@ export async function computeClientMuhurtha(payload: any): Promise<any> {
   return JSON.parse(resJson);
 }
 
+const MASA_NAMES = [
+  "Chaitra", "Vaishakha", "Jyeshtha", "Ashadha", "Shravana", "Bhadrapada",
+  "Ashvina", "Kartika", "Margashirsha", "Pausha", "Magha", "Phalguna",
+];
+
+const VARA_SANSKRIT = [
+  "Somavara", "Mangalavara", "Budhavara", "Guruvara", "Shukravara", "Shanivara", "Ravivara",
+];
+
+const ZODIAC_SIGNS = [
+  "Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo",
+  "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces",
+];
+
+function checkDaySankranti(swe: any, jdStart: number, jdEnd: number): { signIndex: number; signName: string } | null {
+  const { sun: sStart } = getSunMoonSidereal(swe, jdStart);
+  const { sun: sEnd } = getSunMoonSidereal(swe, jdEnd);
+  const r1 = Math.floor(sStart / 30.0);
+  const r2 = Math.floor(sEnd / 30.0);
+  if (r1 !== r2) {
+    const r2Idx = ((r2 % 12) + 12) % 12;
+    return { signIndex: r2Idx, signName: ZODIAC_SIGNS[r2Idx] };
+  }
+  return null;
+}
+
+function getSunMoonSidereal(swe: any, jdUT: number): { sun: number; moon: number } {
+  const xxPtr = swe._malloc(6 * 8);
+  const serrPtr = swe._malloc(256);
+
+  swe.ccall(
+    "swe_calc_ut_wrap",
+    "number",
+    ["number", "number", "number", "number", "number"],
+    [jdUT, SE_SUN, CALC_FLAGS, xxPtr, serrPtr]
+  );
+  const sun = ((swe.getValue(xxPtr, "double") % 360) + 360) % 360;
+
+  swe.ccall(
+    "swe_calc_ut_wrap",
+    "number",
+    ["number", "number", "number", "number", "number"],
+    [jdUT, SE_MOON, CALC_FLAGS, xxPtr, serrPtr]
+  );
+  const moon = ((swe.getValue(xxPtr, "double") % 360) + 360) % 360;
+
+  swe._free(xxPtr);
+  swe._free(serrPtr);
+  return { sun, moon };
+}
+
+function findExactNewMoon(swe: any, jd: number, opt: number): number {
+  const { sun, moon } = getSunMoonSidereal(swe, jd);
+  const diff = (moon - sun + 360) % 360;
+  const initialOffset =
+    opt < 0
+      ? diff < 1.0
+        ? -29.53
+        : -diff / 12.190749
+      : diff > 359.0
+      ? 29.53
+      : (360.0 - diff) / 12.190749;
+
+  let curJd = jd + initialOffset;
+  for (let i = 0; i < 4; i++) {
+    const { sun: sCur, moon: mCur } = getSunMoonSidereal(swe, curJd);
+    const d = (mCur - sCur + 360) % 360;
+    const dSigned = d > 180.0 ? d - 360.0 : d;
+    curJd -= dSigned / 12.190749;
+  }
+  return curJd;
+}
+
+function findExactFullMoon(swe: any, jd: number, opt: number): number {
+  const { sun, moon } = getSunMoonSidereal(swe, jd);
+  const diff = (moon - sun + 360) % 360;
+  const diffFromTarget = (diff - 180 + 360) % 360;
+  const initialOffset =
+    opt < 0
+      ? diffFromTarget < 1.0
+        ? -29.53
+        : -diffFromTarget / 12.190749
+      : diffFromTarget > 359.0
+      ? 29.53
+      : (360.0 - diffFromTarget) / 12.190749;
+
+  let curJd = jd + initialOffset;
+  for (let i = 0; i < 4; i++) {
+    const { sun: sCur, moon: mCur } = getSunMoonSidereal(swe, curJd);
+    const d = (mCur - sCur + 360) % 360;
+    const dDiff = (d - 180 + 360) % 360;
+    const dSigned = dDiff > 180.0 ? dDiff - 360.0 : dDiff;
+    curJd -= dSigned / 12.190749;
+  }
+  return curJd;
+}
+
+function getLunarMonthInfo(
+  swe: any,
+  jdUT: number,
+  usePurnimanta: boolean
+): { lunarMonth: number; isLeap: boolean; isNija: boolean } {
+  const lastNm = findExactNewMoon(swe, jdUT, -1);
+  const nextNm = findExactNewMoon(swe, jdUT, 1);
+  const { sun: sunLast } = getSunMoonSidereal(swe, lastNm);
+  const { sun: sunNext } = getSunMoonSidereal(swe, nextNm);
+  const rashiLast = Math.floor(sunLast / 30);
+  const rashiNext = Math.floor(sunNext / 30);
+
+  const isLeap = rashiLast === rashiNext;
+  let lunarMonth = (rashiLast + 1) % 12;
+
+  let isNija = false;
+  if (!isLeap) {
+    const prevLastNm = findExactNewMoon(swe, lastNm - 1.0, -1);
+    const { sun: prevSunLast } = getSunMoonSidereal(swe, prevLastNm);
+    const prevRashiLast = Math.floor(prevSunLast / 30);
+    const prevIsLeap = prevRashiLast === rashiLast;
+    const prevMasa = (prevRashiLast + 1) % 12;
+    if (prevIsLeap && prevMasa === lunarMonth) {
+      isNija = true;
+    }
+  }
+
+  if (usePurnimanta) {
+    const { sun: s, moon: m } = getSunMoonSidereal(swe, jdUT);
+    const moonSun = (m - s + 360) % 360;
+    const tithiIdx = Math.floor(moonSun / 12);
+    if (tithiIdx >= 15) {
+      lunarMonth = (lunarMonth + 1) % 12;
+    }
+  }
+
+  return { lunarMonth, isLeap, isNija };
+}
+
+function jdToLocalDate(jdUT: number, tz: number): { year: number; month: number; day: number } {
+  const unixTs = (jdUT - 2440587.5) * 86400.0;
+  const localMs = (unixTs + tz * 3600) * 1000;
+  const d = new Date(localMs);
+  return {
+    year: d.getUTCFullYear(),
+    month: d.getUTCMonth() + 1,
+    day: d.getUTCDate(),
+  };
+}
+
+interface MonthCycleInfo {
+  startDate: { year: number; month: number; day: number };
+  days: Array<{ year: number; month: number; day: number }>;
+  masaIndex: number;
+  isAdhik: boolean;
+  isNija: boolean;
+  vikramSamvat: number;
+  shakaSamvat: number;
+}
+
+function getYearLunarCycles(
+  swe: any,
+  year: number,
+  tradition: string,
+  lat: number,
+  lon: number,
+  tz: number
+): MonthCycleInfo[] {
+  const usePurnimanta = tradition === "purnimanta" || tradition === "north";
+  const isKartikadi = tradition === "gujarat";
+
+  // Scan from Nov 15 previous year to March 15 next year
+  const { jdUT: scanStartJd } = getJulianDayUT(`15/11/${year - 1}`, "12:00", tz);
+  const { jdUT: scanEndJd } = getJulianDayUT(`15/03/${year + 1}`, "12:00", tz);
+
+  const cycles: MonthCycleInfo[] = [];
+  let curNm = findExactNewMoon(swe, scanStartJd, 1);
+
+  for (let step = 0; step < 18; step++) {
+    if (curNm >= scanEndJd) break;
+    const nextNm = findExactNewMoon(swe, curNm + 20.0, 1);
+    if (nextNm <= curNm + 20.0) {
+      curNm += 29.53;
+      continue;
+    }
+
+    const { sun: sunCurr } = getSunMoonSidereal(swe, curNm);
+    const { sun: sunNext } = getSunMoonSidereal(swe, nextNm);
+    const rashiCurr = Math.floor(sunCurr / 30);
+    const rashiNext = Math.floor(sunNext / 30);
+
+    const isLeap = rashiCurr === rashiNext;
+    const baseAmantaMasa = (rashiCurr + 1) % 12;
+
+    let isNija = false;
+    if (!isLeap) {
+      const prevNm = findExactNewMoon(swe, curNm - 1.0, -1);
+      const { sun: prevSun } = getSunMoonSidereal(swe, prevNm);
+      const prevRashi = Math.floor(prevSun / 30);
+      if (prevRashi === rashiCurr) {
+        isNija = true;
+      }
+    }
+
+    let startJd = curNm;
+    let endJd = nextNm;
+    if (usePurnimanta) {
+      startJd = findExactFullMoon(swe, curNm, -1);
+      endJd = findExactFullMoon(swe, nextNm, -1);
+    }
+
+    const approxStartDate = jdToLocalDate(startJd, tz);
+    const sSunrise = calcAstronomicalSunriseSunset(
+      approxStartDate.year,
+      approxStartDate.month,
+      approxStartDate.day,
+      lat,
+      lon,
+      tz
+    ).sunriseJd;
+    let startDate = approxStartDate;
+    if (startJd >= sSunrise) {
+      const nextD = new Date(Date.UTC(approxStartDate.year, approxStartDate.month - 1, approxStartDate.day + 1));
+      startDate = { year: nextD.getUTCFullYear(), month: nextD.getUTCMonth() + 1, day: nextD.getUTCDate() };
+    }
+
+    const approxEndDate = jdToLocalDate(endJd, tz);
+    const eSunrise = calcAstronomicalSunriseSunset(
+      approxEndDate.year,
+      approxEndDate.month,
+      approxEndDate.day,
+      lat,
+      lon,
+      tz
+    ).sunriseJd;
+    let nextStartDate = approxEndDate;
+    if (endJd >= eSunrise) {
+      const nextD = new Date(Date.UTC(approxEndDate.year, approxEndDate.month - 1, approxEndDate.day + 1));
+      nextStartDate = { year: nextD.getUTCFullYear(), month: nextD.getUTCMonth() + 1, day: nextD.getUTCDate() };
+    }
+
+    const days: Array<{ year: number; month: number; day: number }> = [];
+    let curDayDate = new Date(Date.UTC(startDate.year, startDate.month - 1, startDate.day));
+    const endDayDate = new Date(Date.UTC(nextStartDate.year, nextStartDate.month - 1, nextStartDate.day));
+
+    let count = 0;
+    while (curDayDate < endDayDate && count < 32) {
+      days.push({
+        year: curDayDate.getUTCFullYear(),
+        month: curDayDate.getUTCMonth() + 1,
+        day: curDayDate.getUTCDate(),
+      });
+      curDayDate.setUTCDate(curDayDate.getUTCDate() + 1);
+      count++;
+    }
+    if (days.length < 29) {
+      while (days.length < 29) {
+        days.push({
+          year: curDayDate.getUTCFullYear(),
+          month: curDayDate.getUTCMonth() + 1,
+          day: curDayDate.getUTCDate(),
+        });
+        curDayDate.setUTCDate(curDayDate.getUTCDate() + 1);
+      }
+    } else if (days.length > 30) {
+      days.length = 30;
+    }
+
+    const isAfterNewYear = isKartikadi
+      ? baseAmantaMasa >= 7 || startDate.month >= 11
+      : startDate.month >= 4 || (startDate.month === 3 && baseAmantaMasa === 0);
+
+    const vikramSamvat = isAfterNewYear ? startDate.year + 57 : startDate.year + 56;
+    const shakaSamvat =
+      startDate.month >= 4 || (startDate.month === 3 && baseAmantaMasa === 0)
+        ? startDate.year - 78
+        : startDate.year - 79;
+
+    cycles.push({
+      startDate,
+      days,
+      masaIndex: baseAmantaMasa,
+      isAdhik: isLeap,
+      isNija,
+      vikramSamvat,
+      shakaSamvat,
+    });
+
+    curNm = nextNm;
+  }
+
+  return cycles;
+}
+
 /**
  * Compute Monthly Panchanga Calendar in the browser using WASM
  */
@@ -457,40 +752,147 @@ export async function computeClientCalendar(payload: {
   timezone: number;
   tradition?: string;
   view_mode?: string;
+  lunar_masa?: number;
+  masa_type?: string;
+  is_adhik?: boolean;
 }): Promise<any> {
+  const swe = await initSwissEphemeris();
+
   const year = Number(payload.year);
   const month = Number(payload.month);
   const lat = Number(payload.lat);
   const lon = Number(payload.lon);
   const tz = Number(payload.timezone ?? 5.5);
-  const tradition = payload.tradition || "gujarat";
-  const viewMode = payload.view_mode || "lunar";
+  const tradition = (payload.tradition || "gujarat").toLowerCase();
+  const isLunarView = (payload.view_mode || "lunar").toLowerCase() === "lunar";
+  const isAdhikTarget = payload.is_adhik ?? payload.masa_type === "adhik";
 
-  const daysInMonth = new Date(year, month, 0).getDate();
-  const days: any[] = [];
+  const isPurnimanta = tradition === "purnimanta" || tradition === "north";
+  const isGujarat = tradition === "gujarat";
 
-  const MONTH_NAMES = [
-    "Chaitra", "Vaisakha", "Jyeshtha", "Ashadha", "Shravana", "Bhadrapada",
-    "Ashvina", "Kartika", "Margashirsha", "Pausha", "Magha", "Phalguna"
-  ];
+  // Pre-calculate full year lunar cycles
+  const cycles = getYearLunarCycles(swe, year, tradition, lat, lon, tz);
 
+  const yearCycles = cycles.filter(
+    (c) =>
+      c.startDate.year === year ||
+      (c.startDate.year === year - 1 && c.masaIndex >= 10 && isPurnimanta)
+  );
+
+  const seen = new Set<string>();
+  const availableMasas: Array<{
+    index: number;
+    name: string;
+    is_adhik: boolean;
+    masa_type: string;
+    masa_id: string;
+  }> = [];
+
+  for (const c of yearCycles) {
+    const key = `${c.masaIndex}_${c.isAdhik}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      const mName = MASA_NAMES[c.masaIndex] || "Chaitra";
+      const mType = c.isAdhik ? "adhik" : c.isNija ? "nija" : "regular";
+      availableMasas.push({
+        index: c.masaIndex,
+        name: mName,
+        is_adhik: c.isAdhik,
+        masa_type: mType,
+        masa_id: `${year}_${mName.toLowerCase()}_${mType}`,
+      });
+    }
+  }
+
+  // Sort available masas according to tradition sequence
+  if (isGujarat) {
+    availableMasas.sort((a, b) => {
+      const orderA = a.index >= 7 ? a.index - 7 : a.index + 5;
+      const orderB = b.index >= 7 ? b.index - 7 : b.index + 5;
+      return orderA * 2 + (a.is_adhik ? 0 : 1) - (orderB * 2 + (b.is_adhik ? 0 : 1));
+    });
+  } else {
+    availableMasas.sort((a, b) => {
+      return a.index * 2 + (a.is_adhik ? 0 : 1) - (b.index * 2 + (b.is_adhik ? 0 : 1));
+    });
+  }
+
+  let datesToCalculate: Array<{ year: number; month: number; day: number }> = [];
   let primaryMasaIdx = 0;
-  let primaryMasa = "Kartika";
+  let calcStartDate = "";
+  let calcEndDate = "";
+  let monthIsAdhik = false;
+  let monthIsNija = false;
+
+  if (isLunarView) {
+    let targetMasa = payload.lunar_masa != null ? payload.lunar_masa % 12 : undefined;
+    if (targetMasa == null) {
+      const { jdUT: refJd } = getJulianDayUT(
+        `15/${String(Math.min(12, month)).padStart(2, "0")}/${year}`,
+        "12:00",
+        tz
+      );
+      const { lunarMonth } = getLunarMonthInfo(swe, refJd, isPurnimanta);
+      targetMasa = lunarMonth;
+    }
+
+    const matched =
+      cycles.find(
+        (c) =>
+          c.masaIndex === targetMasa &&
+          (isAdhikTarget ? c.isAdhik : !c.isAdhik) &&
+          c.startDate.year === year
+      ) ||
+      cycles.find(
+        (c) =>
+          c.masaIndex === targetMasa &&
+          (isAdhikTarget ? c.isAdhik : !c.isAdhik) &&
+          (c.startDate.year === year || c.startDate.year === year + 1)
+      ) ||
+      cycles.find(
+        (c) => c.masaIndex === targetMasa && (isAdhikTarget ? c.isAdhik : !c.isAdhik)
+      ) ||
+      cycles.find((c) => c.masaIndex === targetMasa) ||
+      cycles[0];
+
+    datesToCalculate = matched.days;
+    primaryMasaIdx = matched.masaIndex;
+    calcStartDate = `${String(matched.startDate.day).padStart(2, "0")}/${String(matched.startDate.month).padStart(2, "0")}/${matched.startDate.year}`;
+    const endD = matched.days[matched.days.length - 1] || matched.startDate;
+    calcEndDate = `${String(endD.day).padStart(2, "0")}/${String(endD.month).padStart(2, "0")}/${endD.year}`;
+    monthIsAdhik = matched.isAdhik;
+    monthIsNija = matched.isNija;
+  } else {
+    const daysInMonth = new Date(year, month, 0).getDate();
+    datesToCalculate = [];
+    for (let d = 1; d <= daysInMonth; d++) {
+      datesToCalculate.push({ year, month, day: d });
+    }
+    calcStartDate = `01/${String(month).padStart(2, "0")}/${year}`;
+    calcEndDate = `${String(daysInMonth).padStart(2, "0")}/${String(month).padStart(2, "0")}/${year}`;
+    primaryMasaIdx = (month + 7) % 12;
+  }
+
+  const days: any[] = [];
+  let primaryMasa = "";
   let primaryVikram = year + 57;
   let primaryShaka = year - 78;
-  let primarySamvatsara = "Krodhi";
-  let primaryRitu = "Sharad";
-  let primaryAyana = "Dakshinayana";
+  let primarySamvatsara = "";
+  let primaryRitu = "";
+  let primaryAyana = "";
 
-  for (let d = 1; d <= daysInMonth; d++) {
-    const dayStr = `${String(d).padStart(2, "0")}/${String(month).padStart(2, "0")}/${year}`;
-    const dateObj = new Date(year, month - 1, d);
-    const dayOfWeek = dateObj.toLocaleDateString("en-US", { weekday: "long" });
+  for (let idx = 0; idx < datesToCalculate.length; idx++) {
+    const dObj = datesToCalculate[idx];
+    const dayStr = `${String(dObj.day).padStart(2, "0")}/${String(dObj.month).padStart(2, "0")}/${dObj.year}`;
+    const dateObj = new Date(Date.UTC(dObj.year, dObj.month - 1, dObj.day));
+    const dayOfWeek = dateObj.toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" });
+    const weekdayIdx = (dateObj.getUTCDay() + 6) % 7; // Monday = 0
 
     try {
+      // Calculate chart at midday (12:00) exactly as in the Parashari backend
       const chartRes = await computeClientChart({
         date: dayStr,
-        time: "06:00",
+        time: "12:00",
         lat,
         lon,
         timezone: tz,
@@ -499,110 +901,119 @@ export async function computeClientCalendar(payload: {
 
       const p = chartRes.panchanga || {};
       const tithiIdx = p.tithi?.index || 1;
-      const tithiName = p.tithi?.name || "Pratipada";
-      const nakName = p.nakshatra?.name || "Ashwini";
-      const yogaName = p.yoga?.name || "Vishkambha";
-      const karanaName = p.karana?.name || "Bava";
-      const sunrise = p.sunrise || "06:45";
-      const sunset = p.sunset || "17:35";
-      const rahuKaal = p.rahu_kalam ? `${p.rahu_kalam.start} - ${p.rahu_kalam.end}` : "N/A";
-      const abhijit = p.abhijit_muhurta ? `${p.abhijit_muhurta.start} - ${p.abhijit_muhurta.end}` : "N/A";
-
-      const masaAmanta = p.lunar_month?.amanta_masa || p.lunar_month_name || "Kartika";
-      const masaPurnimanta = p.lunar_month?.purnimanta_masa || "Margashirsha";
-      primaryMasa = tradition === "purnimanta" || tradition === "north" ? masaPurnimanta : masaAmanta;
-      primaryMasaIdx = p.lunar_month?.amanta_masa_index ?? 7;
-      primaryVikram = p.samvat?.vikram_samvat || year + 57;
-      primaryShaka = p.samvat?.shaka_samvat || year - 78;
-      primarySamvatsara = p.samvat?.samvatsara_name || "Krodhi";
-      primaryRitu = p.samvat?.ritu || "Hemanta";
-      primaryAyana = p.samvat?.ayana || "Dakshinayana";
-
       const isEkadashi = tithiIdx === 11 || tithiIdx === 26;
       const isPradosh = tithiIdx === 13 || tithiIdx === 28;
       const isPurnima = tithiIdx === 15;
       const isAmavasya = tithiIdx === 30;
 
-      const vrats: string[] = [];
-      let festival: string | null = null;
+      const vrats: string[] = Array.isArray(p.vrats) ? [...p.vrats] : [];
+      if (isEkadashi && !vrats.includes("Ekadashi Vrat")) vrats.push("Ekadashi Vrat");
+      if (isPradosh && !vrats.includes("Pradosh Vrat")) vrats.push("Pradosh Vrat");
+      if (isPurnima && !vrats.some((v) => v.includes("Purnima"))) vrats.push("Purnima Vrat / Satyanarayan");
+      if (isAmavasya && !vrats.some((v) => v.includes("Amavasya"))) vrats.push("Amavasya / Pitru Tarpan");
+      if (tithiIdx === 4 && !vrats.includes("Vinayaka Chaturthi")) vrats.push("Vinayaka Chaturthi");
+      if (tithiIdx === 19 && !vrats.includes("Sankashti Chaturthi")) vrats.push("Sankashti Chaturthi");
 
-      if (isEkadashi) {
-        vrats.push("Ekadashi Vrat");
-        festival = "Ekadashi";
-      } else if (isPradosh) {
-        vrats.push("Pradosh Vrat");
-      } else if (isPurnima) {
-        festival = "Purnima";
-        vrats.push("Satyanarayan Vrat");
-      } else if (isAmavasya) {
-        festival = "Amavasya";
+      // Saṅkrānti detection between today's sunrise and tomorrow's sunrise
+      const sunriseJd = chartRes.sunriseJd;
+      const nextSunriseJd = chartRes.nextSunriseJd || sunriseJd + 1.0;
+      const sankrantiInfo = checkDaySankranti(swe, sunriseJd, nextSunriseJd);
+      const isSankranti = !!sankrantiInfo;
+      if (sankrantiInfo) {
+        let sankrantiLabel = `${sankrantiInfo.signName} Sankranti`;
+        if (sankrantiInfo.signName === "Capricorn") {
+          sankrantiLabel = "Makar Sankranti / Pongal / Uttarayana";
+        } else if (sankrantiInfo.signName === "Aries") {
+          sankrantiLabel = "Mesha Sankranti / Vaisakhi / Solar New Year";
+        } else if (sankrantiInfo.signName === "Cancer") {
+          sankrantiLabel = "Karka Sankranti / Dakshinayana";
+        } else if (sankrantiInfo.signName === "Libra") {
+          sankrantiLabel = "Tula Sankranti";
+        }
+        if (!vrats.some((v) => v.includes("Sankranti"))) {
+          vrats.push(sankrantiLabel);
+        }
+      }
+
+      if (p.festival && !vrats.includes(p.festival)) {
+        vrats.push(p.festival);
+      }
+
+      const mAmanta = p.masa_amanta || "Kartika";
+      const mPurnimanta = p.masa_purnimanta || "Margashirsha";
+
+      if (idx === 14 || !primaryMasa) {
+        primaryMasa = isLunarView
+          ? monthIsAdhik
+            ? `Adhik ${MASA_NAMES[primaryMasaIdx]}`
+            : MASA_NAMES[primaryMasaIdx]
+          : tradition === "amanta"
+          ? mAmanta
+          : mPurnimanta;
+        primaryVikram = p.vikram_samvat || year + 57;
+        primaryShaka = p.shaka_samvat || year - 78;
+        primarySamvatsara = p.samvatsara_name || "";
+        primaryRitu = p.ritu || "";
+        primaryAyana = p.ayana || "";
       }
 
       days.push({
-        day_of_month: d,
         date: dayStr,
+        day_of_month: dObj.day,
+        tithi_day_number: idx + 1,
         day_of_week: dayOfWeek,
+        vara_sanskrit: VARA_SANSKRIT[weekdayIdx] || "Ravivara",
+        tithi_name: p.tithi?.name || "Pratipada",
         tithi_index: tithiIdx,
-        tithi_name: tithiName,
-        tithi_progress: p.tithi?.progress ?? 0.5,
-        tithi_end_time: p.tithi?.end_time || null,
-        nakshatra_index: p.nakshatra?.index ?? 1,
-        nakshatra_name: nakName,
-        yoga_name: yogaName,
-        karana_name: karanaName,
-        masa_amanta: masaAmanta,
-        masa_purnimanta: masaPurnimanta,
-        is_adhika: false,
-        ritu: primaryRitu,
-        ayana: primaryAyana,
-        vikram_samvat: primaryVikram,
-        shaka_samvat: primaryShaka,
-        sunrise,
-        sunset,
-        rahu_kaal: rahuKaal,
-        abhijit_muhurat: abhijit,
+        paksha: p.paksha || "Shukla",
+        nakshatra_name: p.nakshatra?.name || "Ashwini",
+        yoga_name: p.yoga?.name || "Vishkambha",
+        karana_name: p.karana?.name || "Bava",
+        masa_amanta: mAmanta,
+        masa_purnimanta: mPurnimanta,
+        is_adhika: monthIsAdhik,
+        ritu: p.ritu || primaryRitu,
+        ayana: p.ayana || primaryAyana,
+        vikram_samvat: p.vikram_samvat || primaryVikram,
+        shaka_samvat: p.shaka_samvat || primaryShaka,
+        sunrise: p.sunrise || "06:45",
+        sunset: p.sunset || "17:35",
+        rahu_kaal: p.rahu_kaal || "N/A",
+        abhijit_muhurat: p.abhijit_muhurat || "N/A",
         vrats,
         is_ekadashi: isEkadashi,
         is_pradosh: isPradosh,
         is_purnima: isPurnima,
         is_amavasya: isAmavasya,
-        is_sankranti: false,
-        festival,
+        is_sankranti: isSankranti,
+        festival: p.festival || null,
       });
     } catch (dayErr) {
       console.warn("Failed calculating calendar day:", dayStr, dayErr);
     }
   }
 
-  const startDate = `01/${String(month).padStart(2, "0")}/${year}`;
-  const endDate = `${String(daysInMonth).padStart(2, "0")}/${String(month).padStart(2, "0")}/${year}`;
+  const masaTypeStr = monthIsAdhik ? "adhik" : monthIsNija ? "nija" : "regular";
+  const masaIdStr = `${year}_${(MASA_NAMES[primaryMasaIdx] || "chaitra").toLowerCase()}_${masaTypeStr}`;
 
   return {
     requested_year: year,
     requested_month: month,
-    tradition,
-    view_mode: viewMode,
+    tradition: tradition === "amanta" ? "Amanta" : "Purnimanta",
+    view_mode: isLunarView ? "lunar" : "gregorian",
     primary_masa: primaryMasa,
     primary_masa_index: primaryMasaIdx,
-    is_adhika: false,
-    masa_type: "regular",
-    masa_id: `${primaryMasa.toLowerCase()}_${year}`,
+    is_adhika: monthIsAdhik,
+    masa_type: masaTypeStr,
+    masa_id: masaIdStr,
     primary_vikram_samvat: primaryVikram,
     primary_shaka_samvat: primaryShaka,
     primary_samvatsara: primarySamvatsara,
     primary_ritu: primaryRitu,
     primary_ayana: primaryAyana,
-    start_date: startDate,
-    end_date: endDate,
+    start_date: calcStartDate,
+    end_date: calcEndDate,
     days,
-    available_masas: MONTH_NAMES.map((m, idx) => ({
-      masa_name: m,
-      masa_index: idx,
-      is_adhik: false,
-      is_nija: false,
-      masa_type: "regular",
-      masa_id: `${m.toLowerCase()}_${year}`,
-      display_label: m,
-    })),
+    available_masas: availableMasas,
   };
 }

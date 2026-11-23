@@ -130,40 +130,47 @@ async function readSSEStream(
   const decoder = new TextDecoder();
   let buffer = "";
 
+  const processBlock = (block: string) => {
+    const lines = block.split(/\r?\n/);
+    let dataPayload = "";
+    for (const line of lines) {
+      const trimmed = line.trimStart();
+      if (trimmed.startsWith("data:")) {
+        const val = trimmed.slice(5).trim();
+        dataPayload += (dataPayload ? "\n" : "") + val;
+      }
+    }
+    if (!dataPayload) return;
+    try {
+      const payload = JSON.parse(dataPayload);
+      if (payload.text) {
+        onChunk(payload.text);
+      } else if (payload.done) {
+        onDone?.();
+      } else if (payload.error) {
+        onError?.(payload.error);
+      }
+    } catch (err) {
+      console.error("Malformed SSE payload parsing failed:", dataPayload, err);
+    }
+  };
+
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
 
     buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split("\n");
-    buffer = lines.pop() || "";
-
-    for (const line of lines) {
-      const cleanLine = line.trim();
-      if (!cleanLine.startsWith("data: ")) continue;
-      try {
-        const payload = JSON.parse(cleanLine.slice(6));
-        if (payload.text) {
-          onChunk(payload.text);
-        } else if (payload.done) {
-          onDone?.();
-        } else if (payload.error) {
-          onError?.(payload.error);
-        }
-      } catch (err) {
-        console.error("Malformed SSE line parsing failed:", cleanLine, err);
-      }
+    let pos: number;
+    while ((pos = buffer.indexOf("\n\n")) !== -1) {
+      const block = buffer.slice(0, pos);
+      buffer = buffer.slice(pos + 2);
+      processBlock(block);
     }
   }
 
   // Flush remaining buffer if present
-  if (buffer.trim().startsWith("data: ")) {
-    try {
-      const payload = JSON.parse(buffer.trim().slice(6));
-      if (payload.text) onChunk(payload.text);
-      else if (payload.done) onDone?.();
-      else if (payload.error) onError?.(payload.error);
-    } catch {}
+  if (buffer.trim()) {
+    processBlock(buffer);
   }
 }
 

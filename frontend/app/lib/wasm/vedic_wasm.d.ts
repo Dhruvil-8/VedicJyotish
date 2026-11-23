@@ -1,25 +1,16 @@
 /* tslint:disable */
 /* eslint-disable */
 
-export function build_ai_chart_context_wasm(chart_input_json: string): string;
-
 export function calculate_guna_milan_wasm(boy_nakshatra: number, boy_pada: number, girl_nakshatra: number, girl_pada: number, method: string): string;
 
-export function calculate_muhurtha_wasm(input_json: string): string;
-
 export function compute_chart_wasm(input_json: string): string;
-
-export function compute_transits_wasm(input_json: string): string;
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
-    readonly build_ai_chart_context_wasm: (a: number, b: number) => [number, number, number, number];
     readonly calculate_guna_milan_wasm: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
-    readonly calculate_muhurtha_wasm: (a: number, b: number) => [number, number, number, number];
     readonly compute_chart_wasm: (a: number, b: number) => [number, number, number, number];
-    readonly compute_transits_wasm: (a: number, b: number) => [number, number, number, number];
     readonly __wbindgen_externrefs: WebAssembly.Table;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;

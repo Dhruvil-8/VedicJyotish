@@ -164,7 +164,7 @@ pub struct LunarMonthInfo {
 pub fn julian_to_local_time(jd: f64, offset_hours: f64) -> String {
     let local_jd = jd + (offset_hours / 24.0);
     let day_fraction = (local_jd + 0.5) - (local_jd + 0.5).floor();
-    let total_seconds = (day_fraction * 86400.0).round() as u32 % 86400;
+    let total_seconds = ((day_fraction * 86400.0).round() as u32 + 30) % 86400;
     let hours = total_seconds / 3600;
     let minutes = (total_seconds % 3600) / 60;
     format!("{:02}:{:02}", hours, minutes)
@@ -230,7 +230,7 @@ pub fn detect_festival(
 
         // Ashadha
         ("Ashadha", "Shukla", 2) => Some("Jagannath Ratha Yatra".to_string()),
-        ("Ashadha", "Shukla", 11) => Some("Devshayani Ekadashi (Chaturmas Begins)".to_string()),
+        ("Ashadha", "Shukla", 11) => Some("Devshayani Ekadashi / Ashadi Ekadashi".to_string()),
         ("Ashadha", "Shukla", 15) => Some("Guru Purnima / Vyasa Puja".to_string()),
         ("Ashadha", "Krishna", 26) => Some("Kamika Ekadashi".to_string()),
 
@@ -238,75 +238,85 @@ pub fn detect_festival(
         ("Shravana", "Shukla", 3) => Some("Hariyali Teej".to_string()),
         ("Shravana", "Shukla", 5) => Some("Nag Panchami".to_string()),
         ("Shravana", "Shukla", 11) => Some("Shravana Putrada Ekadashi".to_string()),
-        ("Shravana", "Shukla", 15) => Some("Raksha Bandhan / Hayagriva Jayanti".to_string()),
+        ("Shravana", "Shukla", 15) => Some("Raksha Bandhan / Shravana Purnima / Gayatri Jayanti".to_string()),
+        ("Shravana", "Krishna", 18) => Some("Kajari Teej".to_string()),
         ("Shravana", "Krishna", 20) => Some("Nag Panchami (Gujarat/South)".to_string()),
         ("Shravana", "Krishna", 22) => Some("Sheetala Saptami".to_string()),
         ("Shravana", "Krishna", 23) => Some("Krishna Janmashtami".to_string()),
-        ("Shravana", "Krishna", 24) => Some("Dahi Handi".to_string()),
+        ("Shravana", "Krishna", 24) => Some("Dahi Handi / Nandotsav".to_string()),
         ("Shravana", "Krishna", 26) => Some("Aja Ekadashi".to_string()),
 
         // Bhadrapada
         ("Bhadrapada", "Shukla", 3) => Some("Hartalika Teej / Varaha Jayanti".to_string()),
-        ("Bhadrapada", "Shukla", 4) => Some("Ganesh Chaturthi (Vinayaka Chavithi)".to_string()),
+        ("Bhadrapada", "Shukla", 4) => Some("Ganesh Chaturthi / Vinayaka Chavithi".to_string()),
         ("Bhadrapada", "Shukla", 5) => Some("Rishi Panchami".to_string()),
         ("Bhadrapada", "Shukla", 8) => Some("Radha Ashtami".to_string()),
-        ("Bhadrapada", "Shukla", 11) => Some("Parsva Ekadashi (Vamana Jayanti)".to_string()),
-        ("Bhadrapada", "Shukla", 14) => Some("Anant Chaturdashi (Ganesh Visarjan)".to_string()),
-        ("Bhadrapada", "Shukla", 15) => Some("Bhadrapada Purnima / Shraddha Paksha Begins".to_string()),
+        ("Bhadrapada", "Shukla", 11) => Some("Parsva Ekadashi / Vamana Jayanti".to_string()),
+        ("Bhadrapada", "Shukla", 14) => Some("Anant Chaturdashi / Ganesh Visarjan".to_string()),
+        ("Bhadrapada", "Shukla", 15) => Some("Bhadrapada Purnima / Pitru Paksha Begins".to_string()),
         ("Bhadrapada", "Krishna", 26) => Some("Indira Ekadashi".to_string()),
-        ("Bhadrapada", "Krishna", 30) => Some("Sarva Pitru Amavasya (Mahalaya Amavasya)".to_string()),
+        ("Bhadrapada", "Krishna", 30) => Some("Sarva Pitru Amavasya / Mahalaya Amavasya".to_string()),
 
         // Ashvina
-        ("Ashvina", "Shukla", 1) => Some("Sharad Navratri Starts / Ghatasthapana".to_string()),
-        ("Ashvina", "Shukla", 7) => Some("Saraswati Avahan / Maha Saptami".to_string()),
-        ("Ashvina", "Shukla", 8) => Some("Durga Maha Ashtami / Sandhi Puja".to_string()),
-        ("Ashvina", "Shukla", 9) => Some("Maha Navami / Ayudha Puja".to_string()),
-        ("Ashvina", "Shukla", 10) => Some("Vijayadashami (Dussehra) / Madhvacharya Jayanti".to_string()),
-        ("Ashvina", "Shukla", 11) => Some("Papankusha Ekadashi".to_string()),
-        ("Ashvina", "Shukla", 15) => Some("Sharad Purnima / Kojagiri Lakshmi Puja".to_string()),
         ("Ashvina", "Krishna", 19) => Some("Karwa Chauth".to_string()),
-        ("Ashvina", "Krishna", 23) => Some("Ahoi Ashtami".to_string()),
+        ("Ashvina", "Krishna", 23) | ("Ashvina", "Krishna", 27) => Some("Ahoi Ashtami".to_string()),
         ("Ashvina", "Krishna", 26) => Some("Rama Ekadashi / Govatsa Dwadashi".to_string()),
-        ("Ashvina", "Krishna", 28) => Some("Dhanteras (Dhanvantari Jayanti)".to_string()),
-        ("Ashvina", "Krishna", 29) => Some("Naraka Chaturdashi / Chhoti Diwali".to_string()),
-        ("Ashvina", "Krishna", 30) => Some("Diwali (Lakshmi Puja)".to_string()),
+        ("Ashvina", "Krishna", 28) => Some("Dhanteras / Dhanvantari Jayanti / Yama Deepam".to_string()),
+        ("Ashvina", "Krishna", 29) => Some("Naraka Chaturdashi / Choti Diwali / Roop Chaudas".to_string()),
+        ("Ashvina", "Krishna", 30) => Some("Diwali / Lakshmi Puja / Kedar Gauri Vrat".to_string()),
+        ("Ashvina", "Shukla", 1) => Some("Sharad Navratri Starts / Ghatasthapana".to_string()),
+        ("Ashvina", "Shukla", 7) => Some("Maha Saptami / Saraswati Puja".to_string()),
+        ("Ashvina", "Shukla", 8) => Some("Maha Ashtami / Durga Ashtami".to_string()),
+        ("Ashvina", "Shukla", 9) => Some("Maha Navami / Ayudha Puja".to_string()),
+        ("Ashvina", "Shukla", 10) => Some("Vijayadashami / Dussehra".to_string()),
+        ("Ashvina", "Shukla", 11) => Some("Papankusha Ekadashi".to_string()),
+        ("Ashvina", "Shukla", 15) => Some("Sharad Purnima / Kojagara Puja / Raas Purnima".to_string()),
 
         // Kartika
-        ("Kartika", "Shukla", 1) => Some("Govardhan Puja / Annakut / Gujarati New Year".to_string()),
+        ("Kartika", "Krishna", 26) => Some("Rama Ekadashi".to_string()),
+        ("Kartika", "Krishna", 28) => Some("Dhanteras / Dhanvantari Jayanti / Yama Deepam".to_string()),
+        ("Kartika", "Krishna", 29) => Some("Naraka Chaturdashi / Choti Diwali / Roop Chaudas".to_string()),
+        ("Kartika", "Krishna", 30) => Some("Diwali / Lakshmi Puja / Kedar Gauri Vrat".to_string()),
+        ("Kartika", "Shukla", 1) => Some("Govardhan Puja / Annakut / Gujarati New Year / Bali Pratipada".to_string()),
         ("Kartika", "Shukla", 2) => Some("Bhai Dooj / Yama Dwitiya".to_string()),
-        ("Kartika", "Shukla", 6) => Some("Chhath Puja (Surya Shashthi)".to_string()),
+        ("Kartika", "Shukla", 5) => Some("Labh Pancham / Saubhagya Panchami".to_string()),
+        ("Kartika", "Shukla", 6) => Some("Chhath Puja (Sandhya Arghya) / Surya Shashthi".to_string()),
+        ("Kartika", "Shukla", 7) => Some("Chhath Puja (Usha Arghya)".to_string()),
         ("Kartika", "Shukla", 8) => Some("Gopashtami".to_string()),
-        ("Kartika", "Shukla", 9) => Some("Akshaya Navami (Amla Navami)".to_string()),
-        ("Kartika", "Shukla", 11) => Some("Devutthana Ekadashi (Tulsi Vivah Begins)".to_string()),
-        ("Kartika", "Shukla", 15) => Some("Kartik Purnima / Dev Diwali / Guru Nanak Jayanti".to_string()),
-        ("Kartika", "Krishna", 26) => Some("Utpanna Ekadashi".to_string()),
+        ("Kartika", "Shukla", 9) => Some("Akshaya Navami / Amla Navami".to_string()),
+        ("Kartika", "Shukla", 11) => Some("Devutthana Ekadashi / Tulsi Vivah Starts".to_string()),
+        ("Kartika", "Shukla", 14) => Some("Vaikuntha Chaturdashi".to_string()),
+        ("Kartika", "Shukla", 15) => Some("Dev Diwali / Kartik Purnima / Guru Nanak Jayanti".to_string()),
 
         // Margashirsha
+        ("Margashirsha", "Krishna", 26) => Some("Utpanna Ekadashi".to_string()),
         ("Margashirsha", "Shukla", 5) => Some("Vivah Panchami (Rama-Sita Vivah)".to_string()),
-        ("Margashirsha", "Shukla", 11) => Some("Mokshada Ekadashi / Gita Jayanti".to_string()),
-        ("Margashirsha", "Shukla", 15) => Some("Dattatreya Jayanti / Margashirsha Purnima".to_string()),
-        ("Margashirsha", "Krishna", 26) => Some("Saphala Ekadashi".to_string()),
+        ("Margashirsha", "Shukla", 11) => Some("Mokshada Ekadashi / Gita Jayanti / Guruvayur Ekadashi".to_string()),
+        ("Margashirsha", "Shukla", 15) => Some("Dattatreya Jayanti / Margashirsha Purnima / Annapurna Jayanti".to_string()),
 
         // Pausha
-        ("Pausha", "Shukla", 11) => Some("Pausha Putrada Ekadashi".to_string()),
+        ("Pausha", "Krishna", 26) => Some("Saphala Ekadashi".to_string()),
+        ("Pausha", "Shukla", 11) => Some("Pausha Putrada Ekadashi / Vaikuntha Ekadashi".to_string()),
         ("Pausha", "Shukla", 15) => Some("Pausha Purnima / Shakambhari Jayanti".to_string()),
-        ("Pausha", "Krishna", 26) => Some("Shattila Ekadashi".to_string()),
 
         // Magha
+        ("Magha", "Krishna", 26) => Some("Shattila Ekadashi".to_string()),
+        ("Magha", "Krishna", 29) => Some("Maha Shivratri".to_string()),
         ("Magha", "Krishna", 30) => Some("Mauni Amavasya".to_string()),
-        ("Magha", "Shukla", 5) => Some("Vasant Panchami (Saraswati Puja)".to_string()),
-        ("Magha", "Shukla", 7) => Some("Ratha Saptami (Arogya Saptami)".to_string()),
+        ("Magha", "Shukla", 5) => Some("Vasant Panchami / Saraswati Puja".to_string()),
+        ("Magha", "Shukla", 7) => Some("Ratha Saptami / Arogya Saptami".to_string()),
         ("Magha", "Shukla", 8) => Some("Bhishma Ashtami".to_string()),
         ("Magha", "Shukla", 11) => Some("Jaya Ekadashi".to_string()),
-        ("Magha", "Shukla", 15) => Some("Magha Purnima / Guru Ravidas Jayanti".to_string()),
-        ("Magha", "Krishna", 26) => Some("Vijaya Ekadashi".to_string()),
-        ("Magha", "Krishna", 29) => Some("Maha Shivaratri".to_string()),
+        ("Magha", "Shukla", 15) => Some("Magha Purnima / Lalita Jayanti / Guru Ravidas Jayanti".to_string()),
 
         // Phalguna
+        ("Phalguna", "Krishna", 16) => Some("Holi (Dhulandi) / Vasantotsav".to_string()),
+        ("Phalguna", "Krishna", 20) => Some("Rang Panchami".to_string()),
+        ("Phalguna", "Krishna", 23) => Some("Sheetala Ashtami / Basoda".to_string()),
+        ("Phalguna", "Krishna", 26) | ("Phalguna", "Krishna", 27) => Some("Papmochani Ekadashi".to_string()),
         ("Phalguna", "Shukla", 11) => Some("Amalaki Ekadashi".to_string()),
         ("Phalguna", "Shukla", 14) => Some("Holika Dahan / Chhoti Holi".to_string()),
         ("Phalguna", "Shukla", 15) => Some("Holi / Phalguna Purnima / Chaitanya Mahaprabhu Jayanti".to_string()),
-        ("Phalguna", "Krishna", 26) => Some("Papmochani Ekadashi".to_string()),
 
         _ => None,
     }
@@ -602,7 +612,7 @@ pub fn calculate_panchanga_advanced(
     let (amanta_masa_idx, purnimanta_masa_idx, is_adhika_masa) = if let Some(info) = lunar_month_info {
         (info.amanta_masa_idx, info.purnimanta_masa_idx, info.is_adhika)
     } else {
-        let amanta_idx = sun_sign_idx % 12;
+        let amanta_idx = (sun_sign_idx + 1) % 12;
         let purnimanta_idx = if paksha == "Krishna" { (amanta_idx + 1) % 12 } else { amanta_idx };
         (amanta_idx, purnimanta_idx, false)
     };

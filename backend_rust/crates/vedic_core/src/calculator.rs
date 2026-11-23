@@ -57,6 +57,12 @@ pub struct CoreChartInput {
     pub jd_ut: Option<f64>,
     #[serde(default)]
     pub lunar_month_info: Option<LunarMonthInfo>,
+    #[serde(default)]
+    pub amanta_month: Option<usize>,
+    #[serde(default)]
+    pub purnimanta_month: Option<usize>,
+    #[serde(default)]
+    pub is_adhika_month: Option<bool>,
 }
 
 pub fn normalize_degree(degree: f64) -> f64 {
@@ -528,7 +534,21 @@ pub fn compute_chart_core(input: CoreChartInput) -> Result<ChartResponse, String
     let navamsa_chart = chart::build_navamsa_chart(input.ascendant_degree, &planets);
 
     let offset_hours = input.timezone.unwrap_or(0.0);
-    let jd_ut = input.jd_ut.unwrap_or(2451545.0);
+    let jd_ut = input.jd_ut.unwrap_or_else(|| {
+        let (y, m, d) = (naive_date.year(), naive_date.month() as i32, naive_date.day() as f64);
+        let dec_hour = (th as f64) + (tm as f64) / 60.0 + (ts as f64) / 3600.0 - offset_hours;
+        let mut adj_y = y;
+        let mut adj_m = m;
+        if adj_m <= 2 {
+            adj_y -= 1;
+            adj_m += 12;
+        }
+        let a = (adj_y as f64 / 100.0).floor();
+        let b = 2.0 - a + (a / 4.0).floor();
+        (365.25 * (adj_y as f64 + 4716.0)).floor()
+            + (30.6001 * (adj_m as f64 + 1.0)).floor()
+            + d + (dec_hour / 24.0) + b - 1524.5
+    });
 
     let sunrise_jd = input.sunrise_jd.unwrap_or(jd_ut - 0.25);
     let sunset_jd = input.sunset_jd.unwrap_or(jd_ut + 0.25);
@@ -542,6 +562,14 @@ pub fn compute_chart_core(input: CoreChartInput) -> Result<ChartResponse, String
         next_sunrise_jd,
     };
 
+    let lunar_month_info = input.lunar_month_info.or_else(|| {
+        input.amanta_month.map(|amanta| LunarMonthInfo {
+            amanta_masa_idx: amanta,
+            purnimanta_masa_idx: input.purnimanta_month.unwrap_or(amanta),
+            is_adhika: input.is_adhika_month.unwrap_or(false),
+        })
+    });
+
     let mut panchanga = panchanga::calculate_panchanga_advanced(
         &coords,
         local_naive,
@@ -550,7 +578,7 @@ pub fn compute_chart_core(input: CoreChartInput) -> Result<ChartResponse, String
         input.lat,
         input.lon,
         Some(input.ayanamsa_value),
-        input.lunar_month_info,
+        lunar_month_info,
     );
     panchanga.ayanamsha = Some(input.ayanamsa_value);
 

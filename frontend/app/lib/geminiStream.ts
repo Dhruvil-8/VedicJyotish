@@ -322,38 +322,60 @@ async function streamFromGemini(apiKey: string, requestBody: any): Promise<Respo
 
       let buffer = "";
 
+      const emitCandidateText = (jsonStr: string) => {
+        try {
+          const chunkJson = JSON.parse(jsonStr);
+          const candidates = chunkJson.candidates;
+          if (Array.isArray(candidates)) {
+            for (const c of candidates) {
+              const parts = c.content?.parts;
+              if (Array.isArray(parts)) {
+                for (const part of parts) {
+                  if (part.text) {
+                    controller.enqueue(
+                      encoder.encode(`data: ${JSON.stringify({ text: part.text })}\n\n`)
+                    );
+                  }
+                }
+              }
+            }
+          }
+        } catch {}
+      };
+
+      const processEventBlock = (block: string) => {
+        const lines = block.split(/\r?\n/);
+        let dataPayload = "";
+        for (const line of lines) {
+          const trimmed = line.trimStart();
+          if (trimmed.startsWith("data:")) {
+            const val = trimmed.slice(5).trim();
+            dataPayload += (dataPayload ? "\n" : "") + val;
+          }
+        }
+        if (dataPayload && dataPayload !== "[DONE]") {
+          emitCandidateText(dataPayload);
+        }
+      };
+
       try {
         while (true) {
           const { done, value } = await geminiReader.read();
           if (done) break;
 
           buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop() || "";
 
-          for (const line of lines) {
-            const clean = line.trim();
-            if (clean.startsWith("data: ")) {
-              try {
-                const chunkJson = JSON.parse(clean.slice(6));
-                const candidates = chunkJson.candidates;
-                if (Array.isArray(candidates)) {
-                  for (const c of candidates) {
-                    const parts = c.content?.parts;
-                    if (Array.isArray(parts)) {
-                      for (const part of parts) {
-                        if (part.text) {
-                          controller.enqueue(
-                            encoder.encode(`data: ${JSON.stringify({ text: part.text })}\n\n`)
-                          );
-                        }
-                      }
-                    }
-                  }
-                }
-              } catch {}
-            }
+          let pos: number;
+          while ((pos = buffer.indexOf("\n\n")) !== -1) {
+            const block = buffer.slice(0, pos);
+            buffer = buffer.slice(pos + 2);
+            processEventBlock(block);
           }
+        }
+
+        // Flush any remaining buffer content
+        if (buffer.trim()) {
+          processEventBlock(buffer);
         }
 
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`));
