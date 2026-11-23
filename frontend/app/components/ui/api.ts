@@ -288,6 +288,18 @@ export const calculateCalendar = async (payload: {
   masa_type?: string;
   is_adhik?: boolean;
 }) => {
+  if (isClient) {
+    try {
+      const { computeClientCalendar } = await import("../../lib/ephemeris/engine");
+      const localResult = await computeClientCalendar(payload);
+      if (localResult && localResult.days && localResult.days.length > 0) {
+        return localResult;
+      }
+    } catch (clientErr) {
+      console.warn("Client-side Calendar calculation failed, falling back to backend:", clientErr);
+    }
+  }
+
   const res = await fetch(`${API_BASE}/calculate_calendar`, {
     method: "POST",
     headers: getHeaders({ "Content-Type": "application/json" }),

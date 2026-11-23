@@ -1,7 +1,7 @@
 // Serverless Gemini streaming integration for Next.js Edge / Serverless functions
 // Allows report generation and chat directly via Google's Gemini API without needing a Rust backend.
 
-const DEFAULT_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+const DEFAULT_MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash";
 
 interface ChatMessage {
   role: "user" | "model";
@@ -252,9 +252,9 @@ FORMATTING RULES:
  */
 async function streamFromGemini(apiKey: string, requestBody: any): Promise<Response> {
   const model = DEFAULT_MODEL;
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`;
+  let url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`;
 
-  const geminiRes = await fetch(url, {
+  let geminiRes = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -262,9 +262,34 @@ async function streamFromGemini(apiKey: string, requestBody: any): Promise<Respo
     body: JSON.stringify(requestBody),
   });
 
+  // If model fails (e.g. 404 or unsupported), attempt fallback to gemini-1.5-flash
+  if (!geminiRes.ok && model !== "gemini-1.5-flash") {
+    console.warn(`Model ${model} returned status ${geminiRes.status}, falling back to gemini-1.5-flash`);
+    const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key=${apiKey}`;
+    const fallbackRes = await fetch(fallbackUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(requestBody),
+    });
+    if (fallbackRes.ok) {
+      geminiRes = fallbackRes;
+    }
+  }
+
   if (!geminiRes.ok) {
     const status = geminiRes.status;
-    let errMsg = "AI Service temporarily unavailable.";
+    let errDetail = "";
+    try {
+      const errText = await geminiRes.text();
+      const errJson = JSON.parse(errText);
+      errDetail = errJson.error?.message || errText;
+    } catch {
+      errDetail = "Network or upstream error";
+    }
+
+    let errMsg = `AI Service temporarily unavailable (${status}: ${errDetail})`;
     if (status === 429) {
       errMsg = "The AI astrologer is currently busy. Please wait a minute and try again.";
     }

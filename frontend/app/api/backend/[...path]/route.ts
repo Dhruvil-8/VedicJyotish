@@ -16,7 +16,12 @@ const BACKEND_URL = (
 
 // Server-only API Key (NEVER exposed to client browser via NEXT_PUBLIC_)
 const SERVER_API_KEY = process.env.API_SECRET_KEY || process.env.BACKEND_API_KEY || "";
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
+const GEMINI_API_KEY =
+  process.env.GEMINI_API_KEY ||
+  process.env.GOOGLE_API_KEY ||
+  process.env.GEMINI_KEY ||
+  process.env.GOOGLE_GEMINI_API_KEY ||
+  "";
 
 async function proxyRequest(
   req: NextRequest,

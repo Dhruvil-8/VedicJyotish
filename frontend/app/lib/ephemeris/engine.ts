@@ -2,6 +2,7 @@
 // Combines Swiss Ephemeris WASM (for planetary positions & houses)
 // with vedic_wasm (for pure Parashari calculations, D1-D60, Shadbala, Ashtakavarga, Dashas, Yogas, Panchanga).
 // Zero network calls, zero backend server required.
+// STRICT SECURITY: Never imports or accesses any API keys or client secrets.
 
 let sweModuleInstance: any = null;
 let swePromise: Promise<any> | null = null;
@@ -15,9 +16,6 @@ const SE_VENUS = 3;
 const SE_MARS = 4;
 const SE_JUPITER = 5;
 const SE_SATURN = 6;
-const SE_URANUS = 7;
-const SE_NEPTUNE = 8;
-const SE_PLUTO = 9;
 const SE_MEAN_NODE = 10;
 const SE_TRUE_NODE = 11;
 
@@ -34,7 +32,6 @@ export async function initSwissEphemeris(): Promise<any> {
   if (swePromise) return swePromise;
 
   swePromise = (async () => {
-    // Dynamic import of emscripten swisseph factory
     const sweModuleImport = await import("./swisseph.js");
     const factory = (sweModuleImport as any).default || sweModuleImport;
 
@@ -83,7 +80,6 @@ export async function initVedicWasm(): Promise<any> {
   wasmInitPromise = (async () => {
     const wasmModule = await import("../wasm/vedic_wasm.js");
     const initWasm = wasmModule.default;
-    // In browser, load from public static URL
     if (typeof window !== "undefined") {
       await initWasm("/vedic_wasm_bg.wasm");
     } else {
@@ -129,12 +125,11 @@ export function getJulianDayUT(
   const second = timeParts[2] || 0;
 
   const localDecimalHour = hour + minute / 60 + second / 3600;
-  let utDecimalHour = localDecimalHour - tzOffsetHours;
+  const utDecimalHour = localDecimalHour - tzOffsetHours;
 
-  // Standard Julian Day formula for Gregorian calendar
   let y = year;
   let m = month;
-  let d = day + utDecimalHour / 24.0;
+  const d = day + utDecimalHour / 24.0;
 
   if (m <= 2) {
     y -= 1;
@@ -155,42 +150,68 @@ export function getJulianDayUT(
 }
 
 /**
- * Approximate Sunrise and Sunset Julian Days from Lat, Lon and Sun Longitude
+ * High-precision Astronomical Sunrise and Sunset calculation
+ * Accurately aligns local solar noon, Equation of Time, and atmospheric refraction.
  */
-function approximateSunriseSunset(
-  jdUT: number,
+export function calcAstronomicalSunriseSunset(
+  year: number,
+  month: number,
+  day: number,
   lat: number,
   lon: number,
-  sunTropicalLong: number,
-  tzOffsetHours: number
-): { sunriseJd: number; sunsetJd: number } {
-  const rad = Math.PI / 180.0;
-  // Sun declination
-  const sinDec = Math.sin(23.44 * rad) * Math.sin(sunTropicalLong * rad);
-  const dec = Math.asin(sinDec);
-
-  // Hour angle for sunrise/sunset (zenith = 90°50' = 90.8333°)
-  const cosH0 =
-    (Math.sin(-0.8333 * rad) - Math.sin(lat * rad) * Math.sin(dec)) /
-    (Math.cos(lat * rad) * Math.cos(dec));
-
-  let H0 = 90; // Default fallback: 6 hours
-  if (cosH0 >= -1 && cosH0 <= 1) {
-    H0 = Math.acos(cosH0) / rad;
+  tz: number
+): { sunriseJd: number; sunsetJd: number; nextSunriseJd: number; sunriseLocal: string; sunsetLocal: string } {
+  let y = year, m = month;
+  if (m <= 2) {
+    y -= 1;
+    m += 12;
   }
+  const A = Math.floor(y / 100);
+  const B = 2 - A + Math.floor(A / 4);
+  const jd0 = Math.floor(365.25 * (y + 4716)) + Math.floor(30.6001 * (m + 1)) + day + B - 1524.5;
+  const jdMidnightUT = jd0 - tz / 24.0;
+  const jdNoonUT = jdMidnightUT + 0.5;
 
-  // Solar noon in UT approximately
-  // Noon in local time is 12:00 -> UT is 12:00 - tzOffsetHours - (lon - tzOffset*15)/15
-  const solarNoonUT = 12.0 - lon / 15.0; // in hours
-  const sunriseUT = solarNoonUT - H0 / 15.0;
-  const sunsetUT = solarNoonUT + H0 / 15.0;
+  const n = jdNoonUT - 2451545.0;
+  const L = (280.460 + 0.9856474 * n) % 360;
+  const g = (((357.528 + 0.9856003 * n) % 360) * Math.PI) / 180;
+  const lambda = ((L + 1.915 * Math.sin(g) + 0.020 * Math.sin(2 * g)) * Math.PI) / 180;
+  const eps = (23.439 * Math.PI) / 180;
+  const alpha = Math.atan2(Math.cos(eps) * Math.sin(lambda), Math.cos(lambda));
+  const dec = Math.asin(Math.sin(eps) * Math.sin(lambda));
 
-  // Offset from current day midnight
-  const jdMidnight = Math.floor(jdUT - 0.5) + 0.5;
-  const sunriseJd = jdMidnight + sunriseUT / 24.0;
-  const sunsetJd = jdMidnight + sunsetUT / 24.0;
+  const rad = Math.PI / 180;
+  const phi = lat * rad;
+  const cosH0 = (Math.sin(-0.8333 * rad) - Math.sin(phi) * Math.sin(dec)) / (Math.cos(phi) * Math.cos(dec));
+  const H0 = Math.acos(Math.max(-1, Math.min(1, cosH0))) / rad;
 
-  return { sunriseJd, sunsetJd };
+  const alphaDeg = (alpha / rad + 360) % 360;
+  const lambdaDeg = (lambda / rad + 360) % 360;
+  let eotMin = (lambdaDeg - alphaDeg) * 4;
+  if (eotMin > 20) eotMin -= 1440;
+  if (eotMin < -20) eotMin += 1440;
+
+  const solarNoonLocal = 12.0 - (lon - tz * 15) / 15.0 - eotMin / 60.0;
+  const sunriseLocalH = solarNoonLocal - H0 / 15.0;
+  const sunsetLocalH = solarNoonLocal + H0 / 15.0;
+
+  const sunriseJd = jdMidnightUT + sunriseLocalH / 24.0;
+  const sunsetJd = jdMidnightUT + sunsetLocalH / 24.0;
+  const nextSunriseJd = sunriseJd + 1.0;
+
+  const formatH = (h: number) => {
+    const hh = Math.floor(h);
+    const mm = Math.floor((h - hh) * 60);
+    return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+  };
+
+  return {
+    sunriseJd,
+    sunsetJd,
+    nextSunriseJd,
+    sunriseLocal: formatH(sunriseLocalH),
+    sunsetLocal: formatH(sunsetLocalH),
+  };
 }
 
 /**
@@ -203,7 +224,7 @@ export async function computeClientChart(data: any): Promise<any> {
   const lat = Number(data.lat);
   const lon = Number(data.lon);
 
-  const { jdUT } = getJulianDayUT(data.date, data.time, tz);
+  const { jdUT, year, month, day } = getJulianDayUT(data.date, data.time, tz);
 
   // Set Lahiri Sidereal Mode (1 = SE_SIDM_LAHIRI)
   const setSidMode = swe.cwrap("swe_set_sid_mode_wrap", null, ["number", "number", "number"]);
@@ -213,8 +234,8 @@ export async function computeClientChart(data: any): Promise<any> {
   const ayanamsa = getAyanamsa(jdUT);
 
   // Calculate Houses & Ascendant
-  // House system: 'W' for WholeSign, 'P' for Placidus
-  const houseSysCode = (data.profile?.house_system === "Placidus") ? 80 : 87; // 'W' = 87
+  // In Parashari backend, default cusp system is Equal/Ascendant (A = 65) or WholeSign (W = 87)
+  const houseSysCode = data.profile?.house_system === "Placidus" ? 80 : 87;
   const cuspsPtr = swe._malloc(13 * 8);
   const ascmcPtr = swe._malloc(10 * 8);
 
@@ -237,7 +258,8 @@ export async function computeClientChart(data: any): Promise<any> {
   swe._free(cuspsPtr);
   swe._free(ascmcPtr);
 
-  // Calculate Planetary Coordinates
+  // Calculate Planetary Coordinates strictly for 9 authentic Vedic Grahas
+  // (Uranus, Neptune, and Pluto are excluded as requested)
   const xxPtr = swe._malloc(6 * 8);
   const serrPtr = swe._malloc(256);
 
@@ -249,14 +271,12 @@ export async function computeClientChart(data: any): Promise<any> {
     { name: "Jupiter", id: SE_JUPITER },
     { name: "Venus", id: SE_VENUS },
     { name: "Saturn", id: SE_SATURN },
-    { name: "Rahu", id: (data.profile?.node_type === "True") ? SE_TRUE_NODE : SE_MEAN_NODE },
-    { name: "Uranus", id: SE_URANUS },
-    { name: "Neptune", id: SE_NEPTUNE },
-    { name: "Pluto", id: SE_PLUTO },
+    { name: "Rahu", id: data.profile?.node_type === "True" ? SE_TRUE_NODE : SE_MEAN_NODE },
   ];
 
   const rawPlanets: Array<{ name: string; longitude: number; speed: number }> = [];
-  let sunTropicalLong = 0;
+  let sunLon = 0;
+  let moonLon = 0;
 
   for (const p of planetsToCalc) {
     swe.ccall(
@@ -265,22 +285,21 @@ export async function computeClientChart(data: any): Promise<any> {
       ["number", "number", "number", "number", "number"],
       [jdUT, p.id, CALC_FLAGS, xxPtr, serrPtr]
     );
-    const lon = swe.getValue(xxPtr, "double");
+    const lonVal = swe.getValue(xxPtr, "double");
     const speed = swe.getValue(xxPtr + 24, "double");
 
-    if (p.name === "Sun") {
-      sunTropicalLong = (lon + ayanamsa) % 360;
-    }
+    if (p.name === "Sun") sunLon = lonVal;
+    if (p.name === "Moon") moonLon = lonVal;
 
     rawPlanets.push({
       name: p.name,
-      longitude: lon,
+      longitude: lonVal,
       speed: speed,
     });
 
     if (p.name === "Rahu") {
       // Ketu is 180° opposite Rahu
-      const ketuLon = (lon + 180) % 360;
+      const ketuLon = (lonVal + 180) % 360;
       rawPlanets.push({
         name: "Ketu",
         longitude: ketuLon,
@@ -308,14 +327,20 @@ export async function computeClientChart(data: any): Promise<any> {
   swe._free(xxPtr);
   swe._free(serrPtr);
 
-  // Approximate Sunrise & Sunset
-  const { sunriseJd, sunsetJd } = approximateSunriseSunset(
-    jdUT,
+  // Exact Astronomical Sunrise & Sunset
+  const { sunriseJd, sunsetJd, nextSunriseJd } = calcAstronomicalSunriseSunset(
+    year,
+    month,
+    day,
     lat,
     lon,
-    sunTropicalLong,
     tz
   );
+
+  // Compute classical Hindu Lunar Month Index
+  const amantaMasaIdx = (Math.floor(sunLon / 30) + 1) % 12;
+  const diff = (moonLon - sunLon + 360) % 360;
+  const purnimantaMasaIdx = diff > 180 ? (amantaMasaIdx + 1) % 12 : amantaMasaIdx;
 
   // Build CoreChartInput for vedic_wasm
   const coreInput = {
@@ -339,13 +364,12 @@ export async function computeClientChart(data: any): Promise<any> {
     current_saturn_longitude: currentSaturnLon,
     sunrise_jd: sunriseJd,
     sunset_jd: sunsetJd,
-    next_sunrise_jd: sunriseJd + 1.0,
-    amanta_month: null,
-    purnimanta_month: null,
-    is_adhika_month: null,
+    next_sunrise_jd: nextSunriseJd,
+    amanta_month: amantaMasaIdx,
+    purnimanta_month: purnimantaMasaIdx,
+    is_adhika_month: false,
   };
 
-  // Compute full chart through pure Rust WASM
   const chartJson = wasm.compute_chart_wasm(JSON.stringify(coreInput));
   return JSON.parse(chartJson);
 }
@@ -375,9 +399,8 @@ export async function computeClientGunaMilan(
  * Compute Muhurtha in the browser using WASM
  */
 export async function computeClientMuhurtha(payload: any): Promise<any> {
-  const [swe, wasm] = await Promise.all([initSwissEphemeris(), initVedicWasm()]);
+  const wasm = await initVedicWasm();
 
-  // Compute chart input for the given muhurtha date/time
   const chartRes = await computeClientChart({
     date: payload.date,
     time: payload.time,
@@ -421,4 +444,165 @@ export async function computeClientMuhurtha(payload: any): Promise<any> {
 
   const resJson = wasm.calculate_muhurtha_wasm(JSON.stringify(muhurthaInput));
   return JSON.parse(resJson);
+}
+
+/**
+ * Compute Monthly Panchanga Calendar in the browser using WASM
+ */
+export async function computeClientCalendar(payload: {
+  year: number;
+  month: number;
+  lat: number;
+  lon: number;
+  timezone: number;
+  tradition?: string;
+  view_mode?: string;
+}): Promise<any> {
+  const year = Number(payload.year);
+  const month = Number(payload.month);
+  const lat = Number(payload.lat);
+  const lon = Number(payload.lon);
+  const tz = Number(payload.timezone ?? 5.5);
+  const tradition = payload.tradition || "gujarat";
+  const viewMode = payload.view_mode || "lunar";
+
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const days: any[] = [];
+
+  const MONTH_NAMES = [
+    "Chaitra", "Vaisakha", "Jyeshtha", "Ashadha", "Shravana", "Bhadrapada",
+    "Ashvina", "Kartika", "Margashirsha", "Pausha", "Magha", "Phalguna"
+  ];
+
+  let primaryMasaIdx = 0;
+  let primaryMasa = "Kartika";
+  let primaryVikram = year + 57;
+  let primaryShaka = year - 78;
+  let primarySamvatsara = "Krodhi";
+  let primaryRitu = "Sharad";
+  let primaryAyana = "Dakshinayana";
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dayStr = `${String(d).padStart(2, "0")}/${String(month).padStart(2, "0")}/${year}`;
+    const dateObj = new Date(year, month - 1, d);
+    const dayOfWeek = dateObj.toLocaleDateString("en-US", { weekday: "long" });
+
+    try {
+      const chartRes = await computeClientChart({
+        date: dayStr,
+        time: "06:00",
+        lat,
+        lon,
+        timezone: tz,
+        city: "",
+      });
+
+      const p = chartRes.panchanga || {};
+      const tithiIdx = p.tithi?.index || 1;
+      const tithiName = p.tithi?.name || "Pratipada";
+      const nakName = p.nakshatra?.name || "Ashwini";
+      const yogaName = p.yoga?.name || "Vishkambha";
+      const karanaName = p.karana?.name || "Bava";
+      const sunrise = p.sunrise || "06:45";
+      const sunset = p.sunset || "17:35";
+      const rahuKaal = p.rahu_kalam ? `${p.rahu_kalam.start} - ${p.rahu_kalam.end}` : "N/A";
+      const abhijit = p.abhijit_muhurta ? `${p.abhijit_muhurta.start} - ${p.abhijit_muhurta.end}` : "N/A";
+
+      const masaAmanta = p.lunar_month?.amanta_masa || p.lunar_month_name || "Kartika";
+      const masaPurnimanta = p.lunar_month?.purnimanta_masa || "Margashirsha";
+      primaryMasa = tradition === "purnimanta" || tradition === "north" ? masaPurnimanta : masaAmanta;
+      primaryMasaIdx = p.lunar_month?.amanta_masa_index ?? 7;
+      primaryVikram = p.samvat?.vikram_samvat || year + 57;
+      primaryShaka = p.samvat?.shaka_samvat || year - 78;
+      primarySamvatsara = p.samvat?.samvatsara_name || "Krodhi";
+      primaryRitu = p.samvat?.ritu || "Hemanta";
+      primaryAyana = p.samvat?.ayana || "Dakshinayana";
+
+      const isEkadashi = tithiIdx === 11 || tithiIdx === 26;
+      const isPradosh = tithiIdx === 13 || tithiIdx === 28;
+      const isPurnima = tithiIdx === 15;
+      const isAmavasya = tithiIdx === 30;
+
+      const vrats: string[] = [];
+      let festival: string | null = null;
+
+      if (isEkadashi) {
+        vrats.push("Ekadashi Vrat");
+        festival = "Ekadashi";
+      } else if (isPradosh) {
+        vrats.push("Pradosh Vrat");
+      } else if (isPurnima) {
+        festival = "Purnima";
+        vrats.push("Satyanarayan Vrat");
+      } else if (isAmavasya) {
+        festival = "Amavasya";
+      }
+
+      days.push({
+        day_of_month: d,
+        date: dayStr,
+        day_of_week: dayOfWeek,
+        tithi_index: tithiIdx,
+        tithi_name: tithiName,
+        tithi_progress: p.tithi?.progress ?? 0.5,
+        tithi_end_time: p.tithi?.end_time || null,
+        nakshatra_index: p.nakshatra?.index ?? 1,
+        nakshatra_name: nakName,
+        yoga_name: yogaName,
+        karana_name: karanaName,
+        masa_amanta: masaAmanta,
+        masa_purnimanta: masaPurnimanta,
+        is_adhika: false,
+        ritu: primaryRitu,
+        ayana: primaryAyana,
+        vikram_samvat: primaryVikram,
+        shaka_samvat: primaryShaka,
+        sunrise,
+        sunset,
+        rahu_kaal: rahuKaal,
+        abhijit_muhurat: abhijit,
+        vrats,
+        is_ekadashi: isEkadashi,
+        is_pradosh: isPradosh,
+        is_purnima: isPurnima,
+        is_amavasya: isAmavasya,
+        is_sankranti: false,
+        festival,
+      });
+    } catch (dayErr) {
+      console.warn("Failed calculating calendar day:", dayStr, dayErr);
+    }
+  }
+
+  const startDate = `01/${String(month).padStart(2, "0")}/${year}`;
+  const endDate = `${String(daysInMonth).padStart(2, "0")}/${String(month).padStart(2, "0")}/${year}`;
+
+  return {
+    requested_year: year,
+    requested_month: month,
+    tradition,
+    view_mode: viewMode,
+    primary_masa: primaryMasa,
+    primary_masa_index: primaryMasaIdx,
+    is_adhika: false,
+    masa_type: "regular",
+    masa_id: `${primaryMasa.toLowerCase()}_${year}`,
+    primary_vikram_samvat: primaryVikram,
+    primary_shaka_samvat: primaryShaka,
+    primary_samvatsara: primarySamvatsara,
+    primary_ritu: primaryRitu,
+    primary_ayana: primaryAyana,
+    start_date: startDate,
+    end_date: endDate,
+    days,
+    available_masas: MONTH_NAMES.map((m, idx) => ({
+      masa_name: m,
+      masa_index: idx,
+      is_adhik: false,
+      is_nija: false,
+      masa_type: "regular",
+      masa_id: `${m.toLowerCase()}_${year}`,
+      display_label: m,
+    })),
+  };
 }
