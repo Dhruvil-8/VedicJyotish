@@ -46,24 +46,32 @@ All endpoints support optional calculation profiles (`profile`) and optional API
 ### 1. System & Atlas Lookups
 * `GET /` - Health check, engine version, and uptime metadata.
 * `GET /search_city?query=<name>` - Prefix query against local GeoNames SQLite database.
+* `GET /api/v1/capabilities` - Supported Ayanamsas, House Systems, Dasha Year conventions, and active calculation modules.
 
 ### 2. Chart Calculations
 * `POST /calculate_chart` - Basic chart computation (D1, D9, planetary table, yogas, Vimshottari).
 * `POST /api/v1/chart/full` - Enterprise-grade chart calculation containing full Vargas (D1..D60), Shadbala, Bhava Bala, Bhava Chalit cusps, Upagrahas, Ashtakavarga reductions, Shodhya Pindas, and all 12 Bhava Arudhas.
-* `POST /calculate_transits` - Real-time planetary transits relative to natal Lagna and natal Moon.
+* `POST /calculate_transits` - Real-time planetary transits relative to natal Lagna and natal Moon with Sade Sati analysis.
 * `POST /calculate_calendar` - Monthly Panchanga calendar across Gregorian, Amanta, and Purnimanta modes.
+* `POST /calculate_muhurtha` (or `POST /api/v1/muhurtha`) - Electional Muhurtha scoring for activities (marriage, travel, business, etc.) with Tarabala, Chandrabala, and Disha Shoola.
 
-### 3. Jaimini & Granular Modules
+### 3. Jaimini, Vargas & Granular Analysis
+* `POST /api/v1/chart/rasi` - Rasi (D1) details, planets, and house distributions.
+* `POST /api/v1/chart/navamsa` - Navamsa (D9) details and ascendant sign.
+* `POST /api/v1/chart/varga` - Targeted divisional chart positions (D2..D60, e.g. D10 Dasamsa, D60 Shashtiamsa).
+* `POST /api/v1/chart/yogas` - 300+ Parashari and Nabhasa planetary yogas.
+* `POST /api/v1/chart/doshas` - Astrological doshas: Manglik (Kuja), Kaal Sarp, Pitra, and Sade Sati.
+* `POST /api/v1/chart/jaimini` - Jaimini 7 Chara Karakas, all 12 Bhava Arudhas (A1..A12), and Special Lagnas (HL, GL, SL, IL).
 * `POST /api/v1/chart/argala` - Jaimini Argala and Virodhargala solver.
+* `POST /api/v1/chart/panchanga` - Birth Panchanga (Vara, Tithi, Nakshatra, Yoga, Karana).
+* `POST /api/v1/chart/ashtakavarga` - Ashtakavarga BAV, SAV, Trikona & Ekadhipatya reductions, and Shodhya Pindas.
+* `POST /api/v1/chart/dasha` - Vimshottari Dasha 3-level timeline (Maha, Antar, Pratyantar).
 * `POST /api/v1/chart/dasha/chara` - Jaimini Chara Dasha sign timeline.
-* `POST /api/v1/chart/ashtakavarga` - Ashtakavarga BAV, SAV, reductions, and Shodhya Pindas.
-* `POST /api/v1/chart/rasi` - Rasi (D1) details.
-* `POST /api/v1/chart/navamsa` - Navamsa (D9) details.
-* `POST /api/v1/chart/varga?division=D10` - Targeted divisional chart positions (D2..D60).
-* `POST /api/v1/chart/drishti` - Graha and Rasi aspects.
-* `POST /api/v1/match/compatibility` - Ashta Koota compatibility matching.
+* `POST /api/v1/chart/drishti` - Graha (planetary) and Rasi (sign) aspects.
+* `POST /api/v1/match/compatibility` - Ashta Koota (36-point) Kundali Milan compatibility matching.
 
-### 4. AI Astrological Consultation (Streaming)
+### 4. AI Astrological Consultation & Context
+* `POST /api/v1/ai/chart-context` - Structured astrological context for LLM prompt ingestion with PII stripping.
 * `POST /generate_report` - Real-time SSE streaming of structured 3-page celestial analysis.
 * `POST /chat_with_astrologer` - Real-time SSE streaming for multi-turn astrological chat consultations with conversation memory and topic filters.
 

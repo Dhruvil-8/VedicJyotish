@@ -6,30 +6,20 @@
 //! - Android Native Library (via JNI)
 //! - WebAssembly (WASM) for frontend & NPM
 
-pub mod argala;
-pub mod ashtakavarga;
+pub use vedic_core::{
+    argala, ashtakavarga, calculator, chart, classical_rules, compatibility, constants, context,
+    dasha, drishti, maitri, models, service, shadbala, transit, yoga,
+};
+
 pub mod atlas;
-pub mod chart;
-pub mod compatibility;
-pub mod constants;
-pub mod context;
-pub mod dasha;
-pub mod drishti;
 pub mod engine;
 pub mod error;
 pub mod gemini;
-pub mod maitri;
-pub mod models;
 pub mod muhurtha;
 pub mod panchanga;
 pub mod ratelimit;
-pub mod service;
-pub mod shadbala;
 pub mod swiss;
 pub mod timezones;
-pub mod classical_rules;
-pub mod yoga;
-
 pub mod jni_bridge;
 
 pub use error::ApiError;

@@ -1,0 +1,82 @@
+{
+  "activity": "travel",
+  "score": 35,
+  "quality": "Inauspicious / Avoid (Ashubha)",
+  "is_auspicious": false,
+  "date": "15/05/1985",
+  "time": "08:15",
+  "panchanga": {
+    "tithi_name": "Krishna Ekadashi",
+    "tithi_number": 26,
+    "paksha": "Krishna",
+    "is_rikta": false,
+    "nakshatra_name": "Uttara Bhadrapada",
+    "nakshatra_lord": "Saturn",
+    "weekday": "Wednesday",
+    "yoga_name": "Vishkambha",
+    "karana_name": "Bava",
+    "is_vishti_bhadra": false
+  },
+  "slots": {
+    "rahu_kaal": "11:51 - 13:09",
+    "gulika_kaal": "10:33 - 11:51",
+    "yama_ganda": "07:57 - 09:15",
+    "abhijit_muhurat": "11:27 - 12:15",
+    "brahma_muhurta": "05:03 - 05:51",
+    "is_in_rahu_kaal": false,
+    "is_in_abhijit": false,
+    "is_in_brahma": false
+  },
+  "disha_shoola": {
+    "day": "Wednesday",
+    "forbidden_direction": "North",
+    "user_direction": "North",
+    "has_conflict": true,
+    "mitigation": "If north travel is essential on Tuesday/Wednesday, consume coriander or jaggery before embarking."
+  },
+  "tarabala": {
+    "janma_nakshatra": "Uttara Bhadrapada",
+    "transit_nakshatra": "Uttara Bhadrapada",
+    "tara_number": 1,
+    "tara_name": "Janma",
+    "is_favorable": false,
+    "description": "Janma Tara (Birth Star) - Indicates physical strain or identity re-evaluation. Generally avoid for critical material ventures."
+  },
+  "chandrabala": {
+    "janma_sign": "Pisces",
+    "transit_sign": "Pisces",
+    "house_from_moon": 1,
+    "is_favorable": true,
+    "description": "Janma Chandra (1st house): Mind focused on self; favorable/acceptable."
+  },
+  "positive_factors": [
+    "Safely outside Rahu Kalam (Rahu Kalam occurs 11:51 - 13:09).",
+    "Personal Chandrabala Favorable: Transit Moon is in house 1 (Pisces) from your natal Moon (Pisces) - Janma Chandra (1st house): Mind focused on self; favorable/acceptable."
+  ],
+  "negative_factors": [
+    "Directional Shoola (Disha Shoola) conflict: Travelling North on Wednesday is discouraged in classical Jyotish.",
+    "Personal Tarabala Affliction: Transit Nakshatra (Uttara Bhadrapada) is your Janma (Tara #1) - Janma Tara (Birth Star) - Indicates physical strain or identity re-evaluation. Generally avoid for critical material ventures."
+  ],
+  "classical_rules_applied": [
+    "Brihat Samhita: DishaShoolaNorth",
+    "Muhurtha Chintamani: VarjyaTarabalaJanma",
+    "Muhurtha Chintamani: ShubhaChandrabalaH1"
+  ],
+  "recommendation": "Inauspicious timing for travel. Notable afflictions (such as Rahu Kalam, Rikta Tithi, Tarabala/Chandrabala friction, or conflicting asterisms) suggest rescheduling if possible.",
+  "active_rahu_kalam": false,
+  "in_abhijit": false,
+  "in_brahma_muhurta": false,
+  "shoola_warning": "Travelling North on Wednesday violates Directional Shoola.",
+  "shoola_mitigation": "If north travel is essential on Tuesday/Wednesday, consume coriander or jaggery before embarking.",
+  "reasons": [
+    "Safely outside Rahu Kalam (Rahu Kalam occurs 11:51 - 13:09).",
+    "Personal Chandrabala Favorable: Transit Moon is in house 1 (Pisces) from your natal Moon (Pisces) - Janma Chandra (1st house): Mind focused on self; favorable/acceptable.",
+    "Directional Shoola (Disha Shoola) conflict: Travelling North on Wednesday is discouraged in classical Jyotish.",
+    "Personal Tarabala Affliction: Transit Nakshatra (Uttara Bhadrapada) is your Janma (Tara #1) - Janma Tara (Birth Star) - Indicates physical strain or identity re-evaluation. Generally avoid for critical material ventures."
+  ],
+  "rules_applied": [
+    "Brihat Samhita: DishaShoolaNorth",
+    "Muhurtha Chintamani: VarjyaTarabalaJanma",
+    "Muhurtha Chintamani: ShubhaChandrabalaH1"
+  ]
+}

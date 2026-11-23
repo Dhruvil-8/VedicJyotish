@@ -1,0 +1,68 @@
+{
+  "boy_details": {
+    "sign": "Sagittarius",
+    "nakshatra": "Moola",
+    "pada": 3
+  },
+  "girl_details": {
+    "sign": "Pisces",
+    "nakshatra": "Uttara Bhadrapada",
+    "pada": 1
+  },
+  "method": "ashtakoota",
+  "varna": {
+    "name": "Varna",
+    "score": 0.0,
+    "max_score": 1.0,
+    "matched": false
+  },
+  "vashya": {
+    "name": "Vashya",
+    "score": 1.0,
+    "max_score": 2.0,
+    "matched": false
+  },
+  "tara": {
+    "name": "Tara",
+    "score": 1.5,
+    "max_score": 3.0,
+    "matched": true
+  },
+  "yoni": {
+    "name": "Yoni",
+    "score": 2.0,
+    "max_score": 4.0,
+    "matched": true
+  },
+  "graha_maitri": {
+    "name": "Graha Maitri",
+    "score": 5.0,
+    "max_score": 5.0,
+    "matched": true
+  },
+  "gana": {
+    "name": "Gana",
+    "score": 0.0,
+    "max_score": 6.0,
+    "matched": false
+  },
+  "bhakoot": {
+    "name": "Bhakoot",
+    "score": 7.0,
+    "max_score": 7.0,
+    "matched": true
+  },
+  "naadi": {
+    "name": "Naadi",
+    "score": 8.0,
+    "max_score": 8.0,
+    "matched": true
+  },
+  "mahendra": false,
+  "vedha": true,
+  "rajju": true,
+  "sthree_dheerga": true,
+  "total_score": 24.5,
+  "max_score": 36.0,
+  "minimum_porutham_matched": false
+}

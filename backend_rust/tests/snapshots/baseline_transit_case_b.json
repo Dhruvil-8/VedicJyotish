@@ -1,0 +1,98 @@
+{
+  "transit_date": "01/06/2024",
+  "transit_time": "10:00",
+  "natal_ascendant": {
+    "sign": "Taurus",
+    "degree": 49.31172583467839
+  },
+  "transit_planets": [
+    {
+      "name": "Sun",
+      "transit_sign": "Taurus",
+      "transit_degree": 16.8,
+      "transit_house_from_lagna": 1,
+      "transit_house_from_moon": 3,
+      "retrograde": false,
+      "combust": false
+    },
+    {
+      "name": "Moon",
+      "transit_sign": "Pisces",
+      "transit_degree": 3.75,
+      "transit_house_from_lagna": 11,
+      "transit_house_from_moon": 1,
+      "retrograde": false,
+      "combust": false
+    },
+    {
+      "name": "Mars",
+      "transit_sign": "Pisces",
+      "transit_degree": 29.68,
+      "transit_house_from_lagna": 11,
+      "transit_house_from_moon": 1,
+      "retrograde": false,
+      "combust": false
+    },
+    {
+      "name": "Mercury",
+      "transit_sign": "Taurus",
+      "transit_degree": 1.34,
+      "transit_house_from_lagna": 1,
+      "transit_house_from_moon": 3,
+      "retrograde": false,
+      "combust": false
+    },
+    {
+      "name": "Jupiter",
+      "transit_sign": "Taurus",
+      "transit_degree": 7.22,
+      "transit_house_from_lagna": 1,
+      "transit_house_from_moon": 3,
+      "retrograde": false,
+      "combust": true
+    },
+    {
+      "name": "Venus",
+      "transit_sign": "Taurus",
+      "transit_degree": 15.82,
+      "transit_house_from_lagna": 1,
+      "transit_house_from_moon": 3,
+      "retrograde": false,
+      "combust": true
+    },
+    {
+      "name": "Saturn",
+      "transit_sign": "Aquarius",
+      "transit_degree": 24.55,
+      "transit_house_from_lagna": 10,
+      "transit_house_from_moon": 12,
+      "retrograde": false,
+      "combust": false
+    },
+    {
+      "name": "Rahu",
+      "transit_sign": "Pisces",
+      "transit_degree": 18.63,
+      "transit_house_from_lagna": 11,
+      "transit_house_from_moon": 1,
+      "retrograde": true,
+      "combust": false
+    },
+    {
+      "name": "Ketu",
+      "transit_sign": "Virgo",
+      "transit_degree": 18.63,
+      "transit_house_from_lagna": 5,
+      "transit_house_from_moon": 7,
+      "retrograde": true,
+      "combust": false
+    }
+  ],
+  "sade_sati": {
+    "is_active": true,
+    "phase": "Phase 1: Rising",
+    "saturn_sign": "Aquarius",
+    "moon_sign": "Pisces",
+    "description": "Saturn is transiting the 12th house relative to your natal Moon. This marks the beginning of Sade Sati, which focuses on letting go, deep introspection, and adjusting to changes."
+  }
+}

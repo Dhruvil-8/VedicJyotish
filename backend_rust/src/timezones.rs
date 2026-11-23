@@ -8,6 +8,7 @@ static TIMEZONE_FINDER: Lazy<DefaultFinder> = Lazy::new(DefaultFinder::new);
 
 pub struct ResolvedTime {
     pub jd_ut: f64,
+    #[allow(dead_code)]
     pub local_naive: NaiveDateTime,
     pub offset_hours: f64,
     pub timezone_name: Option<String>,

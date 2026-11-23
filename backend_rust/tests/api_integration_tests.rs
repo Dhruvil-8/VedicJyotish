@@ -9,14 +9,13 @@ struct TestServer {
 
 impl TestServer {
     async fn start(port: u16) -> Self {
-        // Start the server using cargo run
-        let child = Command::new("cargo")
-            .args(&["run", "--bin", "backend_rust"])
+        // Run the precompiled test binary directly without invoking cargo again to avoid lock contention
+        let child = Command::new(env!("CARGO_BIN_EXE_backend_rust"))
             .env("PORT", port.to_string())
             .env("ENVIRONMENT", "development")
             .env("REQUIRE_API_KEY", "false") // Disable auth during tests
             .spawn()
-            .expect("Failed to spawn cargo run for integration tests");
+            .expect("Failed to spawn backend_rust binary for integration tests");
 
         let this = TestServer { child, _port: port };
 

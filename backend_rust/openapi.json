@@ -2,7 +2,7 @@
   "openapi": "3.0.0",
   "info": {
     "title": "VedicJyotish Rust Backend API",
-    "description": "High-performance modular Vedic Astrology Engine built using Rust, Axum, and Swiss Ephemeris. Computes birth charts, divisional vargas, friendships, transits, Ashtakavarga reductions, Bhava Chalit cusps, Upagrahas, Jaimini Arudhas, dasha sequences, and formats dynamic contexts for AI interpretation.",
+    "description": "High-performance, modular Vedic Astrology API powered by Rust, Axum, Swiss Ephemeris, and vedic_core. Full support for birth chart calculations, divisional vargas (D1..D60), Shadbala, Bhava Chalit cusps, Upagrahas, Jaimini Arudhas, Vimshottari and Chara Dashas, Ashtakavarga reductions, Panchangam calendars, Muhurtha electional astrology, Kundali Milan matching, and Gemini AI streaming consultations.",
     "version": "0.2.0"
   },
   "servers": [
@@ -14,8 +14,8 @@
   "paths": {
     "/": {
       "get": {
-        "summary": "API Status",
-        "description": "Returns status, engine version, and uptime metadata.",
+        "summary": "API Health & Metadata",
+        "description": "Returns backend engine version, operational status, and documentation links.",
         "responses": {
           "200": {
             "description": "API is online",
@@ -27,7 +27,8 @@
                     "message": { "type": "string", "example": "Vedic Astrology API is running" },
                     "status": { "type": "string", "example": "online" },
                     "engine": { "type": "string", "example": "rust-swiss-eph" },
-                    "version": { "type": "string", "example": "0.2.0" }
+                    "version": { "type": "string", "example": "0.2.0" },
+                    "documentation": { "type": "string", "example": "https://github.com/Dhruvil-8/VedicJyotish" }
                   }
                 }
               }
@@ -39,13 +40,13 @@
     "/search_city": {
       "get": {
         "summary": "City Atlas Lookup",
-        "description": "Performs prefix queries against the local SQLite GeoNames atlas database to retrieve matching coordinates and timezone overrides.",
+        "description": "Performs prefix query against the local SQLite GeoNames database to retrieve matching cities with geographical coordinates and timezone offsets.",
         "parameters": [
           {
             "name": "query",
             "in": "query",
             "required": true,
-            "description": "City search query prefix (minimum 3 characters)",
+            "description": "City prefix query (minimum 3 characters)",
             "schema": { "type": "string", "minLength": 3 }
           }
         ],
@@ -56,30 +57,24 @@
               "application/json": {
                 "schema": {
                   "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/CityResult"
-                  }
+                  "items": { "$ref": "#/components/schemas/CityResult" }
                 }
               }
             }
           },
-          "422": {
-            "description": "Unprocessable Query"
-          }
+          "422": { "description": "Query string too short (< 3 characters)" }
         }
       }
     },
     "/calculate_chart": {
       "post": {
-        "summary": "Basic Chart Calculation",
-        "description": "Calculates core planetary longitudes, basic house distributions (D1 and D9), and detected classical yogas.",
+        "summary": "Basic Birth Chart Calculation",
+        "description": "Calculates core planetary longitudes, D1 rasi chart, D9 navamsa chart, planetary aspects, and detected classical yogas.",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/BirthData"
-              }
+              "schema": { "$ref": "#/components/schemas/BirthData" }
             }
           }
         },
@@ -88,9 +83,7 @@
             "description": "Calculated planetary positions, D1/D9 houses, and Vimshottari intervals",
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ChartResponse"
-                }
+                "schema": { "$ref": "#/components/schemas/ChartResponse" }
               }
             }
           }
@@ -99,8 +92,8 @@
     },
     "/calculate_transits": {
       "post": {
-        "summary": "Planetary Transit (Gochara) Calculation",
-        "description": "Calculates real-time planetary transits relative to the natal Lagna and natal Moon positions.",
+        "summary": "Planetary Transit (Gochara) & Sade Sati",
+        "description": "Calculates real-time planetary transits relative to natal Lagna and natal Moon positions, with active Sade Sati phase detection.",
         "requestBody": {
           "required": true,
           "content": {
@@ -110,7 +103,7 @@
                 "required": ["birth_data", "transit_date", "transit_time"],
                 "properties": {
                   "birth_data": { "$ref": "#/components/schemas/BirthData" },
-                  "transit_date": { "type": "string", "example": "01/09/2026" },
+                  "transit_date": { "type": "string", "example": "24/10/2026" },
                   "transit_time": { "type": "string", "example": "12:00" }
                 }
               }
@@ -119,7 +112,12 @@
         },
         "responses": {
           "200": {
-            "description": "Transit planetary coordinates and houses"
+            "description": "Transit planetary coordinates, Gochara houses, and Sade Sati status",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TransitResponse" }
+              }
+            }
           }
         }
       }
@@ -132,23 +130,66 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["year", "lat", "lon"],
-                "properties": {
-                  "year": { "type": "integer", "example": 2026 },
-                  "month": { "type": "integer", "example": 9 },
-                  "lat": { "type": "number", "example": 23.0225 },
-                  "lon": { "type": "number", "example": 72.5714 },
-                  "calendar_type": { "type": "string", "enum": ["gregorian", "amanta", "purnimanta"], "default": "amanta" }
-                }
-              }
+              "schema": { "$ref": "#/components/schemas/MonthCalendarRequest" }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Monthly calendar days and festival markings"
+            "description": "Monthly calendar days, Tithis, Nakshatras, and festival markings",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MonthCalendarResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/calculate_muhurtha": {
+      "post": {
+        "summary": "Electional Muhurtha Scoring",
+        "description": "Evaluates electional timing for activities (marriage, business, travel, medical, property, general) with Panchanga snapshot, Tarabala, Chandrabala, and Disha Shoola.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/MuhurthaRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Auspiciousness score, timing slots, doshas, and recommendation",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MuhurthaResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/muhurtha": {
+      "post": {
+        "summary": "Electional Muhurtha Scoring (v1 Endpoint)",
+        "description": "Versioned alias of /calculate_muhurtha.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/MuhurthaRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Auspiciousness score, timing slots, doshas, and recommendation",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MuhurthaResponse" }
+              }
+            }
           }
         }
       }
@@ -156,7 +197,7 @@
     "/generate_report": {
       "post": {
         "summary": "AI Astrological Report (SSE Stream)",
-        "description": "Streams a comprehensive 3-page celestial analysis report from Gemini via Server-Sent Events.",
+        "description": "Streams a comprehensive 3-page celestial analysis report from Gemini via Server-Sent Events (SSE).",
         "requestBody": {
           "required": true,
           "content": {
@@ -170,7 +211,8 @@
         },
         "responses": {
           "200": {
-            "description": "Server-Sent Events streaming real-time tokens"
+            "description": "Server-Sent Events streaming real-time tokens",
+            "content": { "text/event-stream": {} }
           }
         }
       }
@@ -183,15 +225,14 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ChatRequest"
-              }
+              "schema": { "$ref": "#/components/schemas/ChatRequest" }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Server-Sent Events streaming astrologer answer tokens"
+            "description": "Server-Sent Events streaming astrologer answer tokens",
+            "content": { "text/event-stream": {} }
           }
         }
       }
@@ -199,25 +240,28 @@
     "/api/v1/capabilities": {
       "get": {
         "summary": "Engine Capabilities & Metadata",
-        "description": "Returns supported Ayanamsas, House Systems, Dasha Year conventions, and active modules.",
+        "description": "Returns supported Ayanamsas, House Systems, Dasha Year conventions, and active calculation modules.",
         "responses": {
           "200": {
-            "description": "Engine feature matrix"
+            "description": "Engine feature matrix",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CapabilityResponse" }
+              }
+            }
           }
         }
       }
     },
     "/api/v1/chart/full": {
       "post": {
-        "summary": "Enterprise Chart Calculation",
+        "summary": "Enterprise Full Chart Calculation",
         "description": "Calculates complete Vedic parameters including Five-fold friendships, Vaisheshikamsa counts, Bhava Chalit cusps, Upagrahas, full Ashtakavarga with Trikona/Ekadhipatya reductions and Shodhya Pindas, and all 12 Bhava Arudhas.",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ChartCalculationRequest"
-              }
+              "schema": { "$ref": "#/components/schemas/ChartCalculationRequest" }
             }
           }
         },
@@ -226,74 +270,33 @@
             "description": "Complete birth chart structure",
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ChartResponse"
-                }
+                "schema": { "$ref": "#/components/schemas/ChartResponse" }
               }
             }
           }
         }
       }
     },
-    "/api/v1/chart/argala": {
+    "/api/v1/ai/chart-context": {
       "post": {
-        "summary": "Jaimini Argala Solver",
-        "description": "Solves planetary interventions (Argala) and obstructions (Virodhargala) relative to houses and planets.",
+        "summary": "AI Chart Context Generator",
+        "description": "Formats calculated chart data into a compact, structured Markdown/JSON payload optimized for LLM prompt ingestion with privacy protection.",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ChartCalculationRequest"
-              }
+              "schema": { "$ref": "#/components/schemas/ChartCalculationRequest" }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Argala and Virodhargala maps"
-          }
-        }
-      }
-    },
-    "/api/v1/chart/dasha/chara": {
-      "post": {
-        "summary": "Jaimini Chara Dasha Timeline",
-        "description": "Computes the chronological Chara Dasha sign timeline applying dual-lord strength rules.",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ChartCalculationRequest"
+            "description": "Structured AI chart context",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AiChartContext" }
               }
             }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Sign-based timing timeline"
-          }
-        }
-      }
-    },
-    "/api/v1/chart/ashtakavarga": {
-      "post": {
-        "summary": "Ashtakavarga with Classical Reductions",
-        "description": "Calculates BAV, SAV, Trikona Shodhana, Ekadhipatya Shodhana, and Shodhya Pindas.",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ChartCalculationRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Ashtakavarga grids and Shodhya Pinda totals"
           }
         }
       }
@@ -301,7 +304,7 @@
     "/api/v1/match/compatibility": {
       "post": {
         "summary": "Kundali Milan / Relationship Compatibility",
-        "description": "Computes 36-point Ashta Koota matching with Mahendra, Stree Deergha, and dosha exceptions.",
+        "description": "Computes 36-point Ashta Koota matching with Mahendra, Stree Deergha, and dosha mitigations.",
         "requestBody": {
           "required": true,
           "content": {
@@ -311,7 +314,8 @@
                 "required": ["boy", "girl"],
                 "properties": {
                   "boy": { "$ref": "#/components/schemas/BirthData" },
-                  "girl": { "$ref": "#/components/schemas/BirthData" }
+                  "girl": { "$ref": "#/components/schemas/BirthData" },
+                  "method": { "type": "string", "default": "North", "enum": ["North", "South"] }
                 }
               }
             }
@@ -319,7 +323,306 @@
         },
         "responses": {
           "200": {
-            "description": "Ashta Koota score and dosha compatibility breakdown"
+            "description": "Ashta Koota score, koota breakdown, and dosha exceptions",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CompatibilityResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/chart/rasi": {
+      "post": {
+        "summary": "Rasi (D1) Chart Calculation",
+        "description": "Calculates primary natal birth chart (D1) planetary positions and house distributions.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ChartCalculationRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Rasi ascendant, house data, and planetary table",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/RasiChartResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/chart/navamsa": {
+      "post": {
+        "summary": "Navamsa (D9) Chart Calculation",
+        "description": "Calculates the ninth divisional chart (Navamsa / D9) for marriage, dharma, and planetary dignity verification.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ChartCalculationRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Navamsa ascendant sign and house distributions",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NavamsaChartResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/chart/varga": {
+      "post": {
+        "summary": "Targeted Divisional Chart (D2..D60)",
+        "description": "Calculates a specific divisional chart (e.g. D2 Hora, D3 Drekkana, D7 Saptamsa, D10 Dasamsa, D12 Dwadasamsa, D16 Shodasamsa, D20 Vimsamsa, D24 Chaturvimsamsa, D27 Saptavimsamsa, D30 Trimsamsa, D40 Khavedamsa, D45 Akshavedamsa, D60 Shashtiamsa).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/VargaCalculationRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Targeted divisional chart structure",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/VargaChartResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/chart/yogas": {
+      "post": {
+        "summary": "Planetary Yogas Detection",
+        "description": "Detects over 300+ Parashari, Nabhasa, Raja, Dhana, and Sannyasa yogas.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ChartCalculationRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "List of detected yogas with names, descriptions, and categories",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Yoga" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/chart/doshas": {
+      "post": {
+        "summary": "Astrological Dosha Evaluation",
+        "description": "Evaluates classical astrological doshas: Manglik (Kuja), Kaal Sarp, Pitra, and Sade Sati with classical cancellation exceptions.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ChartCalculationRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Detailed dosha evaluation with severity and remedies",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DoshaResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/chart/jaimini": {
+      "post": {
+        "summary": "Jaimini Astrological Parameters",
+        "description": "Computes 7 Chara Karakas, all 12 Bhava Arudhas (A1 through A12), and Special Lagnas (Hora Lagna, Ghati Lagna, Sree Lagna, Indu Lagna).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ChartCalculationRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Jaimini Karakas, Arudhas, and Special Lagnas",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/JaiminiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/chart/argala": {
+      "post": {
+        "summary": "Jaimini Argala Solver",
+        "description": "Solves planetary interventions (Argala) and obstructions (Virodhargala) relative to all 12 houses and grahas.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ChartCalculationRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Argala and Virodhargala maps per house and planet",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ArgalaResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/chart/panchanga": {
+      "post": {
+        "summary": "Natal Birth Panchanga",
+        "description": "Calculates the five limbs of time at birth: Vara, Tithi, Nakshatra, Yoga, and Karana with sunrise/sunset metadata.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ChartCalculationRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Birth Panchanga details",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Panchanga" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/chart/ashtakavarga": {
+      "post": {
+        "summary": "Ashtakavarga with Classical Reductions",
+        "description": "Calculates BAV, SAV, Trikona Shodhana, Ekadhipatya Shodhana, and Shodhya Pindas (Rasi Pinda, Graha Pinda, Shodhya Pinda).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ChartCalculationRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ashtakavarga grids and Shodhya Pinda totals",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AshtakavargaResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/chart/dasha": {
+      "post": {
+        "summary": "Vimshottari Dasha Timeline",
+        "description": "Calculates 3-level Vimshottari Dasha hierarchy (Maha Dasha, Antar Dasha, and Pratyantar Dasha) across the 120-year cycle.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ChartCalculationRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Array of Maha Dashas and their sub-periods",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/MahaDasha" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/chart/dasha/chara": {
+      "post": {
+        "summary": "Jaimini Chara Dasha Timeline",
+        "description": "Computes the chronological sign-based Chara Dasha timeline applying dual-lord strength tie-breakers.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ChartCalculationRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sign-based timing timeline and progression",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CharaDashaResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/chart/drishti": {
+      "post": {
+        "summary": "Aspects (Graha Drishti & Rasi Drishti)",
+        "description": "Computes planetary mutual aspects (Graha Drishti) and sign-based aspects (Jaimini Rasi Drishti).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ChartCalculationRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Planetary and sign aspects matrix",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DrishtiResponse" }
+              }
+            }
           }
         }
       }
@@ -329,17 +632,13 @@
     "schemas": {
       "BirthData": {
         "type": "object",
-        "required": [
-          "date",
-          "time",
-          "city"
-        ],
+        "required": ["date", "time", "city"],
         "properties": {
-          "date": { "type": "string", "description": "DD/MM/YYYY", "example": "28/05/1998" },
-          "time": { "type": "string", "description": "HH:MM (24-hour)", "example": "12:30" },
-          "city": { "type": "string", "description": "Birth city name", "example": "Mumbai" },
-          "lat": { "type": "number", "description": "Optional latitude override", "example": 19.076 },
-          "lon": { "type": "number", "description": "Optional longitude override", "example": 72.877 },
+          "date": { "type": "string", "description": "DD/MM/YYYY or YYYY-MM-DD", "example": "24/10/1990" },
+          "time": { "type": "string", "description": "HH:MM (24-hour)", "example": "14:30" },
+          "city": { "type": "string", "description": "Birth city name", "example": "New Delhi" },
+          "lat": { "type": "number", "description": "Optional latitude override", "example": 28.6139 },
+          "lon": { "type": "number", "description": "Optional longitude override", "example": 77.2090 },
           "timezone": { "type": "number", "description": "Optional timezone offset override in hours", "example": 5.5 }
         }
       },
@@ -394,20 +693,93 @@
       },
       "ChartCalculationRequest": {
         "type": "object",
-        "required": [
-          "birth_data"
-        ],
+        "required": ["birth_data"],
         "properties": {
           "birth_data": { "$ref": "#/components/schemas/BirthData" },
           "profile": { "$ref": "#/components/schemas/CalculationProfile" }
         }
       },
+      "VargaCalculationRequest": {
+        "type": "object",
+        "required": ["birth_data", "varga_type"],
+        "properties": {
+          "birth_data": { "$ref": "#/components/schemas/BirthData" },
+          "varga_type": { "type": "string", "example": "D10", "description": "Divisional chart type: D2, D3, D7, D9, D10, D12, D16, D20, D24, D27, D30, D40, D45, D60" },
+          "profile": { "$ref": "#/components/schemas/CalculationProfile" }
+        }
+      },
+      "MuhurthaRequest": {
+        "type": "object",
+        "required": ["date", "time", "lat", "lon", "timezone"],
+        "properties": {
+          "date": { "type": "string", "example": "24/10/2026", "description": "DD/MM/YYYY" },
+          "time": { "type": "string", "example": "10:30", "description": "HH:MM" },
+          "lat": { "type": "number", "example": 28.6139 },
+          "lon": { "type": "number", "example": 77.2090 },
+          "timezone": { "type": "number", "example": 5.5 },
+          "activity": { "type": "string", "default": "general", "enum": ["general", "travel", "business", "marriage", "property", "medical"] },
+          "direction": { "type": "string", "example": "north", "enum": ["east", "west", "north", "south"] },
+          "birth_moon_nakshatra": { "type": "string", "example": "Rohini" },
+          "birth_moon_sign": { "type": "string", "example": "Taurus" }
+        }
+      },
+      "MuhurthaResponse": {
+        "type": "object",
+        "properties": {
+          "activity": { "type": "string" },
+          "score": { "type": "integer", "example": 85 },
+          "quality": { "type": "string", "example": "Auspicious" },
+          "is_auspicious": { "type": "boolean", "example": true },
+          "date": { "type": "string" },
+          "time": { "type": "string" },
+          "panchanga": { "type": "object" },
+          "slots": { "type": "object" },
+          "disha_shoola": { "type": "object" },
+          "tarabala": { "type": "object" },
+          "chandrabala": { "type": "object" },
+          "positive_factors": { "type": "array", "items": { "type": "string" } },
+          "negative_factors": { "type": "array", "items": { "type": "string" } },
+          "rules_applied": { "type": "array", "items": { "type": "string" } },
+          "reasons": { "type": "array", "items": { "type": "string" } },
+          "recommendation": { "type": "string" },
+          "active_rahu_kalam": { "type": "boolean" },
+          "in_abhijit": { "type": "boolean" },
+          "in_brahma_muhurta": { "type": "boolean" },
+          "shoola_warning": { "type": "string" },
+          "shoola_mitigation": { "type": "string" }
+        }
+      },
+      "MonthCalendarRequest": {
+        "type": "object",
+        "required": ["year", "lat", "lon"],
+        "properties": {
+          "year": { "type": "integer", "example": 2026 },
+          "month": { "type": "integer", "example": 10 },
+          "lat": { "type": "number", "example": 28.6139 },
+          "lon": { "type": "number", "example": 77.2090 },
+          "timezone": { "type": "number", "example": 5.5 },
+          "tradition": { "type": "string", "enum": ["amanta", "purnimanta"], "default": "amanta" },
+          "view_mode": { "type": "string", "default": "gregorian" },
+          "lunar_masa": { "type": "integer" },
+          "masa_type": { "type": "string" },
+          "is_adhik": { "type": "boolean" }
+        }
+      },
+      "MonthCalendarResponse": {
+        "type": "object",
+        "properties": {
+          "year": { "type": "integer" },
+          "month": { "type": "integer" },
+          "days": { "type": "array", "items": { "type": "object" } },
+          "metadata": { "type": "object" }
+        }
+      },
       "CityResult": {
         "type": "object",
         "properties": {
-          "name": { "type": "string", "example": "Mumbai, MH, IN" },
-          "lat": { "type": "number", "example": 19.076 },
-          "lon": { "type": "number", "example": 72.877 }
+          "name": { "type": "string", "example": "New Delhi, DL, IN" },
+          "lat": { "type": "number", "example": 28.6139 },
+          "lon": { "type": "number", "example": 77.2090 }
         }
       },
       "ChatMessage": {
@@ -423,7 +795,7 @@
         "required": ["chart_data", "question"],
         "properties": {
           "chart_data": { "type": "object" },
-          "question": { "type": "string", "maxLength": 500 },
+          "question": { "type": "string", "maxLength": 5000 },
           "history": {
             "type": "array",
             "items": { "$ref": "#/components/schemas/ChatMessage" },
@@ -444,24 +816,158 @@
               "degree": { "type": "number" }
             }
           },
-          "planetary_table": { "type": "array" },
-          "vimshottari_timeline": { "type": "array" },
-          "bhava_cusps": {
-            "type": "array",
-            "description": "12 Bhava Chalit houses with start, cusp, end, and planets"
-          },
-          "upagrahas": {
-            "type": "array",
-            "description": "Classical shadow planets (Dhuma, Vyatipata, Parivesha, Indrachapa, Upaketu, Gulika, Mandi)"
-          },
-          "ashtakavarga": {
-            "type": "object",
-            "description": "BAV, SAV, Trikona Shodhana, Ekadhipatya Shodhana, and Shodhya Pindas"
-          },
-          "jaimini": {
-            "type": "object",
-            "description": "Chara Karakas, Arudha Lagna, Upapada Lagna, all 12 Bhava Arudhas, and Special Lagnas"
-          }
+          "planetary_table": { "type": "array", "items": { "type": "object" } },
+          "vimshottari_timeline": { "type": "array", "items": { "$ref": "#/components/schemas/MahaDasha" } },
+          "bhava_cusps": { "type": "array", "items": { "type": "object" } },
+          "upagrahas": { "type": "array", "items": { "type": "object" } },
+          "ashtakavarga": { "$ref": "#/components/schemas/AshtakavargaResponse" },
+          "jaimini": { "$ref": "#/components/schemas/JaiminiResponse" },
+          "panchanga": { "$ref": "#/components/schemas/Panchanga" },
+          "shadbala": { "type": "object" },
+          "yogas": { "type": "array", "items": { "$ref": "#/components/schemas/Yoga" } },
+          "doshas": { "$ref": "#/components/schemas/DoshaResponse" }
+        }
+      },
+      "TransitResponse": {
+        "type": "object",
+        "properties": {
+          "transit_date": { "type": "string" },
+          "transit_time": { "type": "string" },
+          "natal_ascendant": { "type": "object" },
+          "natal_moon_sign": { "type": "string" },
+          "planets": { "type": "array", "items": { "type": "object" } },
+          "sade_sati": { "type": "object" }
+        }
+      },
+      "CompatibilityResponse": {
+        "type": "object",
+        "properties": {
+          "total_score": { "type": "number", "example": 28.0 },
+          "max_score": { "type": "number", "example": 36.0 },
+          "percentage": { "type": "number", "example": 77.78 },
+          "kootas": { "type": "object" },
+          "doshas": { "type": "object" },
+          "recommendation": { "type": "string" }
+        }
+      },
+      "RasiChartResponse": {
+        "type": "object",
+        "properties": {
+          "ascendant": { "type": "object" },
+          "chart_data": { "type": "object" },
+          "planetary_table": { "type": "array", "items": { "type": "object" } }
+        }
+      },
+      "NavamsaChartResponse": {
+        "type": "object",
+        "properties": {
+          "navamsa_ascendant_sign": { "type": "string" },
+          "navamsa_chart": { "type": "object" }
+        }
+      },
+      "VargaChartResponse": {
+        "type": "object",
+        "properties": {
+          "varga_type": { "type": "string" },
+          "ascendant_sign": { "type": "string" },
+          "chart_data": { "type": "object" },
+          "planets": { "type": "array", "items": { "type": "object" } }
+        }
+      },
+      "Yoga": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "category": { "type": "string" },
+          "description": { "type": "string" },
+          "planets_involved": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "DoshaResponse": {
+        "type": "object",
+        "properties": {
+          "manglik": { "type": "object" },
+          "kaal_sarp": { "type": "object" },
+          "pitra": { "type": "object" },
+          "sade_sati": { "type": "object" }
+        }
+      },
+      "JaiminiResponse": {
+        "type": "object",
+        "properties": {
+          "chara_karakas": { "type": "object" },
+          "arudha_lagna": { "type": "object" },
+          "upapada_lagna": { "type": "object" },
+          "arudha_padas": { "type": "object" },
+          "special_lagnas": { "type": "object" }
+        }
+      },
+      "ArgalaResponse": {
+        "type": "object",
+        "properties": {
+          "argala": { "type": "object" },
+          "virodhargala": { "type": "object" }
+        }
+      },
+      "Panchanga": {
+        "type": "object",
+        "properties": {
+          "vara": { "type": "object" },
+          "tithi": { "type": "object" },
+          "nakshatra": { "type": "object" },
+          "yoga": { "type": "object" },
+          "karana": { "type": "object" }
+        }
+      },
+      "AshtakavargaResponse": {
+        "type": "object",
+        "properties": {
+          "bav": { "type": "object" },
+          "sav": { "type": "object" },
+          "trikona_shodhana": { "type": "object" },
+          "ekadhipatya_shodhana": { "type": "object" },
+          "shodhya_pindas": { "type": "object" }
+        }
+      },
+      "MahaDasha": {
+        "type": "object",
+        "properties": {
+          "lord": { "type": "string" },
+          "start_date": { "type": "string" },
+          "end_date": { "type": "string" },
+          "antar_dashas": { "type": "array", "items": { "type": "object" } }
+        }
+      },
+      "CharaDashaResponse": {
+        "type": "object",
+        "properties": {
+          "timeline": { "type": "array", "items": { "type": "object" } },
+          "sign_details": { "type": "object" }
+        }
+      },
+      "DrishtiResponse": {
+        "type": "object",
+        "properties": {
+          "graha_drishti": { "type": "object" },
+          "rasi_drishti": { "type": "object" }
+        }
+      },
+      "AiChartContext": {
+        "type": "object",
+        "properties": {
+          "chart_summary": { "type": "string" },
+          "astrological_facts": { "type": "object" },
+          "focus_areas": { "type": "object" }
+        }
+      },
+      "CapabilityResponse": {
+        "type": "object",
+        "properties": {
+          "ayanamsas": { "type": "array", "items": { "type": "string" } },
+          "house_systems": { "type": "array", "items": { "type": "string" } },
+          "node_types": { "type": "array", "items": { "type": "string" } },
+          "dasha_year_types": { "type": "array", "items": { "type": "string" } },
+          "endpoints": { "type": "array", "items": { "type": "string" } }
         }
       }
     }

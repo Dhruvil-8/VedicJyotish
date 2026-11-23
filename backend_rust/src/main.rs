@@ -7,29 +7,17 @@
 //! - API key authentication, CORS, security headers, and rate limiting
 //! - Structured tracing-based logging
 
-mod ashtakavarga;
+use vedic_core::{compatibility, constants, context, drishti, models};
+
 mod atlas;
-mod compatibility;
-mod yoga;
-mod constants;
-mod context;
 mod engine;
+mod error;
 mod gemini;
-mod models;
+mod muhurtha;
 mod panchanga;
 mod ratelimit;
-mod service;
 mod swiss;
 mod timezones;
-mod chart;
-mod drishti;
-mod maitri;
-mod argala;
-mod dasha;
-mod shadbala;
-mod error;
-mod classical_rules;
-mod muhurtha;
 
 pub use error::ApiError;
 

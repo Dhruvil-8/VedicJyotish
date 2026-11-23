@@ -28,6 +28,15 @@ rusqlite = { version = "0.31.0", features = ["bundled"] }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 async-stream = "0.3.6"
+vedic_core = { path = "crates/vedic_core" }
+
+[workspace]
+members = [
+    ".",
+    "crates/vedic_core",
+    "crates/vedic_wasm",
+    "crates/swiss-eph"
+]
 
 [patch.crates-io]
 swiss-eph = { path = "crates/swiss-eph" }

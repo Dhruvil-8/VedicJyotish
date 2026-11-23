@@ -1,0 +1,98 @@
+{
+  "transit_date": "01/06/2024",
+  "transit_time": "10:00",
+  "natal_ascendant": {
+    "sign": "Aquarius",
+    "degree": 301.38268978194844
+  },
+  "transit_planets": [
+    {
+      "name": "Sun",
+      "transit_sign": "Taurus",
+      "transit_degree": 16.98,
+      "transit_house_from_lagna": 4,
+      "transit_house_from_moon": 6,
+      "retrograde": false,
+      "combust": false
+    },
+    {
+      "name": "Moon",
+      "transit_sign": "Pisces",
+      "transit_degree": 6.41,
+      "transit_house_from_lagna": 2,
+      "transit_house_from_moon": 4,
+      "retrograde": false,
+      "combust": false
+    },
+    {
+      "name": "Mars",
+      "transit_sign": "Pisces",
+      "transit_degree": 29.82,
+      "transit_house_from_lagna": 2,
+      "transit_house_from_moon": 4,
+      "retrograde": false,
+      "combust": false
+    },
+    {
+      "name": "Mercury",
+      "transit_sign": "Taurus",
+      "transit_degree": 1.7,
+      "transit_house_from_lagna": 4,
+      "transit_house_from_moon": 6,
+      "retrograde": false,
+      "combust": false
+    },
+    {
+      "name": "Jupiter",
+      "transit_sign": "Taurus",
+      "transit_degree": 7.26,
+      "transit_house_from_lagna": 4,
+      "transit_house_from_moon": 6,
+      "retrograde": false,
+      "combust": true
+    },
+    {
+      "name": "Venus",
+      "transit_sign": "Taurus",
+      "transit_degree": 16.05,
+      "transit_house_from_lagna": 4,
+      "transit_house_from_moon": 6,
+      "retrograde": false,
+      "combust": true
+    },
+    {
+      "name": "Saturn",
+      "transit_sign": "Aquarius",
+      "transit_degree": 24.56,
+      "transit_house_from_lagna": 1,
+      "transit_house_from_moon": 3,
+      "retrograde": false,
+      "combust": false
+    },
+    {
+      "name": "Rahu",
+      "transit_sign": "Pisces",
+      "transit_degree": 18.62,
+      "transit_house_from_lagna": 2,
+      "transit_house_from_moon": 4,
+      "retrograde": true,
+      "combust": false
+    },
+    {
+      "name": "Ketu",
+      "transit_sign": "Virgo",
+      "transit_degree": 18.62,
+      "transit_house_from_lagna": 8,
+      "transit_house_from_moon": 10,
+      "retrograde": true,
+      "combust": false
+    }
+  ],
+  "sade_sati": {
+    "is_active": false,
+    "phase": null,
+    "saturn_sign": "Aquarius",
+    "moon_sign": "Sagittarius",
+    "description": "Saturn is not currently transiting the 12th, 1st, or 2nd houses from your Moon. You are not currently going through Sade Sati."
+  }
+}

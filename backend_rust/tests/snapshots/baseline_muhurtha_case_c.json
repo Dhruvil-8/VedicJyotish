@@ -1,0 +1,86 @@
+{
+  "activity": "travel",
+  "score": 45,
+  "quality": "Inauspicious / Avoid (Ashubha)",
+  "is_auspicious": false,
+  "date": "01/01/2000",
+  "time": "00:05",
+  "panchanga": {
+    "tithi_name": "Krishna Dashami",
+    "tithi_number": 25,
+    "paksha": "Krishna",
+    "is_rikta": false,
+    "nakshatra_name": "Swati",
+    "nakshatra_lord": "Rahu",
+    "weekday": "Friday",
+    "yoga_name": "Sukarma",
+    "karana_name": "Vishti (Bhadra)",
+    "is_vishti_bhadra": true
+  },
+  "slots": {
+    "rahu_kaal": "10:49 - 11:59",
+    "gulika_kaal": "08:29 - 09:39",
+    "yama_ganda": "14:19 - 15:29",
+    "abhijit_muhurat": "11:35 - 12:23",
+    "brahma_muhurta": "05:43 - 06:31",
+    "is_in_rahu_kaal": false,
+    "is_in_abhijit": false,
+    "is_in_brahma": false
+  },
+  "disha_shoola": {
+    "day": "Friday",
+    "forbidden_direction": "West",
+    "user_direction": "North",
+    "has_conflict": false,
+    "mitigation": "If west travel is essential on Sunday/Friday, consume jaggery or curd before embarking."
+  },
+  "tarabala": {
+    "janma_nakshatra": "Swati",
+    "transit_nakshatra": "Swati",
+    "tara_number": 1,
+    "tara_name": "Janma",
+    "is_favorable": false,
+    "description": "Janma Tara (Birth Star) - Indicates physical strain or identity re-evaluation. Generally avoid for critical material ventures."
+  },
+  "chandrabala": {
+    "janma_sign": "Libra",
+    "transit_sign": "Libra",
+    "house_from_moon": 1,
+    "is_favorable": true,
+    "description": "Janma Chandra (1st house): Mind focused on self; favorable/acceptable."
+  },
+  "positive_factors": [
+    "Safely outside Rahu Kalam (Rahu Kalam occurs 10:49 - 11:59).",
+    "Auspicious Lunar Day for Travel: Tithi 11 (Krishna Dashami) promotes fruitful completion of journey.",
+    "Clear directional path: Travel towards North is free of Disha Shoola on Friday.",
+    "Personal Chandrabala Favorable: Transit Moon is in house 1 (Libra) from your natal Moon (Libra) - Janma Chandra (1st house): Mind focused on self; favorable/acceptable."
+  ],
+  "negative_factors": [
+    "Active Vishti (Bhadra) Karana. Carries heavy obstruction; avoid for contracts, marriage, or journeys.",
+    "Personal Tarabala Affliction: Transit Nakshatra (Swati) is your Janma (Tara #1) - Janma Tara (Birth Star) - Indicates physical strain or identity re-evaluation. Generally avoid for critical material ventures."
+  ],
+  "classical_rules_applied": [
+    "Muhurtha Chintamani: ShubhaTithiYatra",
+    "Muhurtha Chintamani: VarjyaTarabalaJanma",
+    "Muhurtha Chintamani: ShubhaChandrabalaH1"
+  ],
+  "recommendation": "Inauspicious timing for travel. Notable afflictions (such as Rahu Kalam, Rikta Tithi, Tarabala/Chandrabala friction, or conflicting asterisms) suggest rescheduling if possible.",
+  "active_rahu_kalam": false,
+  "in_abhijit": false,
+  "in_brahma_muhurta": false,
+  "shoola_warning": null,
+  "shoola_mitigation": null,
+  "reasons": [
+    "Safely outside Rahu Kalam (Rahu Kalam occurs 10:49 - 11:59).",
+    "Auspicious Lunar Day for Travel: Tithi 11 (Krishna Dashami) promotes fruitful completion of journey.",
+    "Clear directional path: Travel towards North is free of Disha Shoola on Friday.",
+    "Personal Chandrabala Favorable: Transit Moon is in house 1 (Libra) from your natal Moon (Libra) - Janma Chandra (1st house): Mind focused on self; favorable/acceptable.",
+    "Active Vishti (Bhadra) Karana. Carries heavy obstruction; avoid for contracts, marriage, or journeys.",
+    "Personal Tarabala Affliction: Transit Nakshatra (Swati) is your Janma (Tara #1) - Janma Tara (Birth Star) - Indicates physical strain or identity re-evaluation. Generally avoid for critical material ventures."
+  ],
+  "rules_applied": [
+    "Muhurtha Chintamani: ShubhaTithiYatra",
+    "Muhurtha Chintamani: VarjyaTarabalaJanma",
+    "Muhurtha Chintamani: ShubhaChandrabalaH1"
+  ]
+}

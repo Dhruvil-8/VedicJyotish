@@ -5,8 +5,22 @@ use std::collections::HashMap;
 use once_cell::sync::Lazy;
 
 pub const SIDEREAL_YEAR: f64 = 365.256363004;
-pub const PLANET_FLAGS: i32 = swiss_eph::SEFLG_SIDEREAL | swiss_eph::SEFLG_SPEED;
-pub const HOUSE_FLAGS: i32 = swiss_eph::SEFLG_SIDEREAL;
+
+// Swiss Ephemeris Standard Flag & Body Constants (C sweph.h)
+pub const SE_SUN: i32 = 0;
+pub const SE_MOON: i32 = 1;
+pub const SE_MERCURY: i32 = 2;
+pub const SE_VENUS: i32 = 3;
+pub const SE_MARS: i32 = 4;
+pub const SE_JUPITER: i32 = 5;
+pub const SE_SATURN: i32 = 6;
+pub const SE_MEAN_NODE: i32 = 10;
+pub const SE_TRUE_NODE: i32 = 11;
+pub const SEFLG_SPEED: i32 = 256;
+pub const SEFLG_SIDEREAL: i32 = 65536;
+
+pub const PLANET_FLAGS: i32 = SEFLG_SIDEREAL | SEFLG_SPEED;
+pub const HOUSE_FLAGS: i32 = SEFLG_SIDEREAL;
 
 pub const SIGNS: [&str; 12] = [
     "Aries",
@@ -72,14 +86,14 @@ pub const NAKSHATRA_NAMES: [&str; 27] = [
 ];
 
 pub const PLANETS: [(&str, i32); 8] = [
-    ("Sun", swiss_eph::SE_SUN),
-    ("Moon", swiss_eph::SE_MOON),
-    ("Mars", swiss_eph::SE_MARS),
-    ("Mercury", swiss_eph::SE_MERCURY),
-    ("Jupiter", swiss_eph::SE_JUPITER),
-    ("Venus", swiss_eph::SE_VENUS),
-    ("Saturn", swiss_eph::SE_SATURN),
-    ("Rahu", swiss_eph::SE_MEAN_NODE),
+    ("Sun", SE_SUN),
+    ("Moon", SE_MOON),
+    ("Mars", SE_MARS),
+    ("Mercury", SE_MERCURY),
+    ("Jupiter", SE_JUPITER),
+    ("Venus", SE_VENUS),
+    ("Saturn", SE_SATURN),
+    ("Rahu", SE_MEAN_NODE),
 ];
 
 pub static FUNCTIONAL_MALEFICS: Lazy<HashMap<usize, Vec<&'static str>>> = Lazy::new(|| {
