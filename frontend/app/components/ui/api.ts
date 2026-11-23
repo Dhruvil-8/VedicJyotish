@@ -47,12 +47,42 @@ export const sanitizeChartForAi = (value: any): any => {
 };
 
 export const searchCity = async (query: string) => {
-  if (query.length < 3) return [];
-  const res = await fetch(`${API_BASE}/search_city?query=${encodeURIComponent(query)}`, {
-    headers: getHeaders(),
-  });
-  if (!res.ok) return [];
-  return res.json();
+  if (!query || query.trim().length < 3) return [];
+
+  // 1. Direct client-side geocoding via Photon API (serverless, no DB or backend needed)
+  try {
+    const photonRes = await fetch(
+      `https://photon.komoot.io/api/?q=${encodeURIComponent(query.trim())}&limit=8`
+    );
+    if (photonRes.ok) {
+      const data = await photonRes.json();
+      if (Array.isArray(data?.features) && data.features.length > 0) {
+        return data.features.map((feature: any) => {
+          const props = feature.properties || {};
+          const coords = feature.geometry?.coordinates || [0, 0];
+          const parts = [props.name, props.state, props.country].filter(Boolean);
+          return {
+            name: parts.join(", "),
+            lat: Number(coords[1]),
+            lon: Number(coords[0]),
+          };
+        });
+      }
+    }
+  } catch (err) {
+    console.warn("Direct Photon API search failed, attempting fallback:", err);
+  }
+
+  // 2. Seamless fallback to backend /search_city
+  try {
+    const res = await fetch(`${API_BASE}/search_city?query=${encodeURIComponent(query)}`, {
+      headers: getHeaders(),
+    });
+    if (!res.ok) return [];
+    return res.json();
+  } catch {
+    return [];
+  }
 };
 
 export const calculateChart = async (data: any) => {
