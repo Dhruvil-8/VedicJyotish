@@ -251,7 +251,8 @@ FORMATTING RULES:
  * Call Google Generative Language REST API and stream SSE events
  */
 async function streamFromGemini(apiKey: string, requestBody: any): Promise<Response> {
-  const model = DEFAULT_MODEL;
+  // Dynamically read GEMINI_MODEL from environment variables per request so dashboard overrides always take effect
+  const model = process.env.GEMINI_MODEL?.trim() || "gemini-2.0-flash";
   let url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`;
 
   let geminiRes = await fetch(url, {
