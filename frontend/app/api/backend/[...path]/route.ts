@@ -1,5 +1,8 @@
 import { NextRequest } from "next/server";
 
+// Configure Edge Runtime for Cloudflare Pages and Vercel Edge Functions
+export const runtime = "edge";
+
 // Allow up to 60 seconds for long-running Server-Sent Events (SSE) AI report streaming
 export const maxDuration = 60;
 
