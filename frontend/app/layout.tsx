@@ -1,20 +1,7 @@
 // Vedic Jyotish — Ancient Wisdom, AI Insight (Secure Web & Mobile Architecture)
 import type { Metadata, Viewport } from "next";
-import { Cinzel, Libre_Baskerville } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "./hooks/useToast";
-
-const cinzel = Cinzel({
-  subsets: ["latin"],
-  variable: "--font-heading",
-  weight: ["400", "500", "600", "700"],
-});
-
-const libreBaskerville = Libre_Baskerville({
-  subsets: ["latin"],
-  variable: "--font-serif",
-  weight: ["400", "700"],
-});
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://vedic-jyotish.vercel.app"),
@@ -99,9 +86,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${cinzel.variable} ${libreBaskerville.variable} antialiased`}
-      >
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap"
+          rel="stylesheet"
+        />
+      </head>
+      <body className="antialiased">
         <ToastProvider>{children}</ToastProvider>
       </body>
     </html>
