@@ -601,9 +601,6 @@ CRITICAL MANDATE: Under NO circumstances recommend remedies, gemstones, rudraksh
               Your Cosmic Life Journey (जीवन यात्रा)
             </span>
           </div>
-          <span className="text-[11px] text-muted-foreground font-serif">
-            Interactive guide designed for intuitive understanding
-          </span>
         </div>
 
         {/* 4-Stage Journey Navigation */}

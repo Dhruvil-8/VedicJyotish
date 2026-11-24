@@ -248,58 +248,94 @@ FORMATTING RULES:
 }
 
 /**
+ * Strip any sensitive API keys or credentials from error logs and client-facing messages.
+ */
+function sanitizeError(msg: any): string {
+  if (!msg) return "";
+  return String(msg)
+    .replace(/AIza[0-9A-Za-z-_]{35}/g, "[REDACTED]")
+    .replace(/(?:key|apiKey|api_key|token)[=:][\s]*["']?[^&\s"'\\}]+/gi, "key=[REDACTED]");
+}
+
+/**
  * Call Google Generative Language REST API and stream SSE events
  */
 async function streamFromGemini(apiKey: string, requestBody: any): Promise<Response> {
+  const cleanKey = apiKey.replace(/^["']|["']$/g, "").trim();
+
   // Dynamically read GEMINI_MODEL from environment variables per request so dashboard overrides always take effect
-  const model = process.env.GEMINI_MODEL?.trim() || "gemini-2.0-flash";
-  let url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`;
+  const rawModel =
+    process.env.GEMINI_MODEL ||
+    (globalThis as any).GEMINI_MODEL ||
+    (globalThis as any).process?.env?.GEMINI_MODEL ||
+    "gemini-2.0-flash";
+  const preferredModel = String(rawModel).replace(/^["']|["']$/g, "").trim() || "gemini-2.0-flash";
 
-  let geminiRes = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(requestBody),
-  });
-
-  // If model fails (e.g. 404 or unsupported), attempt fallback to gemini-1.5-flash
-  if (!geminiRes.ok && model !== "gemini-1.5-flash") {
-    console.warn(`Model ${model} returned status ${geminiRes.status}, falling back to gemini-1.5-flash`);
-    const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key=${apiKey}`;
-    const fallbackRes = await fetch(fallbackUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(requestBody),
-    });
-    if (fallbackRes.ok) {
-      geminiRes = fallbackRes;
+  // Build model fallback sequence: preferred -> gemini-2.0-flash -> gemini-1.5-flash -> gemini-2.5-flash -> gemini-1.5-pro
+  const modelsToTry: string[] = [preferredModel];
+  for (const fallback of ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.5-flash", "gemini-1.5-pro"]) {
+    if (!modelsToTry.includes(fallback)) {
+      modelsToTry.push(fallback);
     }
   }
 
-  if (!geminiRes.ok) {
-    const status = geminiRes.status;
-    let errDetail = "";
-    try {
-      const errText = await geminiRes.text();
-      const errJson = JSON.parse(errText);
-      errDetail = errJson.error?.message || errText;
-    } catch {
-      errDetail = "Network or upstream error";
-    }
+  let geminiRes: Response | null = null;
+  let lastStatus = 500;
+  let lastErrorDetail = "";
 
-    let errMsg = `AI Service temporarily unavailable (${status}: ${errDetail})`;
-    if (status === 429) {
+  for (const model of modelsToTry) {
+    try {
+      // Pass the API key securely via the x-goog-api-key header so it NEVER appears in URL query parameters,
+      // browser history, proxy logs, or exception URLs.
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": cleanKey,
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (res.ok) {
+        geminiRes = res;
+        break;
+      }
+
+      lastStatus = res.status;
+      try {
+        const errText = await res.text();
+        const errJson = JSON.parse(errText);
+        lastErrorDetail = sanitizeError(errJson.error?.message || errText);
+      } catch {
+        lastErrorDetail = `HTTP ${res.status}`;
+      }
+      console.warn(`Gemini model ${model} returned status ${res.status}: ${lastErrorDetail}`);
+
+      // If it's an authentication error (400/401/403 with API key invalid), don't retry other models
+      if ((res.status === 400 || res.status === 401 || res.status === 403) && lastErrorDetail.toLowerCase().includes("api key")) {
+        break;
+      }
+    } catch (networkErr: any) {
+      const sanitized = sanitizeError(networkErr?.message || String(networkErr));
+      console.warn(`Network error requesting model ${model}:`, sanitized);
+      lastErrorDetail = sanitized;
+    }
+  }
+
+  if (!geminiRes || !geminiRes.ok) {
+    let errMsg = `AI Service temporarily unavailable (${lastStatus}: ${sanitizeError(lastErrorDetail)})`;
+    if (lastStatus === 429) {
       errMsg = "The AI astrologer is currently busy. Please wait a minute and try again.";
+    } else if (lastErrorDetail.toLowerCase().includes("api key") || lastErrorDetail.toLowerCase().includes("api_key")) {
+      errMsg = "Invalid or expired Gemini API key. Please check your GEMINI_API_KEY in environment variables.";
     }
     return new Response(
       `data: ${JSON.stringify({ error: errMsg })}\n\n`,
       {
         status: 200,
         headers: {
-          "Content-Type": "text/event-stream",
+          "Content-Type": "text/event-stream; charset=utf-8",
           "Cache-Control": "no-cache",
           Connection: "keep-alive",
         },
@@ -325,9 +361,21 @@ async function streamFromGemini(apiKey: string, requestBody: any): Promise<Respo
       const emitCandidateText = (jsonStr: string) => {
         try {
           const chunkJson = JSON.parse(jsonStr);
+          if (chunkJson.error) {
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify({ error: chunkJson.error.message || "AI response error" })}\n\n`)
+            );
+            return;
+          }
           const candidates = chunkJson.candidates;
           if (Array.isArray(candidates)) {
             for (const c of candidates) {
+              if (c.finishReason === "SAFETY") {
+                controller.enqueue(
+                  encoder.encode(`data: ${JSON.stringify({ error: "Content blocked due to safety guidelines." })}\n\n`)
+                );
+                return;
+              }
               const parts = c.content?.parts;
               if (Array.isArray(parts)) {
                 for (const part of parts) {
