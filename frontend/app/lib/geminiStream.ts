@@ -263,21 +263,18 @@ function sanitizeError(msg: any): string {
 async function streamFromGemini(apiKey: string, requestBody: any): Promise<Response> {
   const cleanKey = apiKey.replace(/^["']|["']$/g, "").trim();
 
-  // Dynamically read GEMINI_MODEL from environment variables per request so dashboard overrides always take effect
+  // Read GEMINI_MODEL with direct static property access for Next.js compiler support
   const rawModel =
     process.env.GEMINI_MODEL ||
-    (globalThis as any).GEMINI_MODEL ||
-    (globalThis as any).process?.env?.GEMINI_MODEL ||
-    "gemini-2.0-flash";
-  const preferredModel = String(rawModel).replace(/^["']|["']$/g, "").trim() || "gemini-2.0-flash";
+    (typeof globalThis !== "undefined" && (globalThis as any).GEMINI_MODEL) ||
+    "";
+  const explicitEnvModel = String(rawModel || "").replace(/^["']|["']$/g, "").trim();
 
-  // Build model fallback sequence: preferred -> gemini-2.0-flash -> gemini-1.5-flash -> gemini-2.5-flash -> gemini-1.5-pro
-  const modelsToTry: string[] = [preferredModel];
-  for (const fallback of ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.5-flash", "gemini-1.5-pro"]) {
-    if (!modelsToTry.includes(fallback)) {
-      modelsToTry.push(fallback);
-    }
-  }
+  // When GEMINI_MODEL is set in env -> ONLY that exact model is used (no fallbacks).
+  // When GEMINI_MODEL is not set -> use "gemini-flash-lite-latest" with fallback chain.
+  const modelsToTry: string[] = explicitEnvModel
+    ? [explicitEnvModel]
+    : ["gemini-flash-lite-latest", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"];
 
   let geminiRes: Response | null = null;
   let lastStatus = 500;
@@ -312,23 +309,28 @@ async function streamFromGemini(apiKey: string, requestBody: any): Promise<Respo
       }
       console.warn(`Gemini model ${model} returned status ${res.status}: ${lastErrorDetail}`);
 
-      // If it's an authentication error (400/401/403 with API key invalid), don't retry other models
-      if ((res.status === 400 || res.status === 401 || res.status === 403) && lastErrorDetail.toLowerCase().includes("api key")) {
+      // If user specified a strict model or it's an authentication error, don't try other models
+      if (explicitEnvModel || ((res.status === 400 || res.status === 401 || res.status === 403) && lastErrorDetail.toLowerCase().includes("api key"))) {
         break;
       }
     } catch (networkErr: any) {
       const sanitized = sanitizeError(networkErr?.message || String(networkErr));
       console.warn(`Network error requesting model ${model}:`, sanitized);
       lastErrorDetail = sanitized;
+      if (explicitEnvModel) {
+        break;
+      }
     }
   }
 
   if (!geminiRes || !geminiRes.ok) {
-    let errMsg = `AI Service temporarily unavailable (${lastStatus}: ${sanitizeError(lastErrorDetail)})`;
+    let errMsg = `AI Service unavailable (${lastStatus}: ${sanitizeError(lastErrorDetail)})`;
     if (lastStatus === 429) {
       errMsg = "The AI astrologer is currently busy. Please wait a minute and try again.";
     } else if (lastErrorDetail.toLowerCase().includes("api key") || lastErrorDetail.toLowerCase().includes("api_key")) {
       errMsg = "Invalid or expired Gemini API key. Please check your GEMINI_API_KEY in environment variables.";
+    } else if (lastStatus === 404) {
+      errMsg = `AI model not found (${sanitizeError(lastErrorDetail)}). If GEMINI_MODEL is set, ensure it is an active model like 'gemini-2.0-flash'.`;
     }
     return new Response(
       `data: ${JSON.stringify({ error: errMsg })}\n\n`,

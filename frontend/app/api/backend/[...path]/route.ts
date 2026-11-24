@@ -9,31 +9,24 @@ export const maxDuration = 60;
 
 /**
  * Dynamically resolve the Gemini API Key from environment variables at request time.
- * In Edge runtimes (Cloudflare Pages / Vercel Edge), process.env may not be populated
- * at module initialization time. Reading dynamically per request ensures env vars
- * configured in the hosting dashboard are always detected.
+ * In Edge runtimes (Cloudflare Pages / Vercel Edge), direct static property access
+ * (e.g. process.env.GEMINI_API_KEY) is required so the Next.js compiler inlines
+ * and binds the variable properly.
  */
 function getGeminiApiKey(): string {
-  const env = (typeof process !== "undefined" && process?.env) || {};
-  const g = (typeof globalThis !== "undefined" && (globalThis as any)) || {};
-  const gEnv = g.process?.env || {};
-
   const rawKey =
-    env.GEMINI_API_KEY ||
-    env.GOOGLE_API_KEY ||
-    env.GEMINI_KEY ||
-    env.GOOGLE_GEMINI_API_KEY ||
-    env.GOOGLE_AI_KEY ||
-    g.GEMINI_API_KEY ||
-    g.GOOGLE_API_KEY ||
-    g.GEMINI_KEY ||
-    g.GOOGLE_GEMINI_API_KEY ||
-    g.GOOGLE_AI_KEY ||
-    gEnv.GEMINI_API_KEY ||
-    gEnv.GOOGLE_API_KEY ||
-    gEnv.GEMINI_KEY ||
-    gEnv.GOOGLE_GEMINI_API_KEY ||
-    gEnv.GOOGLE_AI_KEY ||
+    process.env.GEMINI_API_KEY ||
+    process.env.GOOGLE_API_KEY ||
+    process.env.GEMINI_KEY ||
+    process.env.GOOGLE_GEMINI_API_KEY ||
+    process.env.GOOGLE_AI_KEY ||
+    (typeof globalThis !== "undefined" && (globalThis as any).GEMINI_API_KEY) ||
+    (typeof globalThis !== "undefined" && (globalThis as any).GOOGLE_API_KEY) ||
+    (typeof globalThis !== "undefined" && (globalThis as any).GEMINI_KEY) ||
+    (typeof globalThis !== "undefined" && (globalThis as any).GOOGLE_GEMINI_API_KEY) ||
+    (typeof globalThis !== "undefined" && (globalThis as any).GOOGLE_AI_KEY) ||
+    (typeof globalThis !== "undefined" && (globalThis as any).__ENV__?.GEMINI_API_KEY) ||
+    (typeof globalThis !== "undefined" && (globalThis as any).__ENV__?.GOOGLE_API_KEY) ||
     "";
 
   return String(rawKey || "").replace(/^["']|["']$/g, "").trim();
@@ -43,17 +36,12 @@ function getGeminiApiKey(): string {
  * Dynamically resolve the backend URL at request time.
  */
 function getBackendUrl(): string {
-  const env = (typeof process !== "undefined" && process?.env) || {};
-  const g = (typeof globalThis !== "undefined" && (globalThis as any)) || {};
-  const gEnv = g.process?.env || {};
-
   const raw =
-    env.BACKEND_URL ||
-    env.NEXT_PUBLIC_API_URL ||
-    g.BACKEND_URL ||
-    g.NEXT_PUBLIC_API_URL ||
-    gEnv.BACKEND_URL ||
-    gEnv.NEXT_PUBLIC_API_URL ||
+    process.env.BACKEND_URL ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    (typeof globalThis !== "undefined" && (globalThis as any).BACKEND_URL) ||
+    (typeof globalThis !== "undefined" && (globalThis as any).NEXT_PUBLIC_API_URL) ||
+    (typeof globalThis !== "undefined" && (globalThis as any).__ENV__?.BACKEND_URL) ||
     "http://127.0.0.1:7860";
 
   return String(raw).replace(/\/+$/, "");
@@ -63,17 +51,12 @@ function getBackendUrl(): string {
  * Dynamically resolve the server backend secret API key.
  */
 function getServerApiKey(): string {
-  const env = (typeof process !== "undefined" && process?.env) || {};
-  const g = (typeof globalThis !== "undefined" && (globalThis as any)) || {};
-  const gEnv = g.process?.env || {};
-
   const raw =
-    env.API_SECRET_KEY ||
-    env.BACKEND_API_KEY ||
-    g.API_SECRET_KEY ||
-    g.BACKEND_API_KEY ||
-    gEnv.API_SECRET_KEY ||
-    gEnv.BACKEND_API_KEY ||
+    process.env.API_SECRET_KEY ||
+    process.env.BACKEND_API_KEY ||
+    (typeof globalThis !== "undefined" && (globalThis as any).API_SECRET_KEY) ||
+    (typeof globalThis !== "undefined" && (globalThis as any).BACKEND_API_KEY) ||
+    (typeof globalThis !== "undefined" && (globalThis as any).__ENV__?.API_SECRET_KEY) ||
     "";
 
   return String(raw || "").replace(/^["']|["']$/g, "").trim();
@@ -108,8 +91,21 @@ async function proxyRequest(
   paramsPromise: Promise<{ path: string[] }>
 ): Promise<Response> {
   try {
-    const { path } = await paramsPromise;
-    const subpath = Array.isArray(path) ? path.join("/") : "";
+    const resolvedParams = await Promise.resolve(paramsPromise);
+    const path = resolvedParams?.path;
+    const subpath = Array.isArray(path) ? path.join("/") : (typeof path === "string" ? path : "");
+
+    // Read request body once safely so the body stream is never consumed twice
+    let reqBodyText = "";
+    let parsedBody: any = null;
+    if (req.method !== "GET" && req.method !== "HEAD") {
+      try {
+        reqBodyText = await req.text();
+        if (reqBodyText) {
+          parsedBody = JSON.parse(reqBodyText);
+        }
+      } catch {}
+    }
 
     // ─── Direct Serverless Gemini AI Handlers ──────────────────────────────
     // If request is for AI report or chat, handle directly via Gemini API
@@ -121,7 +117,7 @@ async function proxyRequest(
 
       if (geminiApiKey) {
         try {
-          const body = await req.json();
+          const body = parsedBody || {};
           if (subpath === "generate_report") {
             return await handleReportStream(body, geminiApiKey);
           } else if (subpath === "chat_with_astrologer") {
@@ -158,7 +154,7 @@ async function proxyRequest(
         return new Response(
           `data: ${JSON.stringify({
             error:
-              "Gemini AI API key is not configured. Please add GEMINI_API_KEY or GOOGLE_API_KEY to your environment variables in the Cloudflare Pages / Vercel dashboard.",
+              "Gemini AI API key is not configured. Please add GEMINI_API_KEY or GOOGLE_API_KEY to your environment variables in Cloudflare Pages (under both Production and Preview scopes).",
           })}\n\n`,
           {
             status: 200,
@@ -195,11 +191,8 @@ async function proxyRequest(
       headers,
     };
 
-    if (req.method !== "GET" && req.method !== "HEAD") {
-      const bodyBytes = await req.arrayBuffer();
-      if (bodyBytes.byteLength > 0) {
-        init.body = Buffer.from(bodyBytes);
-      }
+    if (req.method !== "GET" && req.method !== "HEAD" && reqBodyText) {
+      init.body = reqBodyText;
     }
 
     const backendRes = await fetch(targetUrl, init);
