@@ -161,7 +161,8 @@ export function calcAstronomicalSunriseSunset(
   lon: number,
   tz: number
 ): { sunriseJd: number; sunsetJd: number; nextSunriseJd: number; sunriseLocal: string; sunsetLocal: string } {
-  let y = year, m = month;
+  let y = year,
+    m = month;
   if (m <= 2) {
     y -= 1;
     m += 12;
@@ -170,47 +171,74 @@ export function calcAstronomicalSunriseSunset(
   const B = 2 - A + Math.floor(A / 4);
   const jd0 = Math.floor(365.25 * (y + 4716)) + Math.floor(30.6001 * (m + 1)) + day + B - 1524.5;
   const jdMidnightUT = jd0 - tz / 24.0;
-  const jdNoonUT = jdMidnightUT + 0.5;
 
-  const n = jdNoonUT - 2451545.0;
-  const L = (280.460 + 0.9856474 * n) % 360;
-  const g = (((357.528 + 0.9856003 * n) % 360) * Math.PI) / 180;
-  const lambda = ((L + 1.915 * Math.sin(g) + 0.020 * Math.sin(2 * g)) * Math.PI) / 180;
-  const eps = (23.439 * Math.PI) / 180;
-  const alpha = Math.atan2(Math.cos(eps) * Math.sin(lambda), Math.cos(lambda));
-  const dec = Math.asin(Math.sin(eps) * Math.sin(lambda));
+  function calcSun(jdMidUT: number) {
+    const T = (jdMidUT + 0.5 - 2451545.0) / 36525.0;
+    let L0 = (280.46646 + T * (36000.76983 + 0.0003032 * T)) % 360;
+    if (L0 < 0) L0 += 360;
 
-  const rad = Math.PI / 180;
-  const phi = lat * rad;
-  const cosH0 = (Math.sin(-0.8333 * rad) - Math.sin(phi) * Math.sin(dec)) / (Math.cos(phi) * Math.cos(dec));
-  const H0 = Math.acos(Math.max(-1, Math.min(1, cosH0))) / rad;
+    let M = (357.52911 + T * (35999.05029 - 0.0001537 * T)) % 360;
+    if (M < 0) M += 360;
+    const Mrad = (M * Math.PI) / 180;
 
-  const alphaDeg = (alpha / rad + 360) % 360;
-  const lambdaDeg = (lambda / rad + 360) % 360;
-  let eotMin = (lambdaDeg - alphaDeg) * 4;
-  if (eotMin > 20) eotMin -= 1440;
-  if (eotMin < -20) eotMin += 1440;
+    const e = 0.016708634 - T * (0.000042037 + 0.0000001267 * T);
+    const C =
+      Math.sin(Mrad) * (1.914602 - T * (0.004817 + 0.000014 * T)) +
+      Math.sin(2 * Mrad) * (0.019993 - 0.000101 * T) +
+      Math.sin(3 * Mrad) * 0.000289;
 
-  const solarNoonLocal = 12.0 - (lon - tz * 15) / 15.0 - eotMin / 60.0;
-  const sunriseLocalH = solarNoonLocal - H0 / 15.0;
-  const sunsetLocalH = solarNoonLocal + H0 / 15.0;
+    const trueLon = L0 + C;
+    const eps = (23.439291 - 0.0130042 * T) * (Math.PI / 180);
+    const y_tan = Math.tan(eps / 2) * Math.tan(eps / 2);
+    const L0rad = (L0 * Math.PI) / 180;
 
-  const sunriseJd = jdMidnightUT + sunriseLocalH / 24.0;
-  const sunsetJd = jdMidnightUT + sunsetLocalH / 24.0;
-  const nextSunriseJd = sunriseJd + 1.0;
+    const eot =
+      4 *
+      (180 / Math.PI) *
+      (y_tan * Math.sin(2 * L0rad) -
+        2 * e * Math.sin(Mrad) +
+        4 * e * y_tan * Math.sin(Mrad) * Math.cos(2 * L0rad) -
+        0.5 * y_tan * y_tan * Math.sin(4 * L0rad) -
+        1.25 * e * e * Math.sin(2 * Mrad));
+
+    const sinDec = Math.sin(eps) * Math.sin((trueLon * Math.PI) / 180);
+    const dec = Math.asin(sinDec);
+
+    const rad = Math.PI / 180;
+    const phi = lat * rad;
+    // Standard atmospheric refraction + solar radius = 50 arcminutes = 0.8333 degrees
+    const cosH0 = (Math.sin(-0.8333 * rad) - Math.sin(phi) * Math.sin(dec)) / (Math.cos(phi) * Math.cos(dec));
+    const H0 = Math.acos(Math.max(-1, Math.min(1, cosH0))) / rad;
+
+    const solarNoonLocal = 12.0 - (lon - tz * 15) / 15.0 - eot / 60.0;
+    const sunriseLocalH = solarNoonLocal - H0 / 15.0;
+    const sunsetLocalH = solarNoonLocal + H0 / 15.0;
+
+    return {
+      sunriseJd: jdMidUT + sunriseLocalH / 24.0,
+      sunsetJd: jdMidUT + sunsetLocalH / 24.0,
+      sunriseLocalH,
+      sunsetLocalH,
+    };
+  }
+
+  const today = calcSun(jdMidnightUT);
+  const tomorrow = calcSun(jdMidnightUT + 1.0);
 
   const formatH = (h: number) => {
-    const hh = Math.floor(h);
-    const mm = Math.floor((h - hh) * 60);
+    let normalized = ((h % 24) + 24) % 24;
+    const totalSecs = Math.round(normalized * 3600);
+    const hh = Math.floor(totalSecs / 3600) % 24;
+    const mm = Math.floor((totalSecs % 3600) / 60);
     return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
   };
 
   return {
-    sunriseJd,
-    sunsetJd,
-    nextSunriseJd,
-    sunriseLocal: formatH(sunriseLocalH),
-    sunsetLocal: formatH(sunsetLocalH),
+    sunriseJd: today.sunriseJd,
+    sunsetJd: today.sunsetJd,
+    nextSunriseJd: tomorrow.sunriseJd,
+    sunriseLocal: formatH(today.sunriseLocalH),
+    sunsetLocal: formatH(today.sunsetLocalH),
   };
 }
 
@@ -337,10 +365,9 @@ export async function computeClientChart(data: any): Promise<any> {
     tz
   );
 
-  // Compute classical Hindu Lunar Month Index
-  const amantaMasaIdx = (Math.floor(sunLon / 30) + 1) % 12;
-  const diff = (moonLon - sunLon + 360) % 360;
-  const purnimantaMasaIdx = diff > 180 ? (amantaMasaIdx + 1) % 12 : amantaMasaIdx;
+  // Compute classical Hindu Lunar Month Index using precise New Moon calculation
+  const { lunarMonth: amantaMasaIdx, isLeap: amantaIsAdhik } = getLunarMonthInfo(swe, jdUT, false);
+  const { lunarMonth: purnimantaMasaIdx } = getLunarMonthInfo(swe, jdUT, true);
 
   // Build CoreChartInput for vedic_wasm
   const coreInput = {
@@ -368,7 +395,7 @@ export async function computeClientChart(data: any): Promise<any> {
     jd_ut: jdUT,
     amanta_month: amantaMasaIdx,
     purnimanta_month: purnimantaMasaIdx,
-    is_adhika_month: false,
+    is_adhika_month: amantaIsAdhik,
   };
 
   const chartJson = wasm.compute_chart_wasm(JSON.stringify(coreInput));
@@ -378,6 +405,37 @@ export async function computeClientChart(data: any): Promise<any> {
   parsedChart.sunsetJd = sunsetJd;
   parsedChart.nextSunriseJd = nextSunriseJd;
   parsedChart.jdUT = jdUT;
+
+  // Saṅkrānti detection between today's sunrise and tomorrow's sunrise
+  const sankrantiInfo = checkDaySankranti(swe, sunriseJd, nextSunriseJd);
+  if (sankrantiInfo && parsedChart.panchanga) {
+    let sankrantiLabel = `${sankrantiInfo.signName} Sankranti`;
+    if (sankrantiInfo.signName === "Capricorn") {
+      sankrantiLabel = "Makar Sankranti / Pongal / Uttarayana";
+    } else if (sankrantiInfo.signName === "Aries") {
+      sankrantiLabel = "Mesha Sankranti / Vaisakhi / Solar New Year";
+    } else if (sankrantiInfo.signName === "Cancer") {
+      sankrantiLabel = "Karka Sankranti / Dakshinayana";
+    } else if (sankrantiInfo.signName === "Libra") {
+      sankrantiLabel = "Tula Sankranti";
+    }
+    parsedChart.panchanga.is_sankranti = true;
+    if (!parsedChart.panchanga.vrats) parsedChart.panchanga.vrats = [];
+    if (!parsedChart.panchanga.vrats.includes(sankrantiLabel)) {
+      parsedChart.panchanga.vrats.push(sankrantiLabel);
+    }
+    if (!parsedChart.panchanga.festival) {
+      parsedChart.panchanga.festival = sankrantiLabel;
+    }
+  }
+
+  if (parsedChart.panchanga?.festival) {
+    if (!parsedChart.panchanga.vrats) parsedChart.panchanga.vrats = [];
+    if (!parsedChart.panchanga.vrats.includes(parsedChart.panchanga.festival)) {
+      parsedChart.panchanga.vrats.push(parsedChart.panchanga.festival);
+    }
+  }
+
   return parsedChart;
 }
 

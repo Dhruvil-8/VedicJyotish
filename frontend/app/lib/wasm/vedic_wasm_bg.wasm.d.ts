@@ -1,8 +1,11 @@
 /* tslint:disable */
 /* eslint-disable */
 export const memory: WebAssembly.Memory;
+export const build_ai_chart_context_wasm: (a: number, b: number) => [number, number, number, number];
 export const calculate_guna_milan_wasm: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
+export const calculate_muhurtha_wasm: (a: number, b: number) => [number, number, number, number];
 export const compute_chart_wasm: (a: number, b: number) => [number, number, number, number];
+export const compute_transits_wasm: (a: number, b: number) => [number, number, number, number];
 export const __wbindgen_externrefs: WebAssembly.Table;
 export const __wbindgen_malloc: (a: number, b: number) => number;
 export const __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;

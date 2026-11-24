@@ -310,13 +310,14 @@ pub fn detect_festival(
         ("Magha", "Shukla", 15) => Some("Magha Purnima / Lalita Jayanti / Guru Ravidas Jayanti".to_string()),
 
         // Phalguna
-        ("Phalguna", "Krishna", 16) => Some("Holi (Dhulandi) / Vasantotsav".to_string()),
-        ("Phalguna", "Krishna", 20) => Some("Rang Panchami".to_string()),
-        ("Phalguna", "Krishna", 23) => Some("Sheetala Ashtami / Basoda".to_string()),
-        ("Phalguna", "Krishna", 26) | ("Phalguna", "Krishna", 27) => Some("Papmochani Ekadashi".to_string()),
+        ("Phalguna", "Krishna", 26) => Some("Vijaya Ekadashi".to_string()),
+        ("Phalguna", "Krishna", 27) => Some("Papmochani Ekadashi".to_string()),
         ("Phalguna", "Shukla", 11) => Some("Amalaki Ekadashi".to_string()),
         ("Phalguna", "Shukla", 14) => Some("Holika Dahan / Chhoti Holi".to_string()),
         ("Phalguna", "Shukla", 15) => Some("Holi / Phalguna Purnima / Chaitanya Mahaprabhu Jayanti".to_string()),
+        ("Phalguna", "Krishna", 16) => Some("Holi (Dhulandi) / Vasantotsav".to_string()),
+        ("Phalguna", "Krishna", 20) => Some("Rang Panchami".to_string()),
+        ("Phalguna", "Krishna", 23) => Some("Sheetala Ashtami / Basoda".to_string()),
 
         _ => None,
     }
@@ -686,8 +687,11 @@ pub fn calculate_panchanga_advanced(
     });
 
     let m_amanta = masa_amanta.clone().unwrap_or_default();
+    let m_purnimanta = masa_purnimanta.clone().unwrap_or_default();
     let tithi_day_idx = (tithi_index + 1) as u8;
-    let festival = detect_festival(&m_amanta, &paksha, tithi_day_idx, &sun_sign.clone().unwrap_or_default(), false);
+    let s_sign = sun_sign.clone().unwrap_or_default();
+    let festival = detect_festival(&m_amanta, &paksha, tithi_day_idx, &s_sign, false)
+        .or_else(|| detect_festival(&m_purnimanta, &paksha, tithi_day_idx, &s_sign, false));
 
     let mut daily_vrats = Vec::new();
     let is_ekadashi = tithi_day_idx == 11 || tithi_day_idx == 26;
@@ -713,7 +717,9 @@ pub fn calculate_panchanga_advanced(
         daily_vrats.push("Sankashti Chaturthi".to_string());
     }
     if let Some(ref fest) = festival {
-        daily_vrats.push(fest.clone());
+        if !daily_vrats.contains(fest) {
+            daily_vrats.push(fest.clone());
+        }
     }
 
     Panchanga {
