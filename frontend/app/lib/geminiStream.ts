@@ -360,9 +360,14 @@ async function streamFromGemini(apiKey: string, requestBody: any): Promise<Respo
 
       let buffer = "";
 
-      const emitCandidateText = (jsonStr: string) => {
+      const processLine = (line: string) => {
+        const trimmed = line.trim();
+        if (!trimmed || !trimmed.startsWith("data:")) return;
+        const payload = trimmed.slice(5).trim();
+        if (!payload || payload === "[DONE]") return;
+
         try {
-          const chunkJson = JSON.parse(jsonStr);
+          const chunkJson = JSON.parse(payload);
           if (chunkJson.error) {
             controller.enqueue(
               encoder.encode(`data: ${JSON.stringify({ error: chunkJson.error.message || "AI response error" })}\n\n`)
@@ -393,39 +398,24 @@ async function streamFromGemini(apiKey: string, requestBody: any): Promise<Respo
         } catch {}
       };
 
-      const processEventBlock = (block: string) => {
-        const lines = block.split(/\r?\n/);
-        let dataPayload = "";
-        for (const line of lines) {
-          const trimmed = line.trimStart();
-          if (trimmed.startsWith("data:")) {
-            const val = trimmed.slice(5).trim();
-            dataPayload += (dataPayload ? "\n" : "") + val;
-          }
-        }
-        if (dataPayload && dataPayload !== "[DONE]") {
-          emitCandidateText(dataPayload);
-        }
-      };
-
       try {
         while (true) {
           const { done, value } = await geminiReader.read();
           if (done) break;
 
           buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split(/\r?\n/);
+          // Keep the last partial uncompleted line in buffer
+          buffer = lines.pop() || "";
 
-          let pos: number;
-          while ((pos = buffer.indexOf("\n\n")) !== -1) {
-            const block = buffer.slice(0, pos);
-            buffer = buffer.slice(pos + 2);
-            processEventBlock(block);
+          for (const line of lines) {
+            processLine(line);
           }
         }
 
-        // Flush any remaining buffer content
+        // Process any remaining line in buffer
         if (buffer.trim()) {
-          processEventBlock(buffer);
+          processLine(buffer);
         }
 
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`));
